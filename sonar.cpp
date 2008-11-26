@@ -4,161 +4,164 @@
  *
  * Under Fedora Linux, package requirements are portaudio-devel and fftw-devel
  */
-#include <string>
-#include <math>
-#include <portaudio.h>
-#include <fftw.h>
-#define FFT_POINTS 1024
+#include "sonar.hpp"
+#ifndef WINDOWS
+#include <ctime>
+#endif /* ndef WINDOWS */
 
-typedef time float; /* times are expressed as seconds, with floats */
-typedef int frequency;
+using namespace std;
 
-/** This class represents MONO audio buffers */
-class AudioBuf{
-public:
-  /** Contructor reads a WAV file */
-  AudioBuf( string filename ){}
+AudioBuf::AudioBuf( ){}
 
-  void prepend_silence( time silence_duration ){}
-  time get_length(){}
+AudioBuf::AudioBuf( string filename ){}
+
+void AudioBuf::prepend_silence( duration_t silence_duration ){}
+
+duration_t AudioBuf::get_length(){}
   
-  /** return audio samples as an array for fftw or other processing */
-  fft_array_t get_array(){}
+fft_array_t AudioBuf::get_array(){}
 
-  /** return a trimmed audio buffer starting at start seconds with a given
-      length */
-  AudioBuf window( time length, time start=0 ){}
+AudioBuf AudioBuf::window( duration_t length, duration_t start ){}
   
-  /** return a given number of repetitions of this audio buffer */
-  AudioBuf repeat( int repetitions=2 ){}
+AudioBuf AudioBuf::repeat( int repetitions ){}
 
-  bool write_to_file( string filename ){}
+bool AudioBuf::write_to_file( string filename ){}
 
-private:
-  fft_array_t data
-};
-
-class AudioDev{
-public:
-  /** Constructor opens a new instance of recording device */
-  AudioDev(){}
-
-  /** Destructor closes the recording device */
-  ~AudioDev(){}
-
-  void nonblocking_play( AudioBuf buf ){}
-  AudioBuf blocking_record( time duration ){}
-
-  /** Record the echo of buf */
-  AudioBuf recordback( AudioBuf buf ){}
-};
-
-/** stores and elicits the program configuration */
-class Config{
-public:
-  /** default, empty contructor, calls the calibration functions */
-  Config(){}
-  /** load config from file */
-  Config( string filename ){}
-  bool write_config_file( string filename ){}
-  /** this would be called after we've already phoned home */
-  void disable_phone_home(){}
-  
-  frequency ping_freq;
-  float threshold;
-  bool phone_home;
-  AudioDev rec_dev;
-  AudioDev play_dev;
-
-private:
-  /** Prompt the user to choose their preferred recording and playback devices.
-      This must be done before any audio recording can take place. */
-  void choose_audio_devices(){}
-
-  /** CALIBRATION FUNCTIONS */
-  /** Prompt the user to find the best ping frequency.
-      Generally, we want to choose a frequency that is both low enough to
-      register on the (probably cheap) audio equipment but high enough to be
-      inaudible. */
-  freq choose_ping_freq(){}
-  
-  /** Choose the variance threshold for presence detection by prompting
-      the user.
-      NB: ping_freq must already be set!*/
-  float choose_ping_threshold(){}
-  
-  /** Plays a series of loud tones to help users adjust their speaker volume */
-  void warn_audio_level(){}
-};
-
-class Emailer(){
-  Emailer( string dest_addr ){}
-
-  /** sends the filename to destination_address */
-  phone_home( string filename ){}
-
-  /** this is the email address that we phone home to */
-  string destination_address;
-};
-
-class SystemInterface(){
- public:
-  bool sleep_monitor(){}
-  time idle_seconds(){}
-  /** blocks the process for the specified time */
-  void sleep( time duration ){}
-  /** appends message to log */
-  bool log( string message, string log_filename ){}
-};
-
-/** duration is in seconds and freq is the  tone pitch.  
-    Delay, in seconds, is silent time added to before tone.
-    FADE_SAMPLES is the length of the fade in and out periods. */
-AudioBuf tone( time duration=0.5, frequency freq=440, time delay=0, 
-	       time fade_time=0.001 ){}
-
-fft_array_t fft( AudioBuf buf, int N=FFT_POINTS ){}
-
-/** Gives the frequency energy spectrum of an audio buffer, without using
-    windowing.  This is useful for periodic signals.  When using this
-    function, it may be important to trim the buffer to precisely an integer
-    multiple of the fundamental tone's period. */
-fft_array_t energy_spectrum( AudioBuf buf, int N=FFT_POINTS ){}
-
-
-/** Estimates the frequency energy spectrum of an audio buffer by averaging
-    the spectrum over a sliding rectangular window.  
-    I think that this is an implementation of Welch's Method. */
-fft_array_t welch_energy_spectrum( AudioBuf buf, int N=FFT_POINTS, 
-				   time window_size ){}
-
-/** returns the spectrum index closest to a given frequency. */
-int freq_index( frequency freq ){}
-
-/** returns the power/energy of the given time series data at the frequency
-    of interest. */
-float freq_energy( AudioBuf buf, frequency freq_of_interest, time window_size ){}
-
-typedef struct{
-  float mean;
-  float variance;
-} Statistics;
-
-/** Returns the mean and variance of the intensities of a given frequency
-    in the audio buffer sampled in windows spread throughout the recording. */
-Statistics measure_stats( AudioBuf buf, frequency freq ){}
-
-/** cleans up and terminates the program when SIGTERM is received */
-void term_handler( int signum, int frame ){}
-
-/** returns the time at which the program was first run, as indicated in
-    the logfile. */
-long log_start_time( string log_filename ){
-  
+AudioDev::AudioDev(){
+  // Initialize PortAudio
+  check_error( Pa_Initialize() );
 }
 
-/** This is the main program loop.  It checks for a user and powers down
-    the display if it's reasonably confident that no one is there */
+AudioDev::~AudioDev(){
+  // close PortAudio
+  check_error( Pa_Terminate() );
+}
+
+int AudioDev::player_callback( const void *inputBuffer, void *outputBuffer,
+			       unsigned long framesPerBuffer,
+			       const PaStreamCallbackTimeInfo* timeInfo,
+			       PaStreamCallbackFlags statusFlags,
+			       void *userData ){
+  //cout << "inside callback" << endl;
+  /* Cast data passed through stream to our structure. */
+  // in this case, we are storing the index where we left off playback.
+  int *index = (int*)userData; 
+  float *out = (float*)outputBuffer;
+  (void) inputBuffer; /* Prevent unused variable warning. */
+
+  float left_phase=1.0, right_phase=-1.0;
+  unsigned int i;
+  for( i=0; i<framesPerBuffer; i++ ){
+    *out++ = left_phase;  /* left */
+    *out++ = right_phase;  /* right */
+    /* Generate simple sawtooth phaser that ranges between -1.0 and 1.0. */
+    left_phase += 0.01f;
+    /* When signal reaches top, drop back down. */
+    if( left_phase >= 1.0f ) left_phase -= 2.0f;
+    /* higher pitch so we can distinguish left and right. */
+    right_phase += 0.03f;
+    if( right_phase >= 1.0f ) right_phase -= 2.0f;
+  }
+  return 0;
+  // we would return 1 when playback is complete (ie when we want the stream
+  // to die)
+}
+
+void AudioDev::nonblocking_play( AudioBuf buf ){
+  PaStream *stream;
+  int *data = new int;
+  *data = 0;
+  // TODO: include pointer to buf in $data
+
+  /* Open an audio I/O stream. Opening a *default* stream means opening 
+     the default input and output devices */
+  check_error( Pa_OpenDefaultStream( 
+	 &stream,
+	 0,          /* no input channels */
+	 2,          /* stereo output */
+	 paFloat32,  /* 32 bit floating point output */
+	 SAMPLE_RATE,
+	 256,        /* frames per buffer, i.e. the number
+			of sample frames that PortAudio will
+			request from the callback. Many apps
+			may want to use
+			paFramesPerBufferUnspecified, which
+			tells PortAudio to pick the best,
+			possibly changing, buffer size.*/
+	 AudioDev::player_callback, /* this is your callback function */
+	 data ) ); /*This is a pointer that will be passed to
+		      your callback*/
+}
+
+AudioBuf AudioDev::blocking_record( duration_t duration ){}
+
+AudioBuf AudioDev::recordback( AudioBuf buf ){}
+
+inline void AudioDev::check_error( PaError err ){
+  if( err != paNoError )
+    printf(  "PortAudio error: %s\n", Pa_GetErrorText( err ) );
+}
+
+
+Config::Config(){}
+
+Config::Config( string filename ){}
+
+bool Config::write_config_file( string filename ){}
+
+void Config::disable_phone_home(){}
+  
+void Config::choose_audio_devices(){}
+
+frequency Config::choose_ping_freq(){}
+  
+float Config::choose_ping_threshold(){}
+  
+void Config::warn_audio_level(){}
+
+Emailer::Emailer( string dest_addr ){}
+
+bool Emailer::phone_home( string filename ){}
+
+bool SysInterface::sleep_monitor(){}
+
+duration_t SysInterface::idle_seconds(){}
+
+void SysInterface::my_sleep( duration_t duration ){
+  sleep( (int)duration );
+}
+
+bool SysInterface::log( string message, string log_filename ){}
+
+AudioBuf tone( duration_t duration, frequency freq, duration_t delay, 
+	       duration_t fade_time ){}
+
+fft_array_t fft( AudioBuf buf, int N ){}
+
+fft_array_t energy_spectrum( AudioBuf buf, int N ){}
+
+fft_array_t welch_energy_spectrum( AudioBuf buf, int N, 
+				   duration_t window_size ){}
+
+int freq_index( frequency freq ){}
+
+float freq_energy( AudioBuf buf, frequency freq_of_interest, 
+		   duration_t window_size ){}
+
+Statistics measure_stats( AudioBuf buf, frequency freq ){}
+
+void term_handler( int signum, int frame ){}
+
+long log_start_time( string log_filename ){}
+
 void power_management( frequency freq, float threshold ){}
 
-int main( int argc, char **argv ){}
+int main( int argc, char **argv ){
+  AudioDev my_audio = AudioDev();
+  AudioBuf my_buf = AudioBuf();
+  my_audio.nonblocking_play( my_buf ); 
+  while(1){
+    SysInterface::my_sleep( 1 );
+  }
+  return 0;
+}
