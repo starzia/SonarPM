@@ -17,7 +17,8 @@ using namespace std;
 
 typedef float duration_t; /* durations are expressed as seconds, with floats */
 typedef int frequency;
-typedef double* fft_array_t;
+typedef float sample_t;
+typedef sample_t* fft_array_t;
 
 /** This class represents MONO audio buffers */
 class AudioBuf{
@@ -26,8 +27,13 @@ public:
   AudioBuf();
   /** alternative contructor reads a WAV file */
   AudioBuf( std::string filename );
+  /** alternative allocates an empty buffer (not necessarily silent) */
+  AudioBuf( duration_t len );
+  /** returns an audio sample */
+  sample_t* operator[]( unsigned int index );
   void prepend_silence( duration_t silence_duration );
   duration_t get_length();
+  unsigned int get_num_samples();
   /** return audio samples as an array for fftw or other processing */
   fft_array_t get_array();
   /** return a trimmed audio buffer starting at start seconds with a given
@@ -37,7 +43,20 @@ public:
   AudioBuf repeat( int repetitions=2 );
   bool write_to_file( std::string filename );
 private:
+  unsigned int num_samples;
   fft_array_t data;
+};
+
+/** this class stores all data relevant to an Audio callback function */
+class AudioRequest{
+public:
+  /** this constructor creates a playback request */
+  AudioRequest( AudioBuf buf );
+  /** this constructor creates a record request */
+  AudioRequest( duration_t len );
+  
+  AudioBuf audio;
+  unsigned int progress_index;
 };
 
 class AudioDev{
@@ -50,10 +69,10 @@ public:
   ** It may called at interrupt level on some machines so don't do anything
   ** that could mess up the system like calling malloc() or free(). */ 
   static int player_callback( const void *inputBuffer, void *outputBuffer,
-		       unsigned long framesPerBuffer,
-		       const PaStreamCallbackTimeInfo* timeInfo,
-		       PaStreamCallbackFlags statusFlags,
-		       void *userData );
+			      unsigned long framesPerBuffer,
+			      const PaStreamCallbackTimeInfo* timeInfo,
+			      PaStreamCallbackFlags statusFlags,
+			      void *userData );
   void nonblocking_play( AudioBuf buf );
   AudioBuf blocking_record( duration_t duration );
   /** Record the echo of buf */

@@ -12,10 +12,23 @@ AudioBuf::AudioBuf( ){}
 
 AudioBuf::AudioBuf( string filename ){}
 
+AudioBuf::AudioBuf( duration_t length ){
+  this->num_samples = ceil( length * SAMPLE_RATE );
+  this->data = (fft_array_t)fftw_malloc( sizeof(sample_t)*this->num_samples );
+}
+
+sample_t* AudioBuf::operator[]( unsigned int index ){
+  return this->data+index;
+}
+
 void AudioBuf::prepend_silence( duration_t silence_duration ){}
 
 duration_t AudioBuf::get_length(){}
   
+unsigned int AudioBuf::get_num_samples(){ 
+  return this->num_samples;
+}
+
 fft_array_t AudioBuf::get_array(){}
 
 AudioBuf AudioBuf::window( duration_t length, duration_t start ){}
@@ -23,6 +36,13 @@ AudioBuf AudioBuf::window( duration_t length, duration_t start ){}
 AudioBuf AudioBuf::repeat( int repetitions ){}
 
 bool AudioBuf::write_to_file( string filename ){}
+
+AudioRequest::AudioRequest( AudioBuf buf ){
+  this->progress_index = 0; // set to zero so playback starts at beginning
+  this->audio = buf;
+}
+
+AudioRequest::AudioRequest( duration_t len ){}
 
 AudioDev::AudioDev(){
   // Initialize PortAudio
@@ -34,41 +54,39 @@ AudioDev::~AudioDev(){
   check_error( Pa_Terminate() );
 }
 
+/** here, we are copying data from the AudioBuf (stored in userData) into
+    outputBuffer and then updating the progress_index so that we know where
+    to start the next time this callback function is called */
 int AudioDev::player_callback( const void *inputBuffer, void *outputBuffer,
 			       unsigned long framesPerBuffer,
 			       const PaStreamCallbackTimeInfo* timeInfo,
 			       PaStreamCallbackFlags statusFlags,
 			       void *userData ){
-  //cout << "inside callback" << endl;
   /* Cast data passed through stream to our structure. */
   // in this case, we are storing the index where we left off playback.
-  int *index = (int*)userData; 
+  AudioRequest *req = (AudioRequest*)userData; 
   float *out = (float*)outputBuffer;
   (void) inputBuffer; /* Prevent unused variable warning. */
 
-  float left_phase=1.0, right_phase=-1.0;
   unsigned int i;
-  for( i=0; i<framesPerBuffer; i++ ){
-    *out++ = left_phase;  /* left */
-    *out++ = right_phase;  /* right */
-    /* Generate simple sawtooth phaser that ranges between -1.0 and 1.0. */
-    left_phase += 0.01f;
-    /* When signal reaches top, drop back down. */
-    if( left_phase >= 1.0f ) left_phase -= 2.0f;
-    /* higher pitch so we can distinguish left and right. */
-    right_phase += 0.03f;
-    if( right_phase >= 1.0f ) right_phase -= 2.0f;
+  for( i=req->progress_index; i < req->progress_index + framesPerBuffer;
+       i++ ){
+    if( i < req->audio.get_num_samples() ){
+      *out++ = *(req->audio[i]);  /* left */
+    }else{
+      *out++ = 0; // play silence if we've reqched end of buffer
+    }
+    *out++ = 0;  /* right */
   }
-  return 0;
+  req->progress_index = i; // update progress index
   // we would return 1 when playback is complete (ie when we want the stream
-  // to die)
+  // to die), otherwise return 0
+  return ( i >= req->audio.get_num_samples() );
 }
 
 void AudioDev::nonblocking_play( AudioBuf buf ){
   PaStream *stream;
-  int *data = new int;
-  *data = 0;
-  // TODO: include pointer to buf in $data
+  AudioRequest *play_request = new AudioRequest( buf );
 
   /* Open an audio I/O stream. Opening a *default* stream means opening 
      the default input and output devices */
@@ -86,8 +104,8 @@ void AudioDev::nonblocking_play( AudioBuf buf ){
 			tells PortAudio to pick the best,
 			possibly changing, buffer size.*/
 	 AudioDev::player_callback, /* this is your callback function */
-	 data ) ); /*This is a pointer that will be passed to
-		      your callback*/
+	 play_request ) ); /*This is a pointer that will be passed to
+			     your callback*/
 
   // start playback
   check_error( Pa_StartStream( stream ) );
@@ -135,7 +153,15 @@ void SysInterface::sleep( duration_t duration ){
 bool SysInterface::log( string message, string log_filename ){}
 
 AudioBuf tone( duration_t duration, frequency freq, duration_t delay, 
-	       duration_t fade_time ){}
+	       duration_t fade_time ){
+  // create empty buffer
+  AudioBuf buf = AudioBuf( duration );
+  int i;
+  for( i=0; i < buf.get_num_samples(); i++ ){
+    *(buf[i]) = sin( 2*M_PI * freq * i / SAMPLE_RATE );
+  }
+  return buf;
+}
 
 fft_array_t fft( AudioBuf buf, int N ){}
 
@@ -158,11 +184,10 @@ long log_start_time( string log_filename ){}
 void power_management( frequency freq, float threshold ){}
 
 int main( int argc, char **argv ){
+  duration_t length = 3;
   AudioDev my_audio = AudioDev();
-  AudioBuf my_buf = AudioBuf();
+  AudioBuf my_buf = tone( length, 440 );
   my_audio.nonblocking_play( my_buf ); 
-  while(1){
-    SysInterface::sleep( 1 );
-  }
+  SysInterface::sleep( length ); // give the audio some time to play
   return 0;
 }
