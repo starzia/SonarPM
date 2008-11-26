@@ -5,9 +5,6 @@
  * Under Fedora Linux, package requirements are portaudio-devel and fftw-devel
  */
 #include "sonar.hpp"
-#ifndef WINDOWS
-#include <ctime>
-#endif /* ndef WINDOWS */
 
 using namespace std;
 
@@ -91,6 +88,9 @@ void AudioDev::nonblocking_play( AudioBuf buf ){
 	 AudioDev::player_callback, /* this is your callback function */
 	 data ) ); /*This is a pointer that will be passed to
 		      your callback*/
+
+  // start playback
+  check_error( Pa_StartStream( stream ) );
 }
 
 AudioBuf AudioDev::blocking_record( duration_t duration ){}
@@ -127,8 +127,9 @@ bool SysInterface::sleep_monitor(){}
 
 duration_t SysInterface::idle_seconds(){}
 
-void SysInterface::my_sleep( duration_t duration ){
-  sleep( (int)duration );
+void SysInterface::sleep( duration_t duration ){
+  /* use portaudio's convenient portable sleep function */
+  Pa_Sleep( (int)(duration*1000) );
 }
 
 bool SysInterface::log( string message, string log_filename ){}
@@ -161,7 +162,7 @@ int main( int argc, char **argv ){
   AudioBuf my_buf = AudioBuf();
   my_audio.nonblocking_play( my_buf ); 
   while(1){
-    SysInterface::my_sleep( 1 );
+    SysInterface::sleep( 1 );
   }
   return 0;
 }

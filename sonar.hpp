@@ -111,7 +111,7 @@ class SysInterface{
   static bool sleep_monitor();
   static duration_t idle_seconds();
   /** blocks the process for the specified time */
-  static void my_sleep( duration_t duration );
+  static void sleep( duration_t duration );
   /** appends message to log */
   static bool log( std::string message, std::string log_filename );
 };
