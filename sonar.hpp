@@ -54,7 +54,9 @@ public:
   AudioRequest( AudioBuf buf );
   /** this constructor creates a record request */
   AudioRequest( duration_t len );
-  
+  /** has this request been fully serviced? */
+  bool done();
+
   AudioBuf audio;
   unsigned int progress_index;
 };
@@ -73,6 +75,13 @@ public:
 			      const PaStreamCallbackTimeInfo* timeInfo,
 			      PaStreamCallbackFlags statusFlags,
 			      void *userData );
+  /** This routine will be called by the PortAudio engine when it has audio
+      ready. */
+  static int recorder_callback( const void *inputBuffer, void *outputBuffer,
+				unsigned long framesPerBuffer,
+				const PaStreamCallbackTimeInfo* timeInfo,
+				PaStreamCallbackFlags statusFlags,
+				void *userData );
   void nonblocking_play( AudioBuf buf );
   AudioBuf blocking_record( duration_t duration );
   /** Record the echo of buf */

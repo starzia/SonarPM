@@ -42,7 +42,14 @@ AudioRequest::AudioRequest( AudioBuf buf ){
   this->audio = buf;
 }
 
-AudioRequest::AudioRequest( duration_t len ){}
+AudioRequest::AudioRequest( duration_t len ){
+  this->progress_index = 0; // set to zero so playback starts at beginning
+  this->audio = AudioBuf( len );  
+}
+
+bool AudioRequest::done(){
+  return this->progress_index > this->audio.get_num_samples();
+}
 
 AudioDev::AudioDev(){
   // Initialize PortAudio
@@ -63,14 +70,12 @@ int AudioDev::player_callback( const void *inputBuffer, void *outputBuffer,
 			       PaStreamCallbackFlags statusFlags,
 			       void *userData ){
   /* Cast data passed through stream to our structure. */
-  // in this case, we are storing the index where we left off playback.
   AudioRequest *req = (AudioRequest*)userData; 
-  float *out = (float*)outputBuffer;
+  sample_t *out = (sample_t*)outputBuffer;
   (void) inputBuffer; /* Prevent unused variable warning. */
 
   unsigned int i;
-  for( i=req->progress_index; i < req->progress_index + framesPerBuffer;
-       i++ ){
+  for( i=req->progress_index; i < req->progress_index + framesPerBuffer; i++ ){
     if( i < req->audio.get_num_samples() ){
       *out++ = *(req->audio[i]);  /* left */
     }else{
@@ -81,13 +86,37 @@ int AudioDev::player_callback( const void *inputBuffer, void *outputBuffer,
   req->progress_index = i; // update progress index
   // we would return 1 when playback is complete (ie when we want the stream
   // to die), otherwise return 0
-  return ( i >= req->audio.get_num_samples() );
+  return req->done();
+}
+
+/** here, we are copying data from the input buffer into the AudioBuf.
+    and then updating the progress_index so that we know where
+    to start the next time this callback function is called */
+int AudioDev::recorder_callback( const void *inputBuffer, void *outputBuffer,
+				 unsigned long framesPerBuffer,
+				 const PaStreamCallbackTimeInfo* timeInfo,
+				 PaStreamCallbackFlags statusFlags,
+				 void *userData ){
+  /* Cast data passed through stream to our structure. */
+  AudioRequest *req = (AudioRequest*)userData; 
+  sample_t *in = (sample_t*)inputBuffer;
+  (void) outputBuffer; /* Prevent unused variable warning. */
+
+  unsigned int i;
+  for( i=req->progress_index; i < req->progress_index + framesPerBuffer; i++ ){
+    if( i < req->audio.get_num_samples() ){
+      *(req->audio[i]) = *in++;  /* there is only one channel */
+    }
+  }
+  req->progress_index = i; // update progress index
+  // we would return 1 when playback is complete (ie when we want the stream
+  // to die), otherwise return 0
+  return req->done();
 }
 
 void AudioDev::nonblocking_play( AudioBuf buf ){
   PaStream *stream;
   AudioRequest *play_request = new AudioRequest( buf );
-
   /* Open an audio I/O stream. Opening a *default* stream means opening 
      the default input and output devices */
   check_error( Pa_OpenDefaultStream( 
@@ -106,12 +135,31 @@ void AudioDev::nonblocking_play( AudioBuf buf ){
 	 AudioDev::player_callback, /* this is your callback function */
 	 play_request ) ); /*This is a pointer that will be passed to
 			     your callback*/
-
   // start playback
   check_error( Pa_StartStream( stream ) );
 }
 
-AudioBuf AudioDev::blocking_record( duration_t duration ){}
+AudioBuf AudioDev::blocking_record( duration_t duration ){
+  PaStream *stream;
+  AudioRequest *rec_request = new AudioRequest( duration );
+  /* Open an audio I/O stream. Opening a *default* stream means opening 
+     the default input and output devices */
+  check_error( Pa_OpenDefaultStream( 
+	 &stream,
+	 1,          /* mono input */
+	 0,          /* no output channels */
+	 paFloat32,  /* 32 bit floating point output */
+	 SAMPLE_RATE,
+	 256,        /* frames per buffer */
+	 AudioDev::recorder_callback, /* this is your callback function */
+	 rec_request ) ); /*This is a pointer that will be passed to
+			     your callback*/
+  // start recording
+  check_error( Pa_StartStream( stream ) );
+  // wait until done
+  while( !rec_request->done() ) SysInterface::sleep( 0.1 );
+  return rec_request->audio;
+}
 
 AudioBuf AudioDev::recordback( AudioBuf buf ){}
 
@@ -156,7 +204,7 @@ AudioBuf tone( duration_t duration, frequency freq, duration_t delay,
 	       duration_t fade_time ){
   // create empty buffer
   AudioBuf buf = AudioBuf( duration );
-  int i;
+  unsigned int i;
   for( i=0; i < buf.get_num_samples(); i++ ){
     *(buf[i]) = sin( 2*M_PI * freq * i / SAMPLE_RATE );
   }
@@ -186,7 +234,10 @@ void power_management( frequency freq, float threshold ){}
 int main( int argc, char **argv ){
   duration_t length = 3;
   AudioDev my_audio = AudioDev();
-  AudioBuf my_buf = tone( length, 440 );
+  //AudioBuf my_buf = tone( length, 440 );
+  cout << "recording audio...\n";
+  AudioBuf my_buf = my_audio.blocking_record( length );
+  cout << "playback...\n";
   my_audio.nonblocking_play( my_buf ); 
   SysInterface::sleep( length ); // give the audio some time to play
   return 0;
