@@ -61,6 +61,44 @@ AudioDev::~AudioDev(){
   check_error( Pa_Terminate() );
 }
 
+void AudioDev::choose_device(){
+  // get the total number of devices
+  int numDevices = Pa_GetDeviceCount();
+  if( numDevices < 0 ){
+    printf( "ERROR: Pa_CountDevices returned 0x%x\n", numDevices );
+  }
+
+  // get data on each of the devices
+  cout << "These are the available audio devices:" << endl;
+  const PaDeviceInfo *deviceInfo;
+  int i;
+  for( i=0; i<numDevices; i++ ){
+    deviceInfo = Pa_GetDeviceInfo( i );
+    cout << i << ": ";
+    cout << deviceInfo->name << endl;
+  }
+
+  // prompt user on which of the above devices to use
+  int in_dev_num, out_dev_num;
+  cout << "\nPlease enter an input device number: " << endl;
+  cin >> in_dev_num;
+  cout << "\nPlease enter an output device number: " << endl;
+  cin >> out_dev_num;
+
+  // now create the device definition
+  this->in_params.channelCount = 1;
+  this->in_params.device = in_dev_num;
+  this->in_params.sampleFormat = paFloat32;
+  this->in_params.suggestedLatency = Pa_GetDeviceInfo(in_dev_num)->defaultLowInputLatency ;
+  this->in_params.hostApiSpecificStreamInfo = NULL; //See you specific host's API docs for info on using this field
+
+  this->out_params.channelCount = 2;
+  this->out_params.device = out_dev_num;
+  this->out_params.sampleFormat = paFloat32;
+  this->out_params.suggestedLatency = Pa_GetDeviceInfo(out_dev_num)->defaultLowOutputLatency ;
+  this->out_params.hostApiSpecificStreamInfo = NULL; //See you specific host's API docs for info on using this field
+}
+
 /** here, we are copying data from the AudioBuf (stored in userData) into
     outputBuffer and then updating the progress_index so that we know where
     to start the next time this callback function is called */
@@ -117,26 +155,21 @@ int AudioDev::recorder_callback( const void *inputBuffer, void *outputBuffer,
 void AudioDev::nonblocking_play( AudioBuf buf ){
   PaStream *stream;
   AudioRequest *play_request = new AudioRequest( buf );
-  /* Open an audio I/O stream. Opening a *default* stream means opening 
-     the default input and output devices */
-  check_error( Pa_OpenDefaultStream( 
+  /* Open an audio I/O stream. */
+  check_error( Pa_OpenStream( 
 	 &stream,
-	 0,          /* no input channels */
-	 2,          /* stereo output */
-	 paFloat32,  /* 32 bit floating point output */
+	 NULL,          /* no input channels */
+	 &(this->out_params),
 	 SAMPLE_RATE,
-	 256,        /* frames per buffer, i.e. the number
-			of sample frames that PortAudio will
-			request from the callback. Many apps
-			may want to use
-			paFramesPerBufferUnspecified, which
-			tells PortAudio to pick the best,
-			possibly changing, buffer size.*/
+	 256,   /* frames per buffer */
+	 paNoFlag,
 	 AudioDev::player_callback, /* this is your callback function */
 	 play_request ) ); /*This is a pointer that will be passed to
 			     your callback*/
   // start playback
   check_error( Pa_StartStream( stream ) );
+  // TODO: somehow free up the stream resource when playback stops
+  //check_error( Pa_CloseStream( stream ) );
 }
 
 AudioBuf AudioDev::blocking_record( duration_t duration ){
@@ -158,6 +191,7 @@ AudioBuf AudioDev::blocking_record( duration_t duration ){
   check_error( Pa_StartStream( stream ) );
   // wait until done
   while( !rec_request->done() ) SysInterface::sleep( 0.1 );
+  check_error( Pa_CloseStream( stream ) ); // free up stream resource
   return rec_request->audio;
 }
 
@@ -234,6 +268,9 @@ void power_management( frequency freq, float threshold ){}
 int main( int argc, char **argv ){
   duration_t length = 3;
   AudioDev my_audio = AudioDev();
+
+  my_audio.choose_device();
+
   //AudioBuf my_buf = tone( length, 440 );
   cout << "recording audio...\n";
   AudioBuf my_buf = my_audio.blocking_record( length );

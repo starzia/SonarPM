@@ -67,6 +67,10 @@ public:
   AudioDev();
   /** Destructor closes the recording device */
   ~AudioDev();
+
+  /** this is an interactive function that asks the user which playback and 
+      recording device to use */
+  void choose_device();
   /* This routine will be called by the PortAudio engine when audio is needed.
   ** It may called at interrupt level on some machines so don't do anything
   ** that could mess up the system like calling malloc() or free(). */ 
@@ -86,6 +90,8 @@ public:
   AudioBuf blocking_record( duration_t duration );
   /** Record the echo of buf */
   AudioBuf recordback( AudioBuf buf );
+
+  PaStreamParameters out_params, in_params;
 private:
   /** prints PortAudio error message, if any */
   inline void check_error( PaError err );
