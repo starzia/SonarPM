@@ -4,14 +4,16 @@
  *
  * Under Fedora Linux, package requirements are portaudio-devel and fftw-devel
  */
-#include <iostream>
 #include <string>
-#include <cmath>
 #include <portaudio.h>
 #include <fftw3.h>
+
 #define FFT_POINTS (1024)
 #define WINDOW_SIZE (0.01) /* this is for welch */
 #define SAMPLE_RATE (44100)
+#define CONFIG_FILE_NAME "~/.sonarPM/sonarPM.cfg"
+
+#define PLATFORM_POSIX
 
 using namespace std;
 
@@ -63,14 +65,20 @@ public:
 
 class AudioDev{
 public:
-  /** Constructor opens a new instance of recording device */
+  /** Default constructor prompts user for HW devices, if multiple exist */
   AudioDev();
+  /** Alternative constructor specifies which HW devices to use */
+  AudioDev( unsigned int rec_dev, unsigned int play_dev );
+
   /** Destructor closes the recording device */
   ~AudioDev();
 
   /** this is an interactive function that asks the user which playback and 
-      recording device to use */
+      recording hardware device to use */
   void choose_device();
+  /** or if we already know which devices to use we can specify */
+  void choose_device( unsigned int in_dev_num, unsigned int out_dev_num );
+
   /* This routine will be called by the PortAudio engine when audio is needed.
   ** It may called at interrupt level on some machines so don't do anything
   ** that could mess up the system like calling malloc() or free(). */ 
@@ -111,23 +119,21 @@ public:
   frequency ping_freq;
   float threshold;
   bool phone_home;
-  AudioDev rec_dev;
-  AudioDev play_dev;
-
-  /** Prompt the user to choose their preferred recording and playback devices.
-      This must be done before any audio recording can take place. */
-  void choose_audio_devices();
+  unsigned int rec_dev;
+  unsigned int play_dev;
 
   /** CALIBRATION FUNCTIONS */
   /** Prompt the user to find the best ping frequency.
       Generally, we want to choose a frequency that is both low enough to
       register on the (probably cheap) audio equipment but high enough to be
       inaudible. */
-  frequency choose_ping_freq();
+  void choose_ping_freq();
   /** Choose the variance threshold for presence detection by prompting
       the user.
       NB: ping_freq must already be set!*/
-  float choose_ping_threshold();
+  void choose_ping_threshold();
+  /** Ask the user whether or not to report anonymous statistics */
+  void choose_phone_home();
   /** Plays a series of loud tones to help users adjust their speaker volume */
   void warn_audio_level();
 };

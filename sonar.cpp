@@ -5,12 +5,26 @@
  * Under Fedora Linux, package requirements are portaudio-devel and fftw-devel
  */
 #include "sonar.hpp"
+#include <iostream>
+#include <cmath>
+
+#ifdef PLATFORM_POSIX
+/* The following headers are provided by these packages on a Redhat system:
+ * libX11-devel, libXext-devel, libScrnSaver-devel
+ * There are also some additional dependencies for libX11-devel */
+#include <X11/Xlib.h>
+#include <X11/Xutil.h>
+#include <X11/Xos.h>
+#include <X11/extensions/scrnsaver.h>
+#endif //def PLATFORM_POSIX
 
 using namespace std;
 
 AudioBuf::AudioBuf( ){}
 
-AudioBuf::AudioBuf( string filename ){}
+AudioBuf::AudioBuf( string filename ){
+  cerr << "unimplemented\n";
+}
 
 AudioBuf::AudioBuf( duration_t length ){
   this->num_samples = ceil( length * SAMPLE_RATE );
@@ -21,27 +35,53 @@ sample_t* AudioBuf::operator[]( unsigned int index ){
   return this->data+index;
 }
 
-void AudioBuf::prepend_silence( duration_t silence_duration ){}
+void AudioBuf::prepend_silence( duration_t silence_duration ){
+  cerr << "unimplemented\n";
+}
 
-duration_t AudioBuf::get_length(){}
+duration_t AudioBuf::get_length(){
+  return ( this->num_samples / SAMPLE_RATE );
+}
   
 unsigned int AudioBuf::get_num_samples(){ 
   return this->num_samples;
 }
 
-fft_array_t AudioBuf::get_array(){}
+fft_array_t AudioBuf::get_array(){
+  return this->data;
+}
 
-AudioBuf AudioBuf::window( duration_t length, duration_t start ){}
+AudioBuf AudioBuf::window( duration_t length, duration_t start ){
+  unsigned int start_index;
+  start_index = floor( start * SAMPLE_RATE );
+  AudioBuf ret = AudioBuf( length );
+  unsigned int i;
+  for( i=0; i < ret.get_num_samples(); i++ ){
+    *(ret[i]) = this->data[start_index+i];
+  }
+  return ret;
+}
   
-AudioBuf AudioBuf::repeat( int repetitions ){}
+AudioBuf AudioBuf::repeat( int repetitions ){
+  AudioBuf ret = AudioBuf( this->get_length() * repetitions );
+  unsigned int i;
+  for( i=0; i < ret.get_num_samples(); i++ ){
+    *(ret[i]) = this->data[ i % this->get_num_samples() ];
+  }
+  return ret;
+}
 
-bool AudioBuf::write_to_file( string filename ){}
+bool AudioBuf::write_to_file( string filename ){
+  cerr << "unimplemented\n";
+}
 
 AudioRequest::AudioRequest( AudioBuf buf ){
   this->progress_index = 0; // set to zero so playback starts at beginning
   this->audio = buf;
 }
 
+/** this constructor is used for recording, so we have to allocate an new 
+    audio buffer */
 AudioRequest::AudioRequest( duration_t len ){
   this->progress_index = 0; // set to zero so playback starts at beginning
   this->audio = AudioBuf( len );  
@@ -61,6 +101,22 @@ AudioDev::~AudioDev(){
   check_error( Pa_Terminate() );
 }
 
+void AudioDev::choose_device( unsigned int in_dev_num, 
+			      unsigned int out_dev_num ){
+  // now create the device definition
+  this->in_params.channelCount = 1;
+  this->in_params.device = in_dev_num;
+  this->in_params.sampleFormat = paFloat32;
+  this->in_params.suggestedLatency = Pa_GetDeviceInfo(in_dev_num)->defaultLowInputLatency ;
+  this->in_params.hostApiSpecificStreamInfo = NULL; //See you specific host's API docs for info on using this field
+
+  this->out_params.channelCount = 2;
+  this->out_params.device = out_dev_num;
+  this->out_params.sampleFormat = paFloat32;
+  this->out_params.suggestedLatency = Pa_GetDeviceInfo(out_dev_num)->defaultLowOutputLatency ;
+  this->out_params.hostApiSpecificStreamInfo = NULL; //See you specific host's API docs for info on using this field
+}
+
 void AudioDev::choose_device(){
   // get the total number of devices
   int numDevices = Pa_GetDeviceCount();
@@ -78,25 +134,15 @@ void AudioDev::choose_device(){
     cout << deviceInfo->name << endl;
   }
 
+  unsigned int in_dev_num, out_dev_num;
   // prompt user on which of the above devices to use
-  int in_dev_num, out_dev_num;
   cout << "\nPlease enter an input device number: " << endl;
   cin >> in_dev_num;
   cout << "\nPlease enter an output device number: " << endl;
   cin >> out_dev_num;
 
-  // now create the device definition
-  this->in_params.channelCount = 1;
-  this->in_params.device = in_dev_num;
-  this->in_params.sampleFormat = paFloat32;
-  this->in_params.suggestedLatency = Pa_GetDeviceInfo(in_dev_num)->defaultLowInputLatency ;
-  this->in_params.hostApiSpecificStreamInfo = NULL; //See you specific host's API docs for info on using this field
-
-  this->out_params.channelCount = 2;
-  this->out_params.device = out_dev_num;
-  this->out_params.sampleFormat = paFloat32;
-  this->out_params.suggestedLatency = Pa_GetDeviceInfo(out_dev_num)->defaultLowOutputLatency ;
-  this->out_params.hostApiSpecificStreamInfo = NULL; //See you specific host's API docs for info on using this field
+  // record this choice
+  this->choose_device( in_dev_num, out_dev_num );
 }
 
 /** here, we are copying data from the AudioBuf (stored in userData) into
@@ -202,20 +248,33 @@ inline void AudioDev::check_error( PaError err ){
     printf(  "PortAudio error: %s\n", Pa_GetErrorText( err ) );
 }
 
+/** call calibration functions to create a new configuration */
+Config::Config(){
+  //TODO: choose_audio_devices()
+  this->warn_audio_level();
+  this->choose_ping_freq();
+  this->choose_ping_threshold();
+  this->choose_phone_home();
+}
 
-Config::Config(){}
+Config::Config( string filename ){
+  cerr << "unimplemented\n";
+}
 
-Config::Config( string filename ){}
+bool Config::write_config_file( string filename ){
+  cerr << "unimplemented\n";
+}
 
-bool Config::write_config_file( string filename ){}
-
-void Config::disable_phone_home(){}
+void Config::disable_phone_home(){
+  phone_home = false;
+  this->write_config_file( CONFIG_FILE_NAME );
+}
   
-void Config::choose_audio_devices(){}
-
-frequency Config::choose_ping_freq(){}
+void Config::choose_ping_freq(){}
   
-float Config::choose_ping_threshold(){}
+void Config::choose_ping_threshold(){}
+
+void Config::choose_phone_home(){}
   
 void Config::warn_audio_level(){}
 
@@ -225,7 +284,17 @@ bool Emailer::phone_home( string filename ){}
 
 bool SysInterface::sleep_monitor(){}
 
-duration_t SysInterface::idle_seconds(){}
+duration_t SysInterface::idle_seconds(){
+#ifdef PLATFORM_POSIX
+  Display *dis;
+  XScreenSaverInfo *info;
+  dis = XOpenDisplay((char *)0);
+  Window win = DefaultRootWindow(dis);
+  info = XScreenSaverAllocInfo();
+  XScreenSaverQueryInfo( dis, win, info );
+  return (info->idle)/1000;
+#endif //PLATFORM_POSIX
+}
 
 void SysInterface::sleep( duration_t duration ){
   /* use portaudio's convenient portable sleep function */
