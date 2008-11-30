@@ -20,7 +20,10 @@
 
 using namespace std;
 
-AudioBuf::AudioBuf( ){}
+AudioBuf::AudioBuf( ){
+  this->num_samples=0;
+  this->data = NULL;
+}
 
 AudioBuf::AudioBuf( string filename ){
   cerr << "unimplemented\n";
@@ -28,7 +31,12 @@ AudioBuf::AudioBuf( string filename ){
 
 AudioBuf::AudioBuf( duration_t length ){
   this->num_samples = ceil( length * SAMPLE_RATE );
-  this->data = (fft_array_t)fftw_malloc( sizeof(sample_t)*this->num_samples );
+  this->data = (fft_array_t)fftwf_malloc( sizeof(sample_t)*this->num_samples );
+}
+
+AudioBuf::~AudioBuf(){
+  //TODO: I don't know why the following is causing segfaults
+  //if( this->data ) fftwf_free( this->data ); // free sample array
 }
 
 sample_t* AudioBuf::operator[]( unsigned int index ){
@@ -75,7 +83,7 @@ bool AudioBuf::write_to_file( string filename ){
   cerr << "unimplemented\n";
 }
 
-AudioRequest::AudioRequest( AudioBuf buf ){
+AudioRequest::AudioRequest( const AudioBuf & buf ){
   this->progress_index = 0; // set to zero so playback starts at beginning
   this->audio = buf;
 }
@@ -198,7 +206,7 @@ int AudioDev::recorder_callback( const void *inputBuffer, void *outputBuffer,
   return req->done();
 }
 
-void AudioDev::nonblocking_play( AudioBuf buf ){
+void AudioDev::nonblocking_play( const AudioBuf & buf ){
   PaStream *stream;
   AudioRequest *play_request = new AudioRequest( buf );
   /* Open an audio I/O stream. */
@@ -321,10 +329,27 @@ fft_array_t energy_spectrum( AudioBuf buf, int N ){}
 fft_array_t welch_energy_spectrum( AudioBuf buf, int N, 
 				   duration_t window_size ){}
 
-int freq_index( frequency freq ){}
+int freq_index( frequency freq ){
+  return round( (2.0*freq/SAMPLE_RATE) * FFT_FREQUENCIES );
+}
 
 float freq_energy( AudioBuf buf, frequency freq_of_interest, 
-		   duration_t window_size ){}
+		   duration_t window_size ){
+  float ret;
+  fftwf_complex *out;
+  fftwf_plan p;
+  int N = FFT_FREQUENCIES;
+  // although input is real array, output is complex.
+  out = (fftwf_complex*) fftwf_malloc(sizeof(fftwf_complex) * N);
+  p = fftwf_plan_dft_r2c_1d(N, buf.get_array(), out, FFTW_ESTIMATE);
+  
+  fftwf_execute(p);
+  ret = cabs( out[ freq_index( freq_of_interest ) ] ); //complex abs
+  ret *= ret; // square to get power
+  fftwf_destroy_plan(p);
+  fftwf_free(out);
+  return ret;
+}
 
 Statistics measure_stats( AudioBuf buf, frequency freq ){}
 
@@ -340,11 +365,18 @@ int main( int argc, char **argv ){
 
   my_audio.choose_device();
 
-  //AudioBuf my_buf = tone( length, 440 );
   cout << "recording audio...\n";
   AudioBuf my_buf = my_audio.blocking_record( length );
   cout << "playback...\n";
   my_audio.nonblocking_play( my_buf ); 
   SysInterface::sleep( length ); // give the audio some time to play
+
+  AudioBuf ping;
+  ping = tone( 1, 880 );
+  cout << freq_energy( ping, 800 ) << endl;
+  cout << freq_energy( ping, 850 ) << endl;
+  cout << freq_energy( ping, 880 ) << endl;
+  cout << freq_energy( ping, 910 ) << endl;
+
   return 0;
 }

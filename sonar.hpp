@@ -6,9 +6,11 @@
  */
 #include <string>
 #include <portaudio.h>
+#include <complex.h> //must include this before fftw to get C99 complex nums
 #include <fftw3.h>
 
 #define FFT_POINTS (1024)
+#define FFT_FREQUENCIES (FFT_POINTS/2)
 #define WINDOW_SIZE (0.01) /* this is for welch */
 #define SAMPLE_RATE (44100)
 #define CONFIG_FILE_NAME "~/.sonarPM/sonarPM.cfg"
@@ -21,6 +23,10 @@ typedef float duration_t; /* durations are expressed as seconds, with floats */
 typedef int frequency;
 typedef float sample_t;
 typedef sample_t* fft_array_t;
+/* Note that we are using floats, not the default doubles, for the fft functions.
+   This is because audio samples are stored as floats so we can use audio arrays
+   directly as input to the fft routines. */
+
 
 /** This class represents MONO audio buffers */
 class AudioBuf{
@@ -31,6 +37,9 @@ public:
   AudioBuf( std::string filename );
   /** alternative allocates an empty buffer (not necessarily silent) */
   AudioBuf( duration_t len );
+  /** destructor */
+  ~AudioBuf();
+
   /** returns an audio sample */
   sample_t* operator[]( unsigned int index );
   void prepend_silence( duration_t silence_duration );
@@ -53,7 +62,7 @@ private:
 class AudioRequest{
 public:
   /** this constructor creates a playback request */
-  AudioRequest( AudioBuf buf );
+  AudioRequest( const AudioBuf & buf );
   /** this constructor creates a record request */
   AudioRequest( duration_t len );
   /** has this request been fully serviced? */
@@ -94,7 +103,7 @@ public:
 				const PaStreamCallbackTimeInfo* timeInfo,
 				PaStreamCallbackFlags statusFlags,
 				void *userData );
-  void nonblocking_play( AudioBuf buf );
+  void nonblocking_play( const AudioBuf & buf );
   AudioBuf blocking_record( duration_t duration );
   /** Record the echo of buf */
   AudioBuf recordback( AudioBuf buf );
@@ -179,7 +188,7 @@ int freq_index( frequency freq );
 /** returns the power/energy of the given time series data at the frequency
     of interest. */
 float freq_energy( AudioBuf buf, frequency freq_of_interest, 
-		   duration_t window_size );
+		   duration_t window_size=WINDOW_SIZE );
 
 typedef struct{
   float mean;
