@@ -6,7 +6,6 @@
  */
 #include <string>
 #include <portaudio.h>
-#include <complex.h> //must include this before fftw to get C99 complex nums
 #include <fftw3.h>
 
 #define FFT_POINTS (1024)
@@ -41,18 +40,18 @@ public:
   ~AudioBuf();
 
   /** returns an audio sample */
-  sample_t* operator[]( unsigned int index );
+  sample_t* operator[]( unsigned int index ) const;
   void prepend_silence( duration_t silence_duration );
-  duration_t get_length();
-  unsigned int get_num_samples();
+  duration_t get_length() const;
+  unsigned int get_num_samples() const;
   /** return audio samples as an array for fftw or other processing */
-  fft_array_t get_array();
+  fft_array_t get_array() const;
   /** return a trimmed audio buffer starting at start seconds with a given
       length */
-  AudioBuf window( duration_t length, duration_t start=0 );
+  AudioBuf* window( duration_t length, duration_t start=0 ) const;
   /** return a given number of repetitions of this audio buffer */
-  AudioBuf repeat( int repetitions=2 );
-  bool write_to_file( std::string filename );
+  AudioBuf repeat( int repetitions=2 ) const;
+  bool write_to_file( std::string filename ) const;
 private:
   unsigned int num_samples;
   fft_array_t data;
@@ -196,7 +195,7 @@ typedef struct{
 } Statistics;
 /** Returns the mean and variance of the intensities of a given frequency
     in the audio buffer sampled in windows spread throughout the recording. */
-Statistics measure_stats( AudioBuf buf, frequency freq );
+Statistics measure_stats( const AudioBuf & buf, frequency freq );
 /** cleans up and terminates the program when SIGTERM is received */
 void term_handler( int signum, int frame );
 /** returns the time at which the program was first run, as indicated in

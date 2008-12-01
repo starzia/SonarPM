@@ -7,6 +7,7 @@
 #include "sonar.hpp"
 #include <iostream>
 #include <cmath>
+#include <vector>
 
 #ifdef PLATFORM_POSIX
 /* The following headers are provided by these packages on a Redhat system:
@@ -39,7 +40,7 @@ AudioBuf::~AudioBuf(){
   //if( this->data ) fftwf_free( this->data ); // free sample array
 }
 
-sample_t* AudioBuf::operator[]( unsigned int index ){
+sample_t* AudioBuf::operator[]( unsigned int index ) const{
   return this->data+index;
 }
 
@@ -47,30 +48,30 @@ void AudioBuf::prepend_silence( duration_t silence_duration ){
   cerr << "unimplemented\n";
 }
 
-duration_t AudioBuf::get_length(){
+duration_t AudioBuf::get_length() const{
   return ( this->num_samples / SAMPLE_RATE );
 }
   
-unsigned int AudioBuf::get_num_samples(){ 
+unsigned int AudioBuf::get_num_samples() const{ 
   return this->num_samples;
 }
 
-fft_array_t AudioBuf::get_array(){
+fft_array_t AudioBuf::get_array() const{
   return this->data;
 }
 
-AudioBuf AudioBuf::window( duration_t length, duration_t start ){
+AudioBuf* AudioBuf::window( duration_t length, duration_t start ) const{
   unsigned int start_index;
   start_index = floor( start * SAMPLE_RATE );
-  AudioBuf ret = AudioBuf( length );
+  AudioBuf* ret = new AudioBuf( length );
   unsigned int i;
-  for( i=0; i < ret.get_num_samples(); i++ ){
-    *(ret[i]) = this->data[start_index+i];
+  for( i=0; i < ret->get_num_samples(); i++ ){
+    *((*ret)[i]) = this->data[start_index+i];
   }
   return ret;
 }
   
-AudioBuf AudioBuf::repeat( int repetitions ){
+AudioBuf AudioBuf::repeat( int repetitions ) const{
   AudioBuf ret = AudioBuf( this->get_length() * repetitions );
   unsigned int i;
   for( i=0; i < ret.get_num_samples(); i++ ){
@@ -79,7 +80,7 @@ AudioBuf AudioBuf::repeat( int repetitions ){
   return ret;
 }
 
-bool AudioBuf::write_to_file( string filename ){
+bool AudioBuf::write_to_file( string filename ) const{
   cerr << "unimplemented\n";
 }
 
@@ -335,23 +336,68 @@ int freq_index( frequency freq ){
 
 float freq_energy( AudioBuf buf, frequency freq_of_interest, 
 		   duration_t window_size ){
-  float ret;
-  fftwf_complex *out;
-  fftwf_plan p;
-  int N = FFT_FREQUENCIES;
-  // although input is real array, output is complex.
-  out = (fftwf_complex*) fftwf_malloc(sizeof(fftwf_complex) * N);
-  p = fftwf_plan_dft_r2c_1d(N, buf.get_array(), out, FFTW_ESTIMATE);
-  
-  fftwf_execute(p);
-  ret = cabs( out[ freq_index( freq_of_interest ) ] ); //complex abs
-  ret *= ret; // square to get power
-  fftwf_destroy_plan(p);
-  fftwf_free(out);
-  return ret;
 }
 
-Statistics measure_stats( AudioBuf buf, frequency freq ){}
+/** complex absolute value (float data storage) */
+inline float cabsf( float* c ){
+  return sqrt(c[0]*c[0] + c[1]*c[1]);
+}
+
+Statistics measure_stats( const AudioBuf & buf, frequency freq ){
+  vector<float> energies;
+
+  // set up FFT
+  unsigned int i, N=FFT_POINTS;
+  // although input is real array, output is complex.
+  // use a sliding window
+  duration_t start;
+  unsigned int samples_per_win = floor( WINDOW_SIZE * SAMPLE_RATE );
+  for( start=0; start + samples_per_win < buf.get_num_samples(); 
+       start += samples_per_win ){
+    // allocate buffer for this window
+    float* in = (float*)fftwf_malloc( sizeof(float)*samples_per_win );
+    fftwf_complex *out = (fftwf_complex*)fftwf_malloc( sizeof(fftwf_complex)*N );
+    // prep FFT
+    fftwf_plan p = fftwf_plan_dft_r2c_1d( N, in, out, 
+					  FFTW_ESTIMATE | FFTW_PRESERVE_INPUT );
+    // we must fill in input data AFTER generating plan
+    for( i=0; i<samples_per_win; i++ ){
+      in[i] = *(buf[start+i]);
+      cout << "\t\t" << in[i] << endl;
+    }
+    // do FFT
+    fftwf_execute(p);
+    for( i=0; i<N; i++ ) 
+      cout << '\t' << out[i][0] << endl;
+    float* val = out[ freq_index( freq ) ];
+    cout << "fftval1:" << val[0] <<", " <<val[1] <<endl;
+    float energy = cabsf( val ); //complex absolute value (float)
+    cout << "fftval2:" << energy <<endl;
+    energy *= energy; // square to get power
+    cout << "fftval3:" << energy <<endl<<endl;
+    fftwf_destroy_plan(p);
+    fftwf_free(out);
+    fftwf_free(in);
+
+    energies.push_back( energy );
+    int j;
+    cin >> j;
+  }
+
+  // calculate statistics
+  Statistics ret;
+  ret.mean=0;
+  cout << "energies:\n";
+  for (i=0; i < energies.size(); i++){
+    cout << energies[i] <<endl;
+    ret.mean += energies[i];
+  }
+  ret.mean /= energies.size();
+  ret.variance=0;
+  for (i=0; i < energies.size(); i++)
+    ret.variance += ( energies[i] - ret.mean ) * ( energies[i] - ret.mean );
+  return ret;
+}
 
 void term_handler( int signum, int frame ){}
 
@@ -372,7 +418,10 @@ int main( int argc, char **argv ){
   SysInterface::sleep( length ); // give the audio some time to play
 
   AudioBuf ping;
-  ping = tone( 1, 880 );
+  ping = tone( 1, 8000 );
+  cout << "index into fft array is " << freq_index( 8000 ) << endl;
+  Statistics s = measure_stats( my_buf, 8000 );
+  cout << "mean:" << s.mean << " var:" << s.variance << endl;
   cout << freq_energy( ping, 800 ) << endl;
   cout << freq_energy( ping, 850 ) << endl;
   cout << freq_energy( ping, 880 ) << endl;
