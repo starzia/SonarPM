@@ -170,29 +170,16 @@ class SysInterface{
 AudioBuf tone( duration_t duration=0.5, frequency freq=440, duration_t delay=0, 
 	       duration_t fade_time=0.001 );
 
-/** wrapper for fftw library's fft function */
-fft_array_t fft( AudioBuf buf, int N=FFT_POINTS );
-/** Gives the frequency energy spectrum of an audio buffer, without using
-    windowing.  This is useful for periodic signals.  When using this
-    function, it may be important to trim the buffer to precisely an integer
-    multiple of the fundamental tone's period. */
-fft_array_t energy_spectrum( AudioBuf buf, int N=FFT_POINTS );
-/** Estimates the frequency energy spectrum of an audio buffer by averaging
-    the spectrum over a sliding rectangular window.  
-    I think that this is an implementation of Welch's Method. */
-fft_array_t welch_energy_spectrum( AudioBuf buf, int N=FFT_POINTS, 
-				   duration_t window_size=WINDOW_SIZE );
-/** returns the spectrum index closest to a given frequency. */
 int freq_index( frequency freq );
 /** returns the power/energy of the given time series data at the frequency
     of interest. */
-float freq_energy( AudioBuf buf, frequency freq_of_interest, 
-		   duration_t window_size=WINDOW_SIZE );
 
-typedef struct{
+struct Statistics{
   float mean;
   float variance;
-} Statistics;
+};
+ostream& operator<<(ostream& os, Statistics& s);
+
 /** Returns the mean and variance of the intensities of a given frequency
     in the audio buffer sampled in windows spread throughout the recording. */
 Statistics measure_stats( const AudioBuf & buf, frequency freq );

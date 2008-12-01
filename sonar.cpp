@@ -323,19 +323,8 @@ AudioBuf tone( duration_t duration, frequency freq, duration_t delay,
   return buf;
 }
 
-fft_array_t fft( AudioBuf buf, int N ){}
-
-fft_array_t energy_spectrum( AudioBuf buf, int N ){}
-
-fft_array_t welch_energy_spectrum( AudioBuf buf, int N, 
-				   duration_t window_size ){}
-
 int freq_index( frequency freq ){
   return round( (2.0*freq/SAMPLE_RATE) * FFT_FREQUENCIES );
-}
-
-float freq_energy( AudioBuf buf, frequency freq_of_interest, 
-		   duration_t window_size ){
 }
 
 /** complex absolute value (float data storage) */
@@ -343,6 +332,17 @@ inline float cabsf( float* c ){
   return sqrt(c[0]*c[0] + c[1]*c[1]);
 }
 
+ostream& operator<<(ostream& os, const Statistics& s){
+  os << "{mean:" << s.mean << " var:" << s.variance << '}';
+  return os;
+}
+
+/** We choose a window size to be precisely the same as the number of FFT
+    points.  In other words, we do an exact DFT, and choose a window size
+    small enough so that this computation is not too exensive.
+    Note that there is an explanation of how to take an approximate DFT,
+    that is, find the first K outputs of a real-input FFT at:
+    http://www.fftw.org/pruned.html */
 Statistics measure_stats( const AudioBuf & buf, frequency freq ){
   vector<float> energies;
 
@@ -351,45 +351,38 @@ Statistics measure_stats( const AudioBuf & buf, frequency freq ){
   // although input is real array, output is complex.
   // use a sliding window
   duration_t start;
-  unsigned int samples_per_win = floor( WINDOW_SIZE * SAMPLE_RATE );
-  for( start=0; start + samples_per_win < buf.get_num_samples(); 
-       start += samples_per_win ){
+  for( start=0; start + N < buf.get_num_samples(); start += N ){
     // allocate buffer for this window
-    float* in = (float*)fftwf_malloc( sizeof(float)*samples_per_win );
+    float* in = (float*)fftwf_malloc( sizeof(float)*N );
     fftwf_complex *out = (fftwf_complex*)fftwf_malloc( sizeof(fftwf_complex)*N );
     // prep FFT
     fftwf_plan p = fftwf_plan_dft_r2c_1d( N, in, out, 
 					  FFTW_ESTIMATE | FFTW_PRESERVE_INPUT );
     // we must fill in input data AFTER generating plan
-    for( i=0; i<samples_per_win; i++ ){
+    for( i=0; i<N; i++ ){
       in[i] = *(buf[start+i]);
-      cout << "\t\t" << in[i] << endl;
     }
     // do FFT
     fftwf_execute(p);
-    for( i=0; i<N; i++ ) 
-      cout << '\t' << out[i][0] << endl;
     float* val = out[ freq_index( freq ) ];
-    cout << "fftval1:" << val[0] <<", " <<val[1] <<endl;
+    //cout << "fftval1:" << val[0] <<", " <<val[1] <<endl;
     float energy = cabsf( val ); //complex absolute value (float)
-    cout << "fftval2:" << energy <<endl;
+    //cout << "fftval2:" << energy <<endl;
     energy *= energy; // square to get power
-    cout << "fftval3:" << energy <<endl<<endl;
+    //cout << "fftval3:" << energy <<endl<<endl;
     fftwf_destroy_plan(p);
     fftwf_free(out);
     fftwf_free(in);
 
     energies.push_back( energy );
-    int j;
-    cin >> j;
   }
 
   // calculate statistics
   Statistics ret;
   ret.mean=0;
-  cout << "energies:\n";
+  ///cout << "energies:\n";
   for (i=0; i < energies.size(); i++){
-    cout << energies[i] <<endl;
+    ///  cout << energies[i] <<endl;
     ret.mean += energies[i];
   }
   ret.mean /= energies.size();
@@ -418,14 +411,13 @@ int main( int argc, char **argv ){
   SysInterface::sleep( length ); // give the audio some time to play
 
   AudioBuf ping;
-  ping = tone( 1, 8000 );
-  cout << "index into fft array is " << freq_index( 8000 ) << endl;
-  Statistics s = measure_stats( my_buf, 8000 );
-  cout << "mean:" << s.mean << " var:" << s.variance << endl;
-  cout << freq_energy( ping, 800 ) << endl;
-  cout << freq_energy( ping, 850 ) << endl;
-  cout << freq_energy( ping, 880 ) << endl;
-  cout << freq_energy( ping, 910 ) << endl;
+  ping = tone( 1, 8800 );
+  ///cout << "index into fft array is " << freq_index( 8800 ) << endl;
+  cout << measure_stats( my_buf, 8800 ) << endl;
+  cout << measure_stats( ping, 8000 ) << endl;
+  cout << measure_stats( ping, 8500 ) << endl;
+  cout << measure_stats( ping, 8800 ) << endl;
+  cout << measure_stats( ping, 9100 ) << endl;
 
   return 0;
 }
