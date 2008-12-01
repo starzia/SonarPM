@@ -9,7 +9,7 @@
 #include <cmath>
 #include <vector>
 
-#ifdef PLATFORM_POSIX
+#ifdef PLATFORM_LINUX
 /* The following headers are provided by these packages on a Redhat system:
  * libX11-devel, libXext-devel, libScrnSaver-devel
  * There are also some additional dependencies for libX11-devel */
@@ -17,7 +17,7 @@
 #include <X11/Xutil.h>
 #include <X11/Xos.h>
 #include <X11/extensions/scrnsaver.h>
-#endif //def PLATFORM_POSIX
+#endif //def PLATFORM_LINUX
 
 using namespace std;
 
@@ -207,7 +207,7 @@ int AudioDev::recorder_callback( const void *inputBuffer, void *outputBuffer,
   return req->done();
 }
 
-void AudioDev::nonblocking_play( const AudioBuf & buf ){
+PaStream* AudioDev::nonblocking_play( const AudioBuf & buf ){
   PaStream *stream;
   AudioRequest *play_request = new AudioRequest( buf );
   /* Open an audio I/O stream. */
@@ -223,8 +223,8 @@ void AudioDev::nonblocking_play( const AudioBuf & buf ){
 			     your callback*/
   // start playback
   check_error( Pa_StartStream( stream ) );
-  // TODO: somehow free up the stream resource when playback stops
-  //check_error( Pa_CloseStream( stream ) );
+  // caller is responsible for freeing stream
+  return stream;
 }
 
 AudioBuf AudioDev::blocking_record( duration_t duration ){
@@ -250,7 +250,17 @@ AudioBuf AudioDev::blocking_record( duration_t duration ){
   return rec_request->audio;
 }
 
-AudioBuf AudioDev::recordback( AudioBuf buf ){}
+/** This function could probably be more accurately (re synchronization)
+    implemented by creating a new duplex stream.  For sonar purposes,
+    it shouldn't be necessary*/
+AudioBuf AudioDev::recordback( const AudioBuf & buf ){
+  // play audio
+  PaStream* s = nonblocking_play( buf );
+  // record echo
+  AudioBuf ret = blocking_record( buf.get_length() );
+  AudioDev::check_error( Pa_CloseStream( s ) ); // close stream to free up dev
+  return ret;
+}
 
 inline void AudioDev::check_error( PaError err ){
   if( err != paNoError )
@@ -279,22 +289,36 @@ void Config::disable_phone_home(){
   this->write_config_file( CONFIG_FILE_NAME );
 }
   
-void Config::choose_ping_freq(){}
+void Config::choose_ping_freq(){
+  cerr << "unimplemented\n";
+}
   
-void Config::choose_ping_threshold(){}
+void Config::choose_ping_threshold(){
+  cerr << "unimplemented\n";
+}
 
-void Config::choose_phone_home(){}
+void Config::choose_phone_home(){
+  cerr << "unimplemented\n";
+}
   
-void Config::warn_audio_level(){}
+void Config::warn_audio_level(){
+  cerr << "unimplemented\n";
+}
 
-Emailer::Emailer( string dest_addr ){}
+Emailer::Emailer( string dest_addr ){
+  cerr << "unimplemented\n";
+}
 
-bool Emailer::phone_home( string filename ){}
+bool Emailer::phone_home( string filename ){
+  cerr << "unimplemented\n";
+}
 
-bool SysInterface::sleep_monitor(){}
+bool SysInterface::sleep_monitor(){
+  cerr << "unimplemented\n";
+}
 
 duration_t SysInterface::idle_seconds(){
-#ifdef PLATFORM_POSIX
+#ifdef PLATFORM_LINUX
   Display *dis;
   XScreenSaverInfo *info;
   dis = XOpenDisplay((char *)0);
@@ -302,7 +326,7 @@ duration_t SysInterface::idle_seconds(){
   info = XScreenSaverAllocInfo();
   XScreenSaverQueryInfo( dis, win, info );
   return (info->idle)/1000;
-#endif //PLATFORM_POSIX
+#endif //PLATFORM_LINUX
 }
 
 void SysInterface::sleep( duration_t duration ){
@@ -319,6 +343,7 @@ AudioBuf tone( duration_t duration, frequency freq, duration_t delay,
   unsigned int i;
   for( i=0; i < buf.get_num_samples(); i++ ){
     *(buf[i]) = sin( 2*M_PI * freq * i / SAMPLE_RATE );
+    
   }
   return buf;
 }
@@ -346,15 +371,17 @@ ostream& operator<<(ostream& os, const Statistics& s){
 Statistics measure_stats( const AudioBuf & buf, frequency freq ){
   vector<float> energies;
 
-  // set up FFT
   unsigned int i, N=FFT_POINTS;
-  // although input is real array, output is complex.
+
   // use a sliding window
   duration_t start;
   for( start=0; start + N < buf.get_num_samples(); start += N ){
+    // set up FFT
     // allocate buffer for this window
     float* in = (float*)fftwf_malloc( sizeof(float)*N );
+    // although input is real array, output is complex.
     fftwf_complex *out = (fftwf_complex*)fftwf_malloc( sizeof(fftwf_complex)*N );
+
     // prep FFT
     fftwf_plan p = fftwf_plan_dft_r2c_1d( N, in, out, 
 					  FFTW_ESTIMATE | FFTW_PRESERVE_INPUT );
@@ -392,11 +419,17 @@ Statistics measure_stats( const AudioBuf & buf, frequency freq ){
   return ret;
 }
 
-void term_handler( int signum, int frame ){}
+void term_handler( int signum, int frame ){
+  cerr << "unimplemented\n";
+}
 
-long log_start_time( string log_filename ){}
+long log_start_time( string log_filename ){
+  cerr << "unimplemented\n";
+}
 
-void power_management( frequency freq, float threshold ){}
+void power_management( frequency freq, float threshold ){
+  cerr << "unimplemented\n";
+}
 
 int main( int argc, char **argv ){
   duration_t length = 3;
@@ -404,20 +437,28 @@ int main( int argc, char **argv ){
 
   my_audio.choose_device();
 
+  cout << "First, do some debugging\n";
   cout << "recording audio...\n";
   AudioBuf my_buf = my_audio.blocking_record( length );
   cout << "playback...\n";
-  my_audio.nonblocking_play( my_buf ); 
-  SysInterface::sleep( length ); // give the audio some time to play
+  PaStream* s = my_audio.nonblocking_play( my_buf ); 
+  SysInterface::sleep( length+1 ); // give the audio some time to play
+  AudioDev::check_error( Pa_CloseStream( s ) ); // close stream to free up dev
 
   AudioBuf ping;
-  ping = tone( 1, 8800 );
-  ///cout << "index into fft array is " << freq_index( 8800 ) << endl;
-  cout << measure_stats( my_buf, 8800 ) << endl;
-  cout << measure_stats( ping, 8000 ) << endl;
-  cout << measure_stats( ping, 8500 ) << endl;
-  cout << measure_stats( ping, 8800 ) << endl;
-  cout << measure_stats( ping, 9100 ) << endl;
+  int freq = 18500;
+  ping = tone( 1, freq );
+  ///cout << "index into fft array is " << freq_index( freq ) << endl;
+  cout << measure_stats( my_buf, freq ) << endl;
+  cout << measure_stats( ping, 0.9*freq ) << endl;
+  cout << measure_stats( ping, freq ) << endl;
+  cout << measure_stats( ping, 1.1*freq ) << endl;
 
+  cout << "Begin pinging loop at frequency of " <<freq<<"Hz"<<endl;
+  while( 1 ){
+    AudioBuf rec = my_audio.recordback( ping );
+    cout << measure_stats( rec, freq ) << endl;
+    //SysInterface::sleep( 1 ); // sleep briefly between pings
+  }
   return 0;
 }

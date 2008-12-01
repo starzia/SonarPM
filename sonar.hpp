@@ -14,7 +14,7 @@
 #define SAMPLE_RATE (44100)
 #define CONFIG_FILE_NAME "~/.sonarPM/sonarPM.cfg"
 
-#define PLATFORM_POSIX
+#define PLATFORM_LINUX
 
 using namespace std;
 
@@ -102,15 +102,14 @@ public:
 				const PaStreamCallbackTimeInfo* timeInfo,
 				PaStreamCallbackFlags statusFlags,
 				void *userData );
-  void nonblocking_play( const AudioBuf & buf );
+  PaStream* nonblocking_play( const AudioBuf & buf );
   AudioBuf blocking_record( duration_t duration );
   /** Record the echo of buf */
-  AudioBuf recordback( AudioBuf buf );
+  AudioBuf recordback( const AudioBuf & buf );
 
   PaStreamParameters out_params, in_params;
-private:
   /** prints PortAudio error message, if any */
-  inline void check_error( PaError err );
+  static inline void check_error( PaError err );
 };
 
 /** stores and elicits the program configuration */
