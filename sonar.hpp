@@ -14,7 +14,7 @@
 #define SAMPLE_RATE (44100)
 #define CONFIG_FILE_NAME "~/.sonarPM/sonarPM.cfg"
 
-#define PLATFORM_LINUX
+//#define PLATFORM_LINUX
 
 using namespace std;
 
@@ -167,7 +167,7 @@ class SysInterface{
     Delay, in seconds, is silent time added to before tone.
     FADE_SAMPLES is the length of the fade in and out periods. */
 AudioBuf tone( duration_t duration=0.5, frequency freq=440, duration_t delay=0, 
-	       duration_t fade_time=0.001 );
+	       unsigned int fade_samples=441 );
 
 int freq_index( frequency freq );
 /** returns the power/energy of the given time series data at the frequency

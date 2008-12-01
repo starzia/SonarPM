@@ -337,13 +337,18 @@ void SysInterface::sleep( duration_t duration ){
 bool SysInterface::log( string message, string log_filename ){}
 
 AudioBuf tone( duration_t duration, frequency freq, duration_t delay, 
-	       duration_t fade_time ){
+	       unsigned int fade_samples ){
   // create empty buffer
   AudioBuf buf = AudioBuf( duration );
-  unsigned int i;
-  for( i=0; i < buf.get_num_samples(); i++ ){
+  unsigned int i, end_i = buf.get_num_samples();
+  for( i=0; i < end_i; i++ ){
     *(buf[i]) = sin( 2*M_PI * freq * i / SAMPLE_RATE );
-    
+  }
+  // fade in and fade out to prevent 'click' sound
+  for( i=0; i<fade_samples; i++ ){
+    float attenuation = 1.0*i/fade_samples;
+    *(buf[i]) = attenuation * *(buf[i]);
+    *(buf[end_i-1-i]) = attenuation * *(buf[end_i-1-i]);
   }
   return buf;
 }
@@ -446,8 +451,8 @@ int main( int argc, char **argv ){
   AudioDev::check_error( Pa_CloseStream( s ) ); // close stream to free up dev
 
   AudioBuf ping;
-  int freq = 18500;
-  ping = tone( 1, freq );
+  int freq = 18000;
+  ping = tone( 1, freq ); //duration is one second
   ///cout << "index into fft array is " << freq_index( freq ) << endl;
   cout << measure_stats( my_buf, freq ) << endl;
   cout << measure_stats( ping, 0.9*freq ) << endl;
