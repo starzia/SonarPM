@@ -5,9 +5,25 @@
  * Under Fedora Linux, package requirements are portaudio-devel and fftw-devel
  */
 #include "sonar.hpp"
+#include "SimpleIni.h" // for config files
 #include <iostream>
 #include <cmath>
 #include <vector>
+#include <sstream>
+
+#define FFT_POINTS (1024)
+#define FFT_FREQUENCIES (FFT_POINTS/2)
+#define TONE_LENGTH (3) /* sonar ping length */
+#define WINDOW_SIZE (0.01) /* this is for welch */
+#define SAMPLE_RATE (44100)
+#define CONFIG_FILENAME "/home/steve/.sonarPM/sonarPM.cfg"
+#define LOG_FILENAME "/home/steve/.sonarPM/log.txt"
+#define PHONE_HOME_ADDR "storage@stevetarzia.com"
+
+// One of the following should be defined to activate platform-specific code.
+//#define PLATFORM_LINUX
+//#define PLATFORM_WINDOWS
+//#define PLATFORM_MAC
 
 #ifdef PLATFORM_LINUX
 /* The following headers are provided by these packages on a Redhat system:
@@ -126,7 +142,7 @@ void AudioDev::choose_device( unsigned int in_dev_num,
   this->out_params.hostApiSpecificStreamInfo = NULL; //See you specific host's API docs for info on using this field
 }
 
-void AudioDev::choose_device(){
+pair<unsigned int,unsigned int> AudioDev::prompt_device(){
   // get the total number of devices
   int numDevices = Pa_GetDeviceCount();
   if( numDevices < 0 ){
@@ -152,6 +168,7 @@ void AudioDev::choose_device(){
 
   // record this choice
   this->choose_device( in_dev_num, out_dev_num );
+  return make_pair( in_dev_num, out_dev_num );
 }
 
 /** here, we are copying data from the AudioBuf (stored in userData) into
@@ -268,32 +285,126 @@ inline void AudioDev::check_error( PaError err ){
 }
 
 /** call calibration functions to create a new configuration */
-Config::Config(){
-  //TODO: choose_audio_devices()
-  this->warn_audio_level();
-  this->choose_ping_freq();
-  this->choose_ping_threshold();
-  this->choose_phone_home();
+Config::Config( AudioDev & audio ){
+  pair<unsigned int,unsigned int> devices = audio.prompt_device();
+  this->rec_dev = devices.first;
+  this->play_dev = devices.second;
+  this->warn_audio_level( audio );
+  this->choose_ping_freq( audio );
+  this->choose_ping_threshold( audio );
+  //this->choose_phone_home( );
+  this->allow_phone_home=true;
 }
 
 Config::Config( string filename ){
-  cerr << "unimplemented\n";
+  // load from a data file                                                    
+  CSimpleIniA ini(false,false,false);
+  SI_Error rc = ini.LoadFile( filename.c_str() );
+  if (rc < 0){
+    cerr<< "error opening config file "<<filename<<endl;
+  }
+  
+  // get the key values 
+  stringstream ss;
+  ss << ini.GetValue("general","phone_home" );
+  ss >> this->allow_phone_home;
+  ss << ini.GetValue("general","recording_device" );
+  ss >> this->rec_dev;
+  ss << ini.GetValue("general","playback_device" );
+  ss >> this->play_dev;
+  ss << ini.GetValue("calibration","frequency" );
+  ss >> this->ping_freq;
+  ss << ini.GetValue("calibration","threshold" );
+  ss >> this->threshold;
 }
 
 bool Config::write_config_file( string filename ){
-  cerr << "unimplemented\n";
+  CSimpleIniA ini(false,false,false);
+  // set the key values
+  ostringstream ss;
+  string str;
+  ss.str(""); // reset stringstream
+  ss << this->allow_phone_home;
+  ini.SetValue("general","phone_home", ss.str().c_str());
+  ss.str("");
+  ss << this->rec_dev;
+  ini.SetValue("general","recording_device", ss.str().c_str());
+  ss.str("");
+  ss << this->play_dev;
+  ini.SetValue("general","playback_device", ss.str().c_str());
+  ss.str("");
+  ss << this->ping_freq;
+  ini.SetValue("calibration","frequency", ss.str().c_str());
+  ss.str("");
+  ss << this->threshold;
+  ini.SetValue("calibration","threshold", ss.str().c_str());
+
+  // write to file
+  SI_Error rc = ini.SaveFile( filename.c_str() );
+  if (rc < 0){
+    cerr<< "error opening config file "<<filename<<endl;
+    return false;
+  }
+  return true;
 }
 
 void Config::disable_phone_home(){
-  phone_home = false;
-  this->write_config_file( CONFIG_FILE_NAME );
+  this->allow_phone_home = false;
+  this->write_config_file( CONFIG_FILENAME );
 }
   
-void Config::choose_ping_freq(){
-  cerr << "unimplemented\n";
+void Config::choose_ping_freq( AudioDev & audio ){
+  // We start with 20khz and reduce it until we get a reading on the mic.
+  cout <<""<<endl
+       <<"This power management system uses sonar to detect whether you are sitting"<<endl
+       <<"in front of the computer.  This means that the computer plays a very high"<<endl
+       <<"frequency sound while recording the echo of that sound (and then doing"<<endl
+       <<"some signal processing).  The calibration procedure that follows will try"<<endl
+       <<"to choose a sound frequency that is low enough to register on your"<<endl
+       <<"computer's microphone but high enough to be inaudible to you.  Note that"<<endl
+       <<"younger persons and animals are generally more sensitive to high frequency"<<endl
+       <<"noises.  Therefore, we advise you not to use this software in the company"<<endl
+       <<"of children or pets."<<endl;
+  ///AudioBuf silence = tone( TONE_LENGTH, 0 );
+  ///AudioBuf silence_rec = audio.recordback( silence );
+  frequency start_freq = 22000;
+  frequency freq = start_freq;
+  // below, we subtract two readings because they are logarithms
+  float scaling_factor = 0.95;
+  cout << endl
+       <<"Please press <enter> and listen carefully to continue with the "<<endl
+       <<"calibration."<<endl;
+  cin.ignore();
+  cin.get();
+  while( 1 ){
+    freq *= scaling_factor;
+    AudioBuf blip = tone( TONE_LENGTH, freq );
+    AudioBuf rec = audio.recordback( blip );
+    Statistics blip_s = measure_stats( rec, freq );
+    ///Statistics silence_s = measure_stats( silence_rec, freq );
+    cout << "Did you just hear a high frequency ("<<round(freq)<<"Hz) tone? [yes/no]"
+	 <<endl;
+    string ans;
+    cin >> ans;
+    if( ans == "yes" or ans == "Yes" or ans == "YES" or ans=="Y" or ans=="y"){
+      freq /= scaling_factor;
+      break;
+    }
+    // at some point stop descending frequency loop
+    if( freq >= start_freq ){
+      cout << "Your hearing is too good (or your speakers are too noisy)."<<endl;
+      cout <<"CANNOT CONTINUE"<<endl;
+      SysInterface::log( "freq>=start_freq" );
+      phone_home();
+      exit(-1);
+    }
+  }
+  freq = round( freq );
+  cout << "chose frequency of "<<freq<<endl;
+  this->ping_freq = freq;
 }
   
-void Config::choose_ping_threshold(){
+void Config::choose_ping_threshold( AudioDev & audio ){
   cerr << "unimplemented\n";
 }
 
@@ -301,7 +412,7 @@ void Config::choose_phone_home(){
   cerr << "unimplemented\n";
 }
   
-void Config::warn_audio_level(){
+void Config::warn_audio_level( AudioDev & audio ){
   cerr << "unimplemented\n";
 }
 
@@ -311,6 +422,11 @@ Emailer::Emailer( string dest_addr ){
 
 bool Emailer::phone_home( string filename ){
   cerr << "unimplemented\n";
+}
+
+bool phone_home(){
+  Emailer email( PHONE_HOME_ADDR );
+  email.phone_home( LOG_FILENAME );
 }
 
 bool SysInterface::sleep_monitor(){
@@ -327,6 +443,10 @@ duration_t SysInterface::idle_seconds(){
   XScreenSaverQueryInfo( dis, win, info );
   return (info->idle)/1000;
 #endif //PLATFORM_LINUX
+#ifdef PLATFORM_WINDOWS
+#endif //PLATFORM_WINDOWS
+#ifdef PLATFORM_MAC
+#endif //PLATFORM_MAC
 }
 
 void SysInterface::sleep( duration_t duration ){
@@ -334,7 +454,7 @@ void SysInterface::sleep( duration_t duration ){
   Pa_Sleep( (int)(duration*1000) );
 }
 
-bool SysInterface::log( string message, string log_filename ){}
+bool SysInterface::log( string message ){}
 
 AudioBuf tone( duration_t duration, frequency freq, duration_t delay, 
 	       unsigned int fade_samples ){
@@ -428,7 +548,7 @@ void term_handler( int signum, int frame ){
   cerr << "unimplemented\n";
 }
 
-long log_start_time( string log_filename ){
+long get_log_start_time( ){
   cerr << "unimplemented\n";
 }
 
@@ -440,7 +560,8 @@ int main( int argc, char **argv ){
   duration_t length = 3;
   AudioDev my_audio = AudioDev();
 
-  my_audio.choose_device();
+  Config conf( my_audio );
+  conf.write_config_file( CONFIG_FILENAME );
 
   cout << "First, do some debugging\n";
   cout << "recording audio...\n";

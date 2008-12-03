@@ -8,16 +8,6 @@
 #include <portaudio.h>
 #include <fftw3.h>
 
-#define FFT_POINTS (1024)
-#define FFT_FREQUENCIES (FFT_POINTS/2)
-#define WINDOW_SIZE (0.01) /* this is for welch */
-#define SAMPLE_RATE (44100)
-#define CONFIG_FILE_NAME "~/.sonarPM/sonarPM.cfg"
-
-//#define PLATFORM_LINUX
-
-using namespace std;
-
 typedef float duration_t; /* durations are expressed as seconds, with floats */
 typedef int frequency;
 typedef float sample_t;
@@ -82,8 +72,9 @@ public:
   ~AudioDev();
 
   /** this is an interactive function that asks the user which playback and 
-      recording hardware device to use */
-  void choose_device();
+      recording hardware device to use.
+      Returns recording and playback device numbers.*/
+  std::pair<unsigned int,unsigned int> prompt_device();
   /** or if we already know which devices to use we can specify */
   void choose_device( unsigned int in_dev_num, unsigned int out_dev_num );
 
@@ -115,8 +106,8 @@ public:
 /** stores and elicits the program configuration */
 class Config{
 public:
-  /** default, empty contructor, calls the calibration functions */
-  Config();
+  /** This contructor calls the calibration functions */
+  Config( AudioDev & audio );
   /** load config from file */
   Config( std::string filename );
   bool write_config_file( std::string filename );
@@ -125,7 +116,7 @@ public:
   
   frequency ping_freq;
   float threshold;
-  bool phone_home;
+  bool allow_phone_home;
   unsigned int rec_dev;
   unsigned int play_dev;
 
@@ -134,24 +125,28 @@ public:
       Generally, we want to choose a frequency that is both low enough to
       register on the (probably cheap) audio equipment but high enough to be
       inaudible. */
-  void choose_ping_freq();
+  void choose_ping_freq( AudioDev & audio );
   /** Choose the variance threshold for presence detection by prompting
       the user.
       NB: ping_freq must already be set!*/
-  void choose_ping_threshold();
+  void choose_ping_threshold( AudioDev & audio );
   /** Ask the user whether or not to report anonymous statistics */
   void choose_phone_home();
   /** Plays a series of loud tones to help users adjust their speaker volume */
-  void warn_audio_level();
+  void warn_audio_level( AudioDev & audio );
 };
 
 class Emailer{
+public:
   Emailer( std::string dest_addr );
   /** sends the filename to destination_address */
   bool phone_home( std::string filename );
   /** this is the email address that we phone home to */
   std::string destination_address;
 };
+
+/** creates an Emailer object and calls its phone_home fcn */
+bool phone_home();
 
 class SysInterface{
  public:
@@ -160,7 +155,7 @@ class SysInterface{
   /** blocks the process for the specified time */
   static void sleep( duration_t duration );
   /** appends message to log */
-  static bool log( std::string message, std::string log_filename );
+  static bool log( std::string message );
 };
 
 /** duration is in seconds and freq is the  tone pitch.  
@@ -177,7 +172,7 @@ struct Statistics{
   float mean;
   float variance;
 };
-ostream& operator<<(ostream& os, Statistics& s);
+std::ostream& operator<<(std::ostream& os, Statistics& s);
 
 /** Returns the mean and variance of the intensities of a given frequency
     in the audio buffer sampled in windows spread throughout the recording. */
@@ -186,7 +181,7 @@ Statistics measure_stats( const AudioBuf & buf, frequency freq );
 void term_handler( int signum, int frame );
 /** returns the time at which the program was first run, as indicated in
     the logfile. */
-long log_start_time( std::string log_filename );
+long get_log_start_time( );
 /** This is the main program loop.  It checks for a user and powers down
     the display if it's reasonably confident that no one is there */
 void power_management( frequency freq, float threshold );
