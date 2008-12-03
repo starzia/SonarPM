@@ -86,6 +86,13 @@ public:
 			      const PaStreamCallbackTimeInfo* timeInfo,
 			      PaStreamCallbackFlags statusFlags,
 			      void *userData );
+  /** this is similar to player_callback except that the audio is looped
+      indefinitely */
+  static int oscillator_callback( const void *inputBuffer, void *outputBuffer,
+				  unsigned long framesPerBuffer,
+				  const PaStreamCallbackTimeInfo* timeInfo,
+				  PaStreamCallbackFlags statusFlags,
+				  void *userData );
   /** This routine will be called by the PortAudio engine when it has audio
       ready. */
   static int recorder_callback( const void *inputBuffer, void *outputBuffer,

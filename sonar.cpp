@@ -13,7 +13,7 @@
 
 #define FFT_POINTS (1024)
 #define FFT_FREQUENCIES (FFT_POINTS/2)
-#define TONE_LENGTH (3) /* sonar ping length */
+#define TONE_LENGTH (0.3) /* sonar ping length */
 #define WINDOW_SIZE (0.01) /* this is for welch */
 #define SAMPLE_RATE (44100)
 #define CONFIG_FILENAME "/home/steve/.sonarPM/sonarPM.cfg"
@@ -197,6 +197,26 @@ int AudioDev::player_callback( const void *inputBuffer, void *outputBuffer,
   // we would return 1 when playback is complete (ie when we want the stream
   // to die), otherwise return 0
   return req->done();
+}
+
+/** Similiar to player_callback, but "wrap around" buffer indices */
+int AudioDev::oscillator_callback( const void *inputBuffer, void *outputBuffer,
+				   unsigned long framesPerBuffer,
+				   const PaStreamCallbackTimeInfo* timeInfo,
+				   PaStreamCallbackFlags statusFlags,
+				   void *userData ){
+  /* Cast data passed through stream to our structure. */
+  AudioRequest *req = (AudioRequest*)userData; 
+  sample_t *out = (sample_t*)outputBuffer;
+  (void) inputBuffer; /* Prevent unused variable warning. */
+
+  unsigned int i, total_samples = req->audio.get_num_samples();
+  for( i=0; i<framesPerBuffer; i++ ){
+    *out++ = *(req->audio[ ( req->progress_index + i ) % total_samples ]);  /* left */
+    *out++ = 0;  /* right */
+  }
+  req->progress_index = i; // update progress index
+  return 0; // returning 0 makes the stream stay alive.
 }
 
 /** here, we are copying data from the input buffer into the AudioBuf.
