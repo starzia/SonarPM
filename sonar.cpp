@@ -13,7 +13,8 @@
 
 #define FFT_POINTS (1024)
 #define FFT_FREQUENCIES (FFT_POINTS/2)
-#define TONE_LENGTH (0.3) /* sonar ping length */
+#define TONE_LENGTH (1) /* sonar ping length for calibration */
+#define RECORDING_PERIOD (0.3) /* this is the time period over which stats are calulated */
 #define WINDOW_SIZE (0.01) /* this is for welch */
 #define SAMPLE_RATE (44100)
 #define CONFIG_FILENAME "/home/steve/.sonarPM/sonarPM.cfg"
@@ -256,6 +257,26 @@ PaStream* AudioDev::nonblocking_play( const AudioBuf & buf ){
 	 256,   /* frames per buffer */
 	 paNoFlag,
 	 AudioDev::player_callback, /* this is your callback function */
+	 play_request ) ); /*This is a pointer that will be passed to
+			     your callback*/
+  // start playback
+  check_error( Pa_StartStream( stream ) );
+  // caller is responsible for freeing stream
+  return stream;
+}
+
+PaStream* AudioDev::nonblocking_play_loop( const AudioBuf & buf ){
+  PaStream *stream;
+  AudioRequest *play_request = new AudioRequest( buf );
+  /* Open an audio I/O stream. */
+  check_error( Pa_OpenStream( 
+	 &stream,
+	 NULL,          /* no input channels */
+	 &(this->out_params),
+	 SAMPLE_RATE,
+	 256,   /* frames per buffer */
+	 paNoFlag,
+	 AudioDev::oscillator_callback, /* this is your callback function */
 	 play_request ) ); /*This is a pointer that will be passed to
 			     your callback*/
   // start playback
@@ -577,34 +598,29 @@ void power_management( frequency freq, float threshold ){
 }
 
 int main( int argc, char **argv ){
-  duration_t length = 3;
   AudioDev my_audio = AudioDev();
 
   Config conf( my_audio );
   conf.write_config_file( CONFIG_FILENAME );
 
-  cout << "First, do some debugging\n";
+  duration_t test_length = 3;
+  cout << "First, we are going to record and playback to test the audio HW.\n";
   cout << "recording audio...\n";
-  AudioBuf my_buf = my_audio.blocking_record( length );
-  cout << "playback...\n";
+  AudioBuf my_buf = my_audio.blocking_record( test_length );
+  cout << "playing back the recording...\n";
   PaStream* s = my_audio.nonblocking_play( my_buf ); 
-  SysInterface::sleep( length+1 ); // give the audio some time to play
+  SysInterface::sleep( test_length ); // give the audio some time to play
   AudioDev::check_error( Pa_CloseStream( s ) ); // close stream to free up dev
 
-  AudioBuf ping;
-  int freq = 18000;
-  ping = tone( 1, freq ); //duration is one second
-  ///cout << "index into fft array is " << freq_index( freq ) << endl;
-  cout << measure_stats( my_buf, freq ) << endl;
-  cout << measure_stats( ping, 0.9*freq ) << endl;
-  cout << measure_stats( ping, freq ) << endl;
-  cout << measure_stats( ping, 1.1*freq ) << endl;
-
-  cout << "Begin pinging loop at frequency of " <<freq<<"Hz"<<endl;
+  // buffer duration is one second, but actually it just needs to be a multiple
+  // of the ping_period.
+  AudioBuf ping = tone( 1, conf.ping_freq ); 
+  cout << "Begin pinging loop at frequency of " <<conf.ping_freq<<"Hz"<<endl;
+  s = my_audio.nonblocking_play_loop( ping );
   while( 1 ){
-    AudioBuf rec = my_audio.recordback( ping );
-    cout << measure_stats( rec, freq ) << endl;
-    //SysInterface::sleep( 1 ); // sleep briefly between pings
+    AudioBuf rec = my_audio.blocking_record( RECORDING_PERIOD );
+    cout << measure_stats( rec, conf.ping_freq ) << endl;
   }
+  AudioDev::check_error( Pa_CloseStream( s ) ); // close stream to free up dev
   return 0;
 }
