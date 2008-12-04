@@ -11,20 +11,23 @@
 #include <vector>
 #include <sstream>
 
-#define TONE_LENGTH (1) /* sonar ping length for calibration */
-#define RECORDING_PERIOD (0.2) /* this is the time period over which stats are calulated */
-#define WINDOW_SIZE (0.01) /* sliding window size */
+#define TONE_LENGTH (1) // sonar ping length for calibration
+#define RECORDING_PERIOD (0.3) // this is the time period over which stats are calulated
+#define WINDOW_SIZE (0.01) // sliding window size
 #define SAMPLE_RATE (44100)
 #define CONFIG_FILENAME "/home/steve/.sonarPM/sonarPM.cfg"
 #define LOG_FILENAME "/home/steve/.sonarPM/log.txt"
 #define PHONE_HOME_ADDR "storage@stevetarzia.com"
+#define SLEEP_TIME (1) // sleep time between idleness checks
+#define IDLE_THRESH (5) // don't activate sonar until idle for this long
 
 // One of the following should be defined to activate platform-specific code.
+// It is best to make this choice in the Makefile
 //#define PLATFORM_LINUX
 //#define PLATFORM_WINDOWS
 //#define PLATFORM_MAC
 
-#ifdef PLATFORM_LINUX
+#if defined PLATFORM_LINUX
 /* The following headers are provided by these packages on a Redhat system:
  * libX11-devel, libXext-devel, libScrnSaver-devel
  * There are also some additional dependencies for libX11-devel */
@@ -32,7 +35,12 @@
 #include <X11/Xutil.h>
 #include <X11/Xos.h>
 #include <X11/extensions/scrnsaver.h>
-#endif //def PLATFORM_LINUX
+#include <stdlib.h>
+#elif defined PLATFORM_WINDOWS
+#elif defined PLATFORM_MAC
+#include <stdlib.h>
+#endif
+
 
 using namespace std;
 
@@ -362,7 +370,6 @@ Config::Config( AudioDev & audio, string filename ){
     ss.clear();
     ss.str( ini.GetValue("calibration","threshold" ) );
     ss >> this->threshold;
-    cout << "devices: "<<this->rec_dev<<" "<<this->play_dev<<endl;
     cerr<< "Config file "<<filename<<" loaded."<<endl;
     // set audio object to use the desired devices
     audio.choose_device( this->rec_dev, this->play_dev );
@@ -488,10 +495,12 @@ bool phone_home(){
 
 bool SysInterface::sleep_monitor(){
 #if defined PLATFORM_LINUX
-#elif defined PLATFORM_WINDOWS
-#elif defined PLATFORM_MAC
+  system( "xset dpms force standby" );
+  return true;
+#else
+  cout << "Monitor sleep unimplemented for this platform."<<endl;
+  return false;
 #endif
-  cerr << "unimplemented\n";
 }
 
 duration_t SysInterface::idle_seconds(){
@@ -503,10 +512,8 @@ duration_t SysInterface::idle_seconds(){
   info = XScreenSaverAllocInfo();
   XScreenSaverQueryInfo( dis, win, info );
   return (info->idle)/1000;
-#elif defined PLATFORM_WINDOWS
-
-#elif defined PLATFORM_MAC
-
+#else
+  return 99999;
 #endif
 }
 
@@ -535,6 +542,10 @@ AudioBuf tone( duration_t duration, frequency freq, duration_t delay,
 }
 
 ostream& operator<<(ostream& os, const Statistics& s){
+  os << "{mean:" << s.mean << " var:" << s.variance << '}';
+  return os;
+}
+ostream& operator<<(ostream& os, Statistics& s){
   os << "{mean:" << s.mean << " var:" << s.variance << '}';
   return os;
 }
@@ -592,15 +603,31 @@ long get_log_start_time( ){
   cerr << "unimplemented\n";
 }
 
-void power_management( frequency freq, float threshold ){
-  cerr << "unimplemented\n";
+void power_management( AudioDev & audio, Config & conf ){
+  // buffer duration is one second, but actually it just needs to be a multiple
+  // of the ping_period.
+  AudioBuf ping = tone( 1, conf.ping_freq, 0,0 ); // no fade since we're looping  
+  cout << "Begin pinging loop at frequency of " <<conf.ping_freq<<"Hz"<<endl;
+  PaStream* s = audio.nonblocking_play_loop( ping );
+  while( 1 ){
+    SysInterface::sleep( SLEEP_TIME ); // don't poll idle_seconds constantly
+    while( SysInterface::idle_seconds() > IDLE_THRESH ){
+      AudioBuf rec = audio.blocking_record( RECORDING_PERIOD );
+      Statistics s = measure_stats( rec, conf.ping_freq );
+      cout << s << endl;
+      if( s.variance > conf.threshold ){
+	SysInterface::sleep_monitor();
+      }
+    }
+  }
+  AudioDev::check_error( Pa_CloseStream( s ) ); // close stream to free up dev
 }
 
 int main( int argc, char **argv ){
   AudioDev my_audio = AudioDev();
-
   Config conf( my_audio, CONFIG_FILENAME );
 
+  // This next block is a debugging audio test
   duration_t test_length = 3;
   cout << "First, we are going to record and playback to test the audio HW.\n";
   cout << "recording audio...\n";
@@ -610,15 +637,6 @@ int main( int argc, char **argv ){
   SysInterface::sleep( test_length ); // give the audio some time to play
   AudioDev::check_error( Pa_CloseStream( s ) ); // close stream to free up dev
 
-  // buffer duration is one second, but actually it just needs to be a multiple
-  // of the ping_period.
-  AudioBuf ping = tone( 1, conf.ping_freq, 0,0 ); // no fade since we're looping  
-  cout << "Begin pinging loop at frequency of " <<conf.ping_freq<<"Hz"<<endl;
-  s = my_audio.nonblocking_play_loop( ping );
-  while( 1 ){
-    AudioBuf rec = my_audio.blocking_record( RECORDING_PERIOD );
-    cout << measure_stats( rec, conf.ping_freq ) << endl;
-  }
-  AudioDev::check_error( Pa_CloseStream( s ) ); // close stream to free up dev
+  power_management( my_audio, conf );
   return 0;
 }

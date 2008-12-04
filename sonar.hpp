@@ -190,5 +190,5 @@ void term_handler( int signum, int frame );
 long get_log_start_time( );
 /** This is the main program loop.  It checks for a user and powers down
     the display if it's reasonably confident that no one is there */
-void power_management( frequency freq, float threshold );
+void power_management( AudioDev & audio, Config & conf );
 int main( int argc, char **argv );

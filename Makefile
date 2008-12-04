@@ -1,6 +1,14 @@
+PLATFORM=LINUX
+#PLATFORM=MAC
+#PLATFORM=WINDOWS
+
 sonar: sonar.cpp sonar.hpp
-	g++ -ggdb -Wall -lportaudio -lm sonar.cpp -o sonar
-#	g++ -ggdb -Wall -lXss -lportaudio -lm sonar.cpp -o sonar
+ifeq ($(PLATFORM),LINUX)
+	g++ -DPLATFORM_LINUX -Wall -lXss -lportaudio -lm sonar.cpp -o sonar
+endif
+ifeq ($(PLATFORM),MAC)
+	g++ -DPLATFORM_MAC -Wall -lportaudio -lm sonar.cpp -o sonar
+endif
 
 test: sonar
 	./sonar
