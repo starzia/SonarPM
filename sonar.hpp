@@ -111,10 +111,10 @@ public:
 /** stores and elicits the program configuration */
 class Config{
 public:
-  /** This contructor calls the calibration functions */
-  Config( AudioDev & audio );
-  /** load config from file */
-  Config( std::string filename );
+  /** This contructor first tries to read the configuration from the passed 
+      filename.  If unsuccessful, then call the calibration functions and
+      write a new config file to use next time.*/
+  Config( AudioDev & audio, std::string filename );
   bool write_config_file( std::string filename );
   /** this would be called after we've already phoned home */
   void disable_phone_home();
@@ -125,6 +125,7 @@ public:
   unsigned int rec_dev;
   unsigned int play_dev;
 
+private:
   /** CALIBRATION FUNCTIONS */
   /** Prompt the user to find the best ping frequency.
       Generally, we want to choose a frequency that is both low enough to

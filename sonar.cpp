@@ -165,8 +165,6 @@ pair<unsigned int,unsigned int> AudioDev::prompt_device(){
   cout << "\nPlease enter an output device number: " << endl;
   cin >> out_dev_num;
 
-  // record this choice
-  this->choose_device( in_dev_num, out_dev_num );
   return make_pair( in_dev_num, out_dev_num );
 }
 
@@ -324,37 +322,51 @@ inline void AudioDev::check_error( PaError err ){
 }
 
 /** call calibration functions to create a new configuration */
-Config::Config( AudioDev & audio ){
-  pair<unsigned int,unsigned int> devices = audio.prompt_device();
-  this->rec_dev = devices.first;
-  this->play_dev = devices.second;
-  this->warn_audio_level( audio );
-  this->choose_ping_freq( audio );
-  this->choose_ping_threshold( audio );
-  //this->choose_phone_home( );
-  this->allow_phone_home=true;
-}
-
-Config::Config( string filename ){
-  // load from a data file                                                    
+Config::Config( AudioDev & audio, string filename ){
+  // try to load from a data file                                                    
   CSimpleIniA ini(false,false,false);
   SI_Error rc = ini.LoadFile( filename.c_str() );
   if (rc < 0){
-    cerr<< "error opening config file "<<filename<<endl;
+    // if file open unsuccessful, then run calibration
+    cerr<< "Unable to open config file "<<filename<<endl;
+    cerr<< "A new configuration file will now be created."<<endl;
+
+    pair<unsigned int,unsigned int> devices = audio.prompt_device();
+    this->rec_dev = devices.first;
+    this->play_dev = devices.second;
+    // set audio object to use the desired devices
+    audio.choose_device( this->rec_dev, this->play_dev );
+    this->warn_audio_level( audio );
+    this->choose_ping_freq( audio );
+    this->choose_ping_threshold( audio );
+    //this->choose_phone_home( );
+    this->allow_phone_home=true;
+    
+    // write configuration to file
+    this->write_config_file( CONFIG_FILENAME );
+  }else{
+    // if file open successful, then get the config key values from it.
+    istringstream ss;
+    ss.clear();
+    ss.str( ini.GetValue("general","phone_home" ) );
+    ss >> this->allow_phone_home;
+    ss.clear();
+    ss.str( ini.GetValue("general","recording_device" ) );
+    ss >> this->rec_dev;
+    ss.clear();
+    ss.str( ini.GetValue("general","playback_device" ) );
+    ss >> this->play_dev;
+    ss.clear();
+    ss.str( ini.GetValue("calibration","frequency" ) );
+    ss >> this->ping_freq;
+    ss.clear();
+    ss.str( ini.GetValue("calibration","threshold" ) );
+    ss >> this->threshold;
+    cout << "devices: "<<this->rec_dev<<" "<<this->play_dev<<endl;
+    cerr<< "Config file "<<filename<<" loaded."<<endl;
+    // set audio object to use the desired devices
+    audio.choose_device( this->rec_dev, this->play_dev );
   }
-  
-  // get the key values 
-  stringstream ss;
-  ss << ini.GetValue("general","phone_home" );
-  ss >> this->allow_phone_home;
-  ss << ini.GetValue("general","recording_device" );
-  ss >> this->rec_dev;
-  ss << ini.GetValue("general","playback_device" );
-  ss >> this->play_dev;
-  ss << ini.GetValue("calibration","frequency" );
-  ss >> this->ping_freq;
-  ss << ini.GetValue("calibration","threshold" );
-  ss >> this->threshold;
 }
 
 bool Config::write_config_file( string filename ){
@@ -381,8 +393,10 @@ bool Config::write_config_file( string filename ){
   // write to file
   SI_Error rc = ini.SaveFile( filename.c_str() );
   if (rc < 0){
-    cerr<< "error opening config file "<<filename<<endl;
+    cerr<< "Error saving config file "<<filename<<endl;
     return false;
+  }else{
+    cerr<< "Saved config file "<<filename<<endl;
   }
   return true;
 }
@@ -585,8 +599,7 @@ void power_management( frequency freq, float threshold ){
 int main( int argc, char **argv ){
   AudioDev my_audio = AudioDev();
 
-  Config conf( my_audio );
-  conf.write_config_file( CONFIG_FILENAME );
+  Config conf( my_audio, CONFIG_FILENAME );
 
   duration_t test_length = 3;
   cout << "First, we are going to record and playback to test the audio HW.\n";
