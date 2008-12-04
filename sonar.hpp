@@ -2,20 +2,16 @@
  * Northwestern University, EECC Dept.
  * Nov 25 2008
  *
- * Under Fedora Linux, package requirements are portaudio-devel and fftw-devel
+ * Under Fedora Linux, package requirements are portaudio-devel
  */
 #include <string>
 #include <portaudio.h>
-#include <fftw3.h>
 
 typedef float duration_t; /* durations are expressed as seconds, with floats */
 typedef int frequency;
 typedef float sample_t;
-typedef sample_t* fft_array_t;
-/* Note that we are using floats, not the default doubles, for the fft functions.
-   This is because audio samples are stored as floats so we can use audio arrays
-   directly as input to the fft routines. */
-
+/* Note that we are using floats not integers for audio samples because it makes
+   the signal processing code easier. */
 
 /** This class represents MONO audio buffers */
 class AudioBuf{
@@ -30,12 +26,12 @@ public:
   ~AudioBuf();
 
   /** returns an audio sample */
-  sample_t* operator[]( unsigned int index ) const;
+  sample_t& operator[]( unsigned int index ) const;
   void prepend_silence( duration_t silence_duration );
   duration_t get_length() const;
   unsigned int get_num_samples() const;
-  /** return audio samples as an array for fftw or other processing */
-  fft_array_t get_array() const;
+  /** return audio samples as an array for signal processing */
+  sample_t* get_array() const;
   /** return a trimmed audio buffer starting at start seconds with a given
       length */
   AudioBuf* window( duration_t length, duration_t start=0 ) const;
@@ -44,7 +40,7 @@ public:
   bool write_to_file( std::string filename ) const;
 private:
   unsigned int num_samples;
-  fft_array_t data;
+  sample_t* data;
 };
 
 /** this class stores all data relevant to an Audio callback function */

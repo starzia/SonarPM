@@ -2,7 +2,7 @@
  * Northwestern University, EECC Dept.
  * Nov 25 2008
  *
- * Under Fedora Linux, package requirements are portaudio-devel and fftw-devel
+ * Under Fedora Linux, package requirements are portaudio-devel
  */
 #include "sonar.hpp"
 #include "SimpleIni.h" // for config files
@@ -11,11 +11,9 @@
 #include <vector>
 #include <sstream>
 
-#define FFT_POINTS (1024)
-#define FFT_FREQUENCIES (FFT_POINTS/2)
 #define TONE_LENGTH (1) /* sonar ping length for calibration */
-#define RECORDING_PERIOD (0.3) /* this is the time period over which stats are calulated */
-#define WINDOW_SIZE (0.01) /* this is for welch */
+#define RECORDING_PERIOD (0.2) /* this is the time period over which stats are calulated */
+#define WINDOW_SIZE (0.01) /* sliding window size */
 #define SAMPLE_RATE (44100)
 #define CONFIG_FILENAME "/home/steve/.sonarPM/sonarPM.cfg"
 #define LOG_FILENAME "/home/steve/.sonarPM/log.txt"
@@ -49,16 +47,16 @@ AudioBuf::AudioBuf( string filename ){
 
 AudioBuf::AudioBuf( duration_t length ){
   this->num_samples = ceil( length * SAMPLE_RATE );
-  this->data = (fft_array_t)fftwf_malloc( sizeof(sample_t)*this->num_samples );
+  this->data = (sample_t*)malloc( sizeof(sample_t)*this->num_samples );
 }
 
 AudioBuf::~AudioBuf(){
   //TODO: I don't know why the following is causing segfaults
-  //if( this->data ) fftwf_free( this->data ); // free sample array
+  //if( this->data ) free( this->data ); // free sample array
 }
 
-sample_t* AudioBuf::operator[]( unsigned int index ) const{
-  return this->data+index;
+sample_t& AudioBuf::operator[]( unsigned int index ) const{
+  return this->data[index];
 }
 
 void AudioBuf::prepend_silence( duration_t silence_duration ){
@@ -73,7 +71,7 @@ unsigned int AudioBuf::get_num_samples() const{
   return this->num_samples;
 }
 
-fft_array_t AudioBuf::get_array() const{
+sample_t* AudioBuf::get_array() const{
   return this->data;
 }
 
@@ -83,7 +81,7 @@ AudioBuf* AudioBuf::window( duration_t length, duration_t start ) const{
   AudioBuf* ret = new AudioBuf( length );
   unsigned int i;
   for( i=0; i < ret->get_num_samples(); i++ ){
-    *((*ret)[i]) = this->data[start_index+i];
+    (*ret)[i] = this->data[start_index+i];
   }
   return ret;
 }
@@ -92,7 +90,7 @@ AudioBuf AudioBuf::repeat( int repetitions ) const{
   AudioBuf ret = AudioBuf( this->get_length() * repetitions );
   unsigned int i;
   for( i=0; i < ret.get_num_samples(); i++ ){
-    *(ret[i]) = this->data[ i % this->get_num_samples() ];
+    ret[i] = this->data[ i % this->get_num_samples() ];
   }
   return ret;
 }
@@ -188,7 +186,7 @@ int AudioDev::player_callback( const void *inputBuffer, void *outputBuffer,
   unsigned int i;
   for( i=req->progress_index; i < req->progress_index + framesPerBuffer; i++ ){
     if( i < req->audio.get_num_samples() ){
-      *out++ = *(req->audio[i]);  /* left */
+      *out++ = req->audio[i];  /* left */
     }else{
       *out++ = 0; // play silence if we've reqched end of buffer
     }
@@ -213,7 +211,7 @@ int AudioDev::oscillator_callback( const void *inputBuffer, void *outputBuffer,
 
   unsigned int i, total_samples = req->audio.get_num_samples();
   for( i=0; i<framesPerBuffer; i++ ){
-    *out++ = *(req->audio[ ( req->progress_index + i ) % total_samples ]);  /* left */
+    *out++ = req->audio[ ( req->progress_index + i ) % total_samples ];  /* left */
     *out++ = 0;  /* right */
   }
   req->progress_index = i; // update progress index
@@ -236,7 +234,7 @@ int AudioDev::recorder_callback( const void *inputBuffer, void *outputBuffer,
   unsigned int i;
   for( i=req->progress_index; i < req->progress_index + framesPerBuffer; i++ ){
     if( i < req->audio.get_num_samples() ){
-      *(req->audio[i]) = *in++;  /* there is only one channel */
+      req->audio[i] = *in++;  /* there is only one channel */
     }
   }
   req->progress_index = i; // update progress index
@@ -462,6 +460,10 @@ Emailer::Emailer( string dest_addr ){
 }
 
 bool Emailer::phone_home( string filename ){
+#if defined PLATFORM_LINUX
+#elif defined PLATFORM_WINDOWS
+#elif defined PLATFORM_MAC
+#endif
   cerr << "unimplemented\n";
 }
 
@@ -471,11 +473,15 @@ bool phone_home(){
 }
 
 bool SysInterface::sleep_monitor(){
+#if defined PLATFORM_LINUX
+#elif defined PLATFORM_WINDOWS
+#elif defined PLATFORM_MAC
+#endif
   cerr << "unimplemented\n";
 }
 
 duration_t SysInterface::idle_seconds(){
-#ifdef PLATFORM_LINUX
+#if defined PLATFORM_LINUX
   Display *dis;
   XScreenSaverInfo *info;
   dis = XOpenDisplay((char *)0);
@@ -483,11 +489,11 @@ duration_t SysInterface::idle_seconds(){
   info = XScreenSaverAllocInfo();
   XScreenSaverQueryInfo( dis, win, info );
   return (info->idle)/1000;
-#endif //PLATFORM_LINUX
-#ifdef PLATFORM_WINDOWS
-#endif //PLATFORM_WINDOWS
-#ifdef PLATFORM_MAC
-#endif //PLATFORM_MAC
+#elif defined PLATFORM_WINDOWS
+
+#elif defined PLATFORM_MAC
+
+#endif
 }
 
 void SysInterface::sleep( duration_t duration ){
@@ -503,24 +509,15 @@ AudioBuf tone( duration_t duration, frequency freq, duration_t delay,
   AudioBuf buf = AudioBuf( duration );
   unsigned int i, end_i = buf.get_num_samples();
   for( i=0; i < end_i; i++ ){
-    *(buf[i]) = sin( 2*M_PI * freq * i / SAMPLE_RATE );
+    buf[i] = sin( 2*M_PI * freq * i / SAMPLE_RATE );
   }
   // fade in and fade out to prevent 'click' sound
   for( i=0; i<fade_samples; i++ ){
     float attenuation = 1.0*i/fade_samples;
-    *(buf[i]) = attenuation * *(buf[i]);
-    *(buf[end_i-1-i]) = attenuation * *(buf[end_i-1-i]);
+    buf[i] = attenuation * buf[i];
+    buf[end_i-1-i] = attenuation * buf[end_i-1-i];
   }
   return buf;
-}
-
-int freq_index( frequency freq ){
-  return round( (2.0*freq/SAMPLE_RATE) * FFT_FREQUENCIES );
-}
-
-/** complex absolute value (float data storage) */
-inline float cabsf( float* c ){
-  return sqrt(c[0]*c[0] + c[1]*c[1]);
 }
 
 ostream& operator<<(ostream& os, const Statistics& s){
@@ -528,46 +525,34 @@ ostream& operator<<(ostream& os, const Statistics& s){
   return os;
 }
 
-/** We choose a window size to be precisely the same as the number of FFT
-    points.  In other words, we do an exact DFT, and choose a window size
-    small enough so that this computation is not too exensive.
-    Note that there is an explanation of how to take an approximate DFT,
-    that is, find the first K outputs of a real-input FFT at:
-    http://www.fftw.org/pruned.html */
+/** Geortzel's algorithm for finding the energy of a single frequency component
+    of a signal.  Note that end_index is one past the last valid value. 
+    Normalized frequency is measured in cycles per sample: (F/sample_rate)*/
+template<class indexable,class precision> 
+precision goertzel( const indexable & arr, unsigned int start_index, 
+		    unsigned int end_index, precision norm_freq ){
+  precision s_prev = 0;
+  precision s_prev2 = 0;
+  precision coeff = 2 * cos( 2 * M_PI * norm_freq );
+  unsigned int i;
+  for( i=start_index; i<end_index; i++ ){
+    precision s = arr[i] + coeff*s_prev - s_prev2;
+    s_prev2 = s_prev;
+    s_prev = s;
+  }
+  // return the power
+  return s_prev2*s_prev2 + s_prev*s_prev - coeff*s_prev2*s_prev;
+}
+
 Statistics measure_stats( const AudioBuf & buf, frequency freq ){
   vector<float> energies;
 
-  unsigned int i, N=FFT_POINTS;
-
+  unsigned int i, start, N = ceil(WINDOW_SIZE*SAMPLE_RATE);
   // use a sliding window
-  duration_t start;
+  // TODO: parallelize window computations using SIMD instructions.
   for( start=0; start + N < buf.get_num_samples(); start += N ){
-    // set up FFT
-    // allocate buffer for this window
-    float* in = (float*)fftwf_malloc( sizeof(float)*N );
-    // although input is real array, output is complex.
-    fftwf_complex *out = (fftwf_complex*)fftwf_malloc( sizeof(fftwf_complex)*N );
-
-    // prep FFT
-    fftwf_plan p = fftwf_plan_dft_r2c_1d( N, in, out, 
-					  FFTW_ESTIMATE | FFTW_PRESERVE_INPUT );
-    // we must fill in input data AFTER generating plan
-    for( i=0; i<N; i++ ){
-      in[i] = *(buf[start+i]);
-    }
-    // do FFT
-    fftwf_execute(p);
-    float* val = out[ freq_index( freq ) ];
-    //cout << "fftval1:" << val[0] <<", " <<val[1] <<endl;
-    float energy = cabsf( val ); //complex absolute value (float)
-    //cout << "fftval2:" << energy <<endl;
-    energy *= energy; // square to get power
-    //cout << "fftval3:" << energy <<endl<<endl;
-    fftwf_destroy_plan(p);
-    fftwf_free(out);
-    fftwf_free(in);
-
-    energies.push_back( energy );
+    energies.push_back( 
+       goertzel<AudioBuf,float>(buf,start,start+N,(float)freq/SAMPLE_RATE)  );
   }
 
   // calculate statistics
@@ -614,7 +599,7 @@ int main( int argc, char **argv ){
 
   // buffer duration is one second, but actually it just needs to be a multiple
   // of the ping_period.
-  AudioBuf ping = tone( 1, conf.ping_freq ); 
+  AudioBuf ping = tone( 1, conf.ping_freq, 0,0 ); // no fade since we're looping  
   cout << "Begin pinging loop at frequency of " <<conf.ping_freq<<"Hz"<<endl;
   s = my_audio.nonblocking_play_loop( ping );
   while( 1 ){
