@@ -57,7 +57,7 @@ AudioBuf::AudioBuf( string filename ){
 }
 
 AudioBuf::AudioBuf( duration_t length ){
-  this->num_samples = ceil( length * SAMPLE_RATE );
+  this->num_samples = (unsigned int)ceil( length * SAMPLE_RATE );
   this->data = (sample_t*)malloc( sizeof(sample_t)*this->num_samples );
 }
 
@@ -88,7 +88,7 @@ sample_t* AudioBuf::get_array() const{
 
 AudioBuf* AudioBuf::window( duration_t length, duration_t start ) const{
   unsigned int start_index;
-  start_index = floor( start * SAMPLE_RATE );
+  start_index = (unsigned int)floor( start * SAMPLE_RATE );
   AudioBuf* ret = new AudioBuf( length );
   unsigned int i;
   for( i=0; i < ret->get_num_samples(); i++ ){
@@ -108,6 +108,7 @@ AudioBuf AudioBuf::repeat( int repetitions ) const{
 
 bool AudioBuf::write_to_file( string filename ) const{
   cerr << "unimplemented\n";
+  return true;
 }
 
 AudioRequest::AudioRequest( const AudioBuf & buf ){
@@ -433,7 +434,7 @@ void Config::choose_ping_freq( AudioDev & audio ){
   frequency start_freq = 22000;
   frequency freq = start_freq;
   // below, we subtract two readings because they are logarithms
-  float scaling_factor = 0.95;
+  frequency scaling_factor = (frequency)0.95;
   cout << endl
        <<"Please press <enter> and listen carefully to continue with the "<<endl
        <<"calibration."<<endl;
@@ -462,7 +463,7 @@ void Config::choose_ping_freq( AudioDev & audio ){
       exit(-1);
     }
   }
-  freq = round( freq );
+  freq = (frequency)round( freq );
   cout << "chose frequency of "<<freq<<endl;
   this->ping_freq = freq;
 }
@@ -495,11 +496,12 @@ bool Emailer::phone_home( string filename ){
 #elif defined PLATFORM_MAC
 #endif
   cerr << "unimplemented\n";
+  return true;
 }
 
 bool phone_home(){
   Emailer email( PHONE_HOME_ADDR );
-  email.phone_home( LOG_FILENAME );
+  return email.phone_home( LOG_FILENAME );
 }
 
 bool SysInterface::sleep_monitor(){
@@ -536,13 +538,17 @@ void SysInterface::sleep( duration_t duration ){
 long SysInterface::current_time(){
 #if defined PLATFORM_WINDOWS
   cerr << "unimplemented\n";
+  return 1;
 #else
   time_t ret;
   return time(&ret);
 #endif
 }
 
-bool SysInterface::log( string message ){}
+bool SysInterface::log( string message ){
+  cerr << "unimplemented" <<endl;
+  return true;
+}
 
 AudioBuf tone( duration_t duration, frequency freq, duration_t delay, 
 	       unsigned int fade_samples ){
@@ -592,7 +598,7 @@ precision goertzel( const indexable & arr, unsigned int start_index,
 Statistics measure_stats( const AudioBuf & buf, frequency freq ){
   vector<float> energies;
 
-  unsigned int i, start, N = ceil(WINDOW_SIZE*SAMPLE_RATE);
+  unsigned int i, start, N = (unsigned int)ceil(WINDOW_SIZE*SAMPLE_RATE);
   // use a sliding window
   // TODO: parallelize window computations using SIMD instructions.
   for( start=0; start + N < buf.get_num_samples(); start += N ){
@@ -621,6 +627,7 @@ void term_handler( int signum, int frame ){
 
 long get_log_start_time( ){
   cerr << "unimplemented\n";
+  return 0;
 }
 
 void power_management( AudioDev & audio, Config & conf ){
