@@ -222,10 +222,11 @@ int AudioDev::oscillator_callback( const void *inputBuffer, void *outputBuffer,
 
   unsigned int i, total_samples = req->audio.get_num_samples();
   for( i=0; i<framesPerBuffer; i++ ){
-    *out++ = req->audio[ ( req->progress_index + i ) % total_samples ];  /* left */
-    *out++ = 0;  /* right */
+    *out++ = req->audio[ ( req->progress_index + i ) % total_samples ]; // left
+    *out++ = 0; // right
   }
-  req->progress_index = i; // update progress index
+  // update progress index
+  req->progress_index = ( req->progress_index + i ) % total_samples; 
   return 0; // returning 0 makes the stream stay alive.
 }
 

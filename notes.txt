@@ -12,4 +12,4 @@ Other TODO items:
 - termination signal handler.
 - logging
 - use strings instead of indices to identify audio devices to allow for device
-   removal or addition.
+   removal or addition.  Also, hide OSS devices because their names change.
