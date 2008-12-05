@@ -10,6 +10,7 @@
 #include <cmath>
 #include <vector>
 #include <sstream>
+#include <exception>
 
 #define TONE_LENGTH (1) // sonar ping length for calibration
 #define RECORDING_PERIOD (0.5) // this is the time period over which stats are calulated
@@ -358,25 +359,31 @@ Config::Config( AudioDev & audio, string filename ){
     this->write_config_file( CONFIG_FILENAME );
   }else{
     // if file open successful, then get the config key values from it.
-    istringstream ss;
-    ss.clear();
-    ss.str( ini.GetValue("general","phone_home" ) );
-    ss >> this->allow_phone_home;
-    ss.clear();
-    ss.str( ini.GetValue("general","recording_device" ) );
-    ss >> this->rec_dev;
-    ss.clear();
-    ss.str( ini.GetValue("general","playback_device" ) );
-    ss >> this->play_dev;
-    ss.clear();
-    ss.str( ini.GetValue("calibration","frequency" ) );
-    ss >> this->ping_freq;
-    ss.clear();
-    ss.str( ini.GetValue("calibration","threshold" ) );
-    ss >> this->threshold;
-    cerr<< "Config file "<<filename<<" loaded."<<endl;
-    // set audio object to use the desired devices
-    audio.choose_device( this->rec_dev, this->play_dev );
+    try{
+      istringstream ss;
+      ss.clear();
+      ss.str( ini.GetValue("general","phone_home" ) );
+      ss >> this->allow_phone_home;
+      ss.clear();
+      ss.str( ini.GetValue("general","recording_device" ) );
+      ss >> this->rec_dev;
+      ss.clear();
+      ss.str( ini.GetValue("general","playback_device" ) );
+      ss >> this->play_dev;
+      ss.clear();
+      ss.str( ini.GetValue("calibration","frequency" ) );
+      ss >> this->ping_freq;
+      ss.clear();
+      ss.str( ini.GetValue("calibration","threshold" ) );
+      ss >> this->threshold;
+      cerr<< "Config file "<<filename<<" loaded."<<endl;
+      // set audio object to use the desired devices
+      audio.choose_device( this->rec_dev, this->play_dev );
+    }catch( const exception& e ){
+      cerr <<"Error loading data from Config file "<<filename<<endl
+	   <<"Please check the file for errors and correct or delete it"<<endl;
+      exit(-1);
+    }
   }
 }
 
@@ -434,7 +441,7 @@ void Config::choose_ping_freq( AudioDev & audio ){
   frequency start_freq = 22000;
   frequency freq = start_freq;
   // below, we subtract two readings because they are logarithms
-  frequency scaling_factor = (frequency)0.95;
+  frequency scaling_factor = 0.95;
   cout << endl
        <<"Please press <enter> and listen carefully to continue with the "<<endl
        <<"calibration."<<endl;
@@ -463,7 +470,7 @@ void Config::choose_ping_freq( AudioDev & audio ){
       exit(-1);
     }
   }
-  freq = (frequency)round( freq );
+  freq = round( freq );
   cout << "chose frequency of "<<freq<<endl;
   this->ping_freq = freq;
 }

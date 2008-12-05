@@ -8,7 +8,7 @@
 #include <portaudio.h>
 
 typedef float duration_t; /* durations are expressed as seconds, with floats */
-typedef int frequency;
+typedef float frequency;
 typedef float sample_t;
 /* Note that we are using floats not integers for audio samples because it makes
    the signal processing code easier. */

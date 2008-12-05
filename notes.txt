@@ -11,3 +11,5 @@ Other TODO items:
 - dynamic threshold adjustment.
 - termination signal handler.
 - logging
+- use strings instead of indices to identify audio devices to allow for device
+   removal or addition.
