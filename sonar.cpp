@@ -13,7 +13,8 @@
 #include <exception>
 
 #define TONE_LENGTH (1) // sonar ping length for calibration
-#define RECORDING_PERIOD (0.5) // this is the time period over which stats are calulated
+// this is the time period over which stats are calulated
+#define RECORDING_PERIOD (10.0) 
 #define WINDOW_SIZE (0.01) // sliding window size
 #define SAMPLE_RATE (44100)
 #define CONFIG_FILENAME "/home/steve/.sonarPM/sonarPM.cfg"
@@ -641,7 +642,7 @@ long get_log_start_time( ){
 void power_management( AudioDev & audio, Config & conf ){
   // buffer duration is one second, but actually it just needs to be a multiple
   // of the ping_period.
-  AudioBuf ping = tone( 1, conf.ping_freq, 0,0 ); // no fade since we're looping  
+  AudioBuf ping = tone( 1, conf.ping_freq, 0,0 ); // no fade since we loop it
   cout << "Begin pinging loop at frequency of " <<conf.ping_freq<<"Hz"<<endl;
   PaStream* s = audio.nonblocking_play_loop( ping );
   while( 1 ){
@@ -680,23 +681,59 @@ void power_management( AudioDev & audio, Config & conf ){
       }
     }
   }
+  // TODO: we never get here, so a signal handler needs to free the dev.
   AudioDev::check_error( Pa_CloseStream( s ) ); // close stream to free up dev
 }
 
-int main( int argc, char **argv ){
+/** poll is a simplified version of the power management loop wherein we just
+    constantly take readings */
+void poll( AudioDev & audio, Config & conf ){
+  AudioBuf ping = tone( 1, conf.ping_freq, 0,0 ); // no fade since we loop it  
+  cout << "Begin pinging loop at frequency of " <<conf.ping_freq<<"Hz"<<endl;
+  PaStream* s = audio.nonblocking_play_loop( ping );
+  while( 1 ){
+    SysInterface::sleep( SLEEP_TIME ); // don't poll idle_seconds constantly
+    AudioBuf rec = audio.blocking_record( RECORDING_PERIOD );
+    Statistics s = measure_stats( rec, conf.ping_freq );
+    cout << s << endl;
+  }
+  AudioDev::check_error( Pa_CloseStream( s ) ); // close stream to free up dev
+}
+
+int main( int argc, char* argv[] ){
+  // parse commandline arguments
+  bool do_poll=false, debug=false;
+  int i;
+  for( i=1; i<argc; i++ ){
+    if( string(argv[i]) == string("--help") ){
+      cout<<"usage is "<<argv[0]<<" [ --help | --poll | --debug ]"<<endl;
+      exit(0);
+    }else if( string(argv[i]) == string("--poll") ){
+      do_poll=true;
+    }else if( string(argv[i]) == string("--debug") ){
+      debug=true;
+    }
+  }
+
   AudioDev my_audio = AudioDev();
   Config conf( my_audio, CONFIG_FILENAME );
 
-  // This next block is a debugging audio test
-  duration_t test_length = 3;
-  cout << "First, we are going to record and playback to test the audio HW.\n";
-  cout << "recording audio...\n";
-  AudioBuf my_buf = my_audio.blocking_record( test_length );
-  cout << "playing back the recording...\n";
-  PaStream* s = my_audio.nonblocking_play( my_buf ); 
-  SysInterface::sleep( test_length ); // give the audio some time to play
-  AudioDev::check_error( Pa_CloseStream( s ) ); // close stream to free up dev
+  if( debug ){
+    // This next block is a debugging audio test
+    duration_t test_length = 3;
+    cout<<"First, we are going to record and playback to test the audio HW.\n";
+    cout<<"recording audio...\n";
+    AudioBuf my_buf = my_audio.blocking_record( test_length );
+    cout<<"playing back the recording...\n";
+    PaStream* s = my_audio.nonblocking_play( my_buf ); 
+    SysInterface::sleep( test_length ); // give the audio some time to play
+    AudioDev::check_error( Pa_CloseStream( s ) ); // close stream to free dev
+  }
 
-  power_management( my_audio, conf );
+  if( do_poll ){
+    poll( my_audio, conf );
+  }else{
+    power_management( my_audio, conf );
+  }
   return 0;
 }

@@ -13,3 +13,4 @@ Other TODO items:
 - logging
 - use strings instead of indices to identify audio devices to allow for device
    removal or addition.  Also, hide OSS devices because their names change.
+- fix memory leaks

@@ -11,7 +11,7 @@ ifeq ($(PLATFORM),MAC)
 endif
 
 test: sonar
-	./sonar
+	./sonar --debug --poll
 
 clean:
 	rm -f sonar *~
