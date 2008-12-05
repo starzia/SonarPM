@@ -5,6 +5,9 @@ Platform specific portions:
 - process sleep
 - filesystem access for logfile and creating config dir.
    also, finding suitable home directory to store conf dir.
+- time epoch
 
 Other TODO items:
 - dynamic threshold adjustment.
+- termination signal handler.
+- logging

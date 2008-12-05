@@ -133,9 +133,8 @@ private:
       inaudible. */
   void choose_ping_freq( AudioDev & audio );
   /** Choose the variance threshold for presence detection by prompting
-      the user.
-      NB: ping_freq must already be set!*/
-  void choose_ping_threshold( AudioDev & audio );
+      the user. */
+  void choose_ping_threshold( AudioDev & audio, frequency freq );
   /** Ask the user whether or not to report anonymous statistics */
   void choose_phone_home();
   /** Plays a series of loud tones to help users adjust their speaker volume */
@@ -160,6 +159,8 @@ class SysInterface{
   static duration_t idle_seconds();
   /** blocks the process for the specified time */
   static void sleep( duration_t duration );
+  /** returns glibc style time, ie epoch seconds */
+  static long current_time();
   /** appends message to log */
   static bool log( std::string message );
 };

@@ -12,14 +12,16 @@
 #include <sstream>
 
 #define TONE_LENGTH (1) // sonar ping length for calibration
-#define RECORDING_PERIOD (0.3) // this is the time period over which stats are calulated
+#define RECORDING_PERIOD (0.5) // this is the time period over which stats are calulated
 #define WINDOW_SIZE (0.01) // sliding window size
 #define SAMPLE_RATE (44100)
 #define CONFIG_FILENAME "/home/steve/.sonarPM/sonarPM.cfg"
 #define LOG_FILENAME "/home/steve/.sonarPM/log.txt"
 #define PHONE_HOME_ADDR "storage@stevetarzia.com"
-#define SLEEP_TIME (1) // sleep time between idleness checks
+#define SLEEP_TIME (0.2) // sleep time between idleness checks
 #define IDLE_THRESH (5) // don't activate sonar until idle for this long
+#define IDLE_SAFETYNET (300) // assume that if idle for this long, user is gone.
+#define DYNAMIC_THRESH_FACTOR (1.3) // how rapidly does dynamic threshold move
 
 // One of the following should be defined to activate platform-specific code.
 // It is best to make this choice in the Makefile
@@ -35,12 +37,13 @@
 #include <X11/Xutil.h>
 #include <X11/Xos.h>
 #include <X11/extensions/scrnsaver.h>
-#include <stdlib.h>
 #elif defined PLATFORM_WINDOWS
 #elif defined PLATFORM_MAC
+#endif
+#ifndef PLATFORM_WINDOWS
+#include <ctime>
 #include <stdlib.h>
 #endif
-
 
 using namespace std;
 
@@ -346,7 +349,7 @@ Config::Config( AudioDev & audio, string filename ){
     audio.choose_device( this->rec_dev, this->play_dev );
     this->warn_audio_level( audio );
     this->choose_ping_freq( audio );
-    this->choose_ping_threshold( audio );
+    this->choose_ping_threshold( audio, this->ping_freq );
     //this->choose_phone_home( );
     this->allow_phone_home=true;
     
@@ -464,8 +467,14 @@ void Config::choose_ping_freq( AudioDev & audio ){
   this->ping_freq = freq;
 }
   
-void Config::choose_ping_threshold( AudioDev & audio ){
-  cerr << "unimplemented\n";
+/** current implementation just chooses a threshold in the correct neighborhood
+    and relies on dynamic runtime adjustment for fine-tuning */
+void Config::choose_ping_threshold( AudioDev & audio, frequency freq ){
+  AudioBuf blip = tone( TONE_LENGTH, freq );
+  AudioBuf rec = audio.recordback( blip );
+  Statistics blip_s = measure_stats( rec, freq );
+  cout << "chose preliminary threshold of "<<blip_s.variance<<endl;
+  this->threshold = blip_s.variance;
 }
 
 void Config::choose_phone_home(){
@@ -511,7 +520,9 @@ duration_t SysInterface::idle_seconds(){
   Window win = DefaultRootWindow(dis);
   info = XScreenSaverAllocInfo();
   XScreenSaverQueryInfo( dis, win, info );
-  return (info->idle)/1000;
+  duration_t ret = (info->idle)/1000.0;
+  XCloseDisplay( dis );
+  return ret;
 #else
   return 99999;
 #endif
@@ -520,6 +531,15 @@ duration_t SysInterface::idle_seconds(){
 void SysInterface::sleep( duration_t duration ){
   /* use portaudio's convenient portable sleep function */
   Pa_Sleep( (int)(duration*1000) );
+}
+
+long SysInterface::current_time(){
+#if defined PLATFORM_WINDOWS
+  cerr << "unimplemented\n";
+#else
+  time_t ret;
+  return time(&ret);
+#endif
 }
 
 bool SysInterface::log( string message ){}
@@ -612,11 +632,36 @@ void power_management( AudioDev & audio, Config & conf ){
   while( 1 ){
     SysInterface::sleep( SLEEP_TIME ); // don't poll idle_seconds constantly
     while( SysInterface::idle_seconds() > IDLE_THRESH ){
+      // if we've been tring to detect use for too long, then this probably
+      // means that the threshold is too low.
+      if( SysInterface::idle_seconds() > IDLE_SAFETYNET ){
+	  cout << "False attention detected." <<endl;
+	  conf.threshold *= DYNAMIC_THRESH_FACTOR;
+	  conf.write_config_file( CONFIG_FILENAME ); // config save changes	
+      }
+
       AudioBuf rec = audio.blocking_record( RECORDING_PERIOD );
       Statistics s = measure_stats( rec, conf.ping_freq );
       cout << s << endl;
-      if( s.variance > conf.threshold ){
+      if( s.variance < conf.threshold ){
+	// sleep monitor
 	SysInterface::sleep_monitor();
+	long sleep_time = SysInterface::current_time();
+
+	// wait until woken up again
+	duration_t prev_idle_time = SysInterface::idle_seconds();
+	duration_t current_idle_time = SysInterface::idle_seconds();
+	while( current_idle_time >= prev_idle_time ){
+	  SysInterface::sleep( SLEEP_TIME );
+	  prev_idle_time = current_idle_time;
+	  current_idle_time = SysInterface::idle_seconds();
+	}
+	// waking up too soon means that we've just irritated the user
+	if( SysInterface::current_time() - sleep_time < IDLE_THRESH ){
+	  cout << "False sleep detected." <<endl;
+	  conf.threshold /= DYNAMIC_THRESH_FACTOR;
+	  conf.write_config_file( CONFIG_FILENAME ); // config save changes
+	}
       }
     }
   }
