@@ -178,6 +178,7 @@ int freq_index( frequency freq );
 struct Statistics{
   float mean;
   float variance;
+  float delta;
 };
 std::ostream& operator<<(std::ostream& os, Statistics& s);
 

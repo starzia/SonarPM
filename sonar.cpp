@@ -15,7 +15,8 @@
 #define TONE_LENGTH (1) // sonar ping length for calibration
 // this is the time period over which stats are calulated
 #define RECORDING_PERIOD (10.0) 
-#define WINDOW_SIZE (0.01) // sliding window size
+#define WINDOW_SIZE (0.1) // sliding window size
+#define BARTLETT_WINDOWS (10) // num windows in bartlett's method
 #define SAMPLE_RATE (44100)
 #define CONFIG_FILENAME "/home/steve/.sonarPM/sonarPM.cfg"
 #define LOG_FILENAME "/home/steve/.sonarPM/log.txt"
@@ -26,7 +27,7 @@
 #define DYNAMIC_THRESH_FACTOR (1.3) // how rapidly does dynamic threshold move
 
 // One of the following should be defined to activate platform-specific code.
-// It is best to make this choice in the Makefile
+// It is best to make this choice in the Makefile, rather than uncommenting here
 //#define PLATFORM_LINUX
 //#define PLATFORM_WINDOWS
 //#define PLATFORM_MAC
@@ -576,17 +577,43 @@ AudioBuf tone( duration_t duration, frequency freq, duration_t delay,
   return buf;
 }
 
+/** statistical mean */
+template<class precision> precision mean( const vector<precision> & arr ){
+  unsigned int i;
+  precision mean=0;
+  for( i=0; i<arr.size(); i++ )
+    mean += arr[i];
+  return mean / arr.size();
+}
+/** statistical variance */
+template<class precision> precision variance( const vector<precision> & arr ){
+  unsigned int i;
+  precision mu = mean( arr );
+  precision var = 0;
+  for( i=0; i<arr.size(); i++ )
+    var += ( arr[i] - mu ) * ( arr[i] - mu );
+  return var;
+}
+/** average inter-sample absolute difference */
+template<class precision> precision delta( const vector<precision> & arr ){
+  unsigned int i;
+  precision delta=0;
+  for( i=1; i<arr.size(); i++ )
+    delta += abs( arr[i] - arr[i-1] );
+  return delta / arr.size();
+}
+
 ostream& operator<<(ostream& os, const Statistics& s){
-  os << "{mean:" << s.mean << " var:" << s.variance << '}';
+  os<< "{mean:" <<s.mean<< " var:" <<s.variance<< " delta:" <<s.delta<< '}';
   return os;
 }
 ostream& operator<<(ostream& os, Statistics& s){
-  os << "{mean:" << s.mean << " var:" << s.variance << '}';
+  os<< "{mean:" <<s.mean<< " var:" <<s.variance<< " delta:" <<s.delta<< '}';
   return os;
 }
 
-/** Geortzel's algorithm for finding the energy of a single frequency component
-    of a signal.  Note that end_index is one past the last valid value. 
+/** Geortzel's algorithm for finding the energy of a signal at a certain
+    frequency.  Note that end_index is one past the last valid value. 
     Normalized frequency is measured in cycles per sample: (F/sample_rate)*/
 template<class indexable,class precision> 
 precision goertzel( const indexable & arr, unsigned int start_index, 
@@ -600,33 +627,44 @@ precision goertzel( const indexable & arr, unsigned int start_index,
     s_prev2 = s_prev;
     s_prev = s;
   }
-  // return the power
+  // return the energy (power)
   return s_prev2*s_prev2 + s_prev*s_prev - coeff*s_prev2*s_prev;
 }
+
+
+/** Bartlett's method is the mean of several runs of Goertzel's algorithm in
+    consecutive windows. */
+template<class indexable,class precision> 
+precision bartlett( const indexable & arr, unsigned int start_index, 
+		    unsigned int end_index, precision norm_freq, 
+		    unsigned int num_windows=BARTLETT_WINDOWS ){
+  vector<float> energies;
+  unsigned int i, window_size = (end_index-start_index)/num_windows;
+  // for each window
+  for( i=start_index; i<end_index; i+=window_size ){
+    // be careful not to go beyond end_index
+    unsigned int j = (end_index<i+window_size)? end_index: i+window_size;
+    energies.push_back( goertzel(arr,i,j,norm_freq) );
+  }
+  return mean( energies );
+}
+
 
 Statistics measure_stats( const AudioBuf & buf, frequency freq ){
   vector<float> energies;
 
-  unsigned int i, start, N = (unsigned int)ceil(WINDOW_SIZE*SAMPLE_RATE);
-  // use a sliding window
+  unsigned int start, N = (unsigned int)ceil(WINDOW_SIZE*SAMPLE_RATE);
+  // Calculate echo intensities: use a sliding non-overlapping window
   // TODO: parallelize window computations using SIMD instructions.
   for( start=0; start + N < buf.get_num_samples(); start += N ){
-    energies.push_back( 
-       goertzel<AudioBuf,float>(buf,start,start+N,(float)freq/SAMPLE_RATE)  );
+    energies.push_back( goertzel(buf,start,start+N,(float)freq/SAMPLE_RATE) );
   }
 
   // calculate statistics
   Statistics ret;
-  ret.mean=0;
-  ///cout << "energies:\n";
-  for (i=0; i < energies.size(); i++){
-    ///  cout << energies[i] <<endl;
-    ret.mean += energies[i];
-  }
-  ret.mean /= energies.size();
-  ret.variance=0;
-  for (i=0; i < energies.size(); i++)
-    ret.variance += ( energies[i] - ret.mean ) * ( energies[i] - ret.mean );
+  ret.mean = mean( energies );
+  ret.variance = variance( energies );
+  ret.delta = delta( energies );
   return ret;
 }
 
@@ -685,6 +723,7 @@ void power_management( AudioDev & audio, Config & conf ){
   AudioDev::check_error( Pa_CloseStream( s ) ); // close stream to free up dev
 }
 
+
 /** poll is a simplified version of the power management loop wherein we just
     constantly take readings */
 void poll( AudioDev & audio, Config & conf ){
@@ -700,6 +739,7 @@ void poll( AudioDev & audio, Config & conf ){
   AudioDev::check_error( Pa_CloseStream( s ) ); // close stream to free up dev
 }
 
+
 int main( int argc, char* argv[] ){
   // parse commandline arguments
   bool do_poll=false, debug=false;
@@ -712,6 +752,8 @@ int main( int argc, char* argv[] ){
       do_poll=true;
     }else if( string(argv[i]) == string("--debug") ){
       debug=true;
+    }else{
+      cerr << "unrecognized parameter: " << argv[i] <<endl;
     }
   }
 
@@ -730,6 +772,7 @@ int main( int argc, char* argv[] ){
     AudioDev::check_error( Pa_CloseStream( s ) ); // close stream to free dev
   }
 
+  // choose operating mode
   if( do_poll ){
     poll( my_audio, conf );
   }else{
