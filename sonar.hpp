@@ -171,9 +171,21 @@ class SysInterface{
 AudioBuf tone( duration_t duration=0.5, frequency freq=440, duration_t delay=0, 
 	       unsigned int fade_samples=441 );
 
-int freq_index( frequency freq );
-/** returns the power/energy of the given time series data at the frequency
-    of interest. */
+
+/** Geortzel's algorithm for finding the energy of a signal at a certain
+    frequency.  Note that end_index is one past the last valid value. 
+    Normalized frequency is measured in cycles per sample: (F/sample_rate)*/
+template<class indexable,class precision> 
+precision goertzel( const indexable & arr, unsigned int start_index, 
+		    unsigned int end_index, precision norm_freq );
+
+/** Bartlett's method is the mean of several runs of Goertzel's algorithm in
+    consecutive windows. */
+template<class indexable,class precision> 
+precision bartlett( const indexable & arr, unsigned int start_index, 
+		    unsigned int end_index, precision norm_freq, 
+		    unsigned int num_windows );
+
 
 struct Statistics{
   float mean;
@@ -181,6 +193,7 @@ struct Statistics{
   float delta;
 };
 std::ostream& operator<<(std::ostream& os, Statistics& s);
+
 
 /** Returns the mean and variance of the intensities of a given frequency
     in the audio buffer sampled in windows spread throughout the recording. */

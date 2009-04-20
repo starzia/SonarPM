@@ -65,8 +65,7 @@ AudioBuf::AudioBuf( duration_t length ){
 }
 
 AudioBuf::~AudioBuf(){
-  //TODO: I don't know why the following is causing segfaults
-  //if( this->data ) free( this->data ); // free sample array
+  if( this->data ) free( this->data ); // free sample array
 }
 
 sample_t& AudioBuf::operator[]( unsigned int index ) const{
@@ -123,7 +122,7 @@ AudioRequest::AudioRequest( const AudioBuf & buf ){
     audio buffer */
 AudioRequest::AudioRequest( duration_t len ){
   this->progress_index = 0; // set to zero so playback starts at beginning
-  this->audio = AudioBuf( len );  
+  this->audio = *(new AudioBuf( len ));  
 }
 
 bool AudioRequest::done(){
@@ -757,6 +756,7 @@ int main( int argc, char* argv[] ){
     }
   }
 
+  // set audio device, loading from config file if present
   AudioDev my_audio = AudioDev();
   Config conf( my_audio, CONFIG_FILENAME );
 
