@@ -378,7 +378,8 @@ Config::Config( AudioDev & audio, string filename ){
       ss.clear();
       ss.str( ini.GetValue("calibration","threshold" ) );
       ss >> this->threshold;
-      cerr<< "Config file "<<filename<<" loaded."<<endl;
+      cerr<< "Loaded config file "<<filename<<" with threshold: " 
+	  << this->threshold <<endl;
       // set audio object to use the desired devices
       audio.choose_device( this->rec_dev, this->play_dev );
     }catch( const exception& e ){
@@ -416,7 +417,8 @@ bool Config::write_config_file( string filename ){
     cerr<< "Error saving config file "<<filename<<endl;
     return false;
   }else{
-    cerr<< "Saved config file "<<filename<<endl;
+    cerr<< "Saved config file "<<filename<<" with threshold: "
+	<< this->threshold <<endl;
   }
   return true;
 }
@@ -483,8 +485,8 @@ void Config::choose_ping_threshold( AudioDev & audio, frequency freq ){
   AudioBuf blip = tone( TONE_LENGTH, freq );
   AudioBuf rec = audio.recordback( blip );
   Statistics blip_s = measure_stats( rec, freq );
-  cout << "chose preliminary threshold of "<<blip_s.variance<<endl;
-  this->threshold = blip_s.variance;
+  cout << "chose preliminary threshold of "<<blip_s.delta<<endl;
+  this->threshold = blip_s.delta;
 }
 
 void Config::choose_phone_home(){
@@ -763,7 +765,7 @@ void power_management( AudioDev & audio, Config & conf ){
       AudioBuf rec = audio.blocking_record( RECORDING_PERIOD );
       Statistics s = measure_stats( rec, conf.ping_freq );
       cout << s << endl;
-      if( s.variance < conf.threshold ){
+      if( s.delta < conf.threshold ){
 	// sleep monitor
 	SysInterface::sleep_monitor();
 	long sleep_time = SysInterface::current_time();
