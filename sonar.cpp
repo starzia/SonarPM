@@ -14,9 +14,9 @@
 
 #define TONE_LENGTH (1) // sonar ping length for calibration
 // this is the time period over which stats are calulated
-#define RECORDING_PERIOD (10.0) 
+#define RECORDING_PERIOD (2.0) 
 #define WINDOW_SIZE (0.1) // sliding window size
-#define BARTLETT_WINDOWS (10) // num windows in bartlett's method
+#define BARTLETT_WINDOWS (8) // num windows in bartlett's method
 #define SAMPLE_RATE (44100)
 #define CONFIG_FILENAME "/home/steve/.sonarPM/sonarPM.cfg"
 #define LOG_FILENAME "/home/steve/.sonarPM/log.txt"
@@ -603,11 +603,11 @@ template<class precision> precision delta( const vector<precision> & arr ){
 }
 
 ostream& operator<<(ostream& os, const Statistics& s){
-  os<< "{mean:" <<s.mean<< " var:" <<s.variance<< " delta:" <<s.delta<< '}';
+  os<< "{mean:" <<s.mean<< "\tvar:" <<s.variance<< "\tdelta:" <<s.delta<< '}';
   return os;
 }
 ostream& operator<<(ostream& os, Statistics& s){
-  os<< "{mean:" <<s.mean<< " var:" <<s.variance<< " delta:" <<s.delta<< '}';
+  os<< "{mean:" <<s.mean<< "\tvar:" <<s.variance<< "\tdelta:" <<s.delta<< '}';
   return os;
 }
 
@@ -631,19 +631,85 @@ precision goertzel( const indexable & arr, unsigned int start_index,
 }
 
 
+//16 byte vector of 4 floats
+typedef float v4sf __attribute__ ((vector_size(16)));
+//16 byte vector of 4 uints
+typedef unsigned int v4sd __attribute__ ((vector_size(16))); 
+
+typedef union f4vector { // wrapper for two alternative vector representations
+  v4sf v;
+  float f[4];
+} f4v; 
+
+typedef union d4vector { // wrapper for two alternative vector representations
+  v4sd v;
+  unsigned int f[4];
+} d4v;
+
+/** vectorized version of goertzel that operates on four consecutive windows
+    simultaneously.  ie, operates on arr in the index range:
+    [ start_index, start_index + 4*window_size ) */
+template<class indexable>
+f4v quad_goertzel( const indexable & arr, unsigned int start_index, 
+		   unsigned int window_size, float norm_freq ){
+  const v4sd one = {1, 1, 1, 1};
+  const v4sf zero = {0.0, 0.0, 0.0, 0.0};
+
+  f4v ret, s_prev, s_prev2;
+  s_prev.v = s_prev2.v = zero;
+  f4v coeff;
+  coeff.f[0]=coeff.f[1]=coeff.f[2]=coeff.f[3]= 2 * cos( 2 * M_PI * norm_freq );
+
+  d4v i; // set starting indices
+  i.f[0] = start_index + 0*window_size;
+  i.f[1] = start_index + 1*window_size;
+  i.f[2] = start_index + 2*window_size;
+  i.f[3] = start_index + 3*window_size;
+  for(; i.f[0]<window_size; i.v = i.v+one ){
+    f4v s,a;
+    a.f[0] = arr[i.f[0]];
+    a.f[1] = arr[i.f[1]];
+    a.f[2] = arr[i.f[2]];
+    a.f[3] = arr[i.f[3]];
+    s.v = a.v + coeff.v * s_prev.v - s_prev2.v;
+    s_prev2 = s_prev;
+    s_prev = s;
+  }
+  // return the energy (power)
+  ret.v = s_prev2.v * s_prev2.v + s_prev.v * s_prev.v 
+    - coeff.v * s_prev2.v * s_prev.v;
+  return ret;
+}
+
+
 /** Bartlett's method is the mean of several runs of Goertzel's algorithm in
     consecutive windows. */
 template<class indexable,class precision> 
 precision bartlett( const indexable & arr, unsigned int start_index, 
 		    unsigned int end_index, precision norm_freq, 
-		    unsigned int num_windows=BARTLETT_WINDOWS ){
+		    unsigned int num_windows ){
   vector<float> energies;
   unsigned int i, window_size = (end_index-start_index)/num_windows;
+
   // for each window
-  for( i=start_index; i<end_index; i+=window_size ){
-    // be careful not to go beyond end_index
-    unsigned int j = (end_index<i+window_size)? end_index: i+window_size;
-    energies.push_back( goertzel(arr,i,j,norm_freq) );
+  for( i=0; i<num_windows; i++ ){
+    if( i > num_windows-4 ){
+      // if less than four windows left, do one at a time.
+      // be careful not to go beyond end_index
+      unsigned int j = (end_index<(i+1)*window_size)? 
+	end_index: start_index+(i+1)*window_size;
+      energies.push_back( goertzel( arr, start_index + i*window_size, 
+				    j, norm_freq) );
+    }else{
+      // otherwise do four at once.
+      f4v res = quad_goertzel( arr, start_index + i*window_size,
+			       window_size, norm_freq );
+      energies.push_back( res.f[0] );
+      energies.push_back( res.f[1] );
+      energies.push_back( res.f[2] );
+      energies.push_back( res.f[3] );
+      i+=3; //skip ahead
+    }  
   }
   return mean( energies );
 }
@@ -656,7 +722,8 @@ Statistics measure_stats( const AudioBuf & buf, frequency freq ){
   // Calculate echo intensities: use a sliding non-overlapping window
   // TODO: parallelize window computations using SIMD instructions.
   for( start=0; start + N < buf.get_num_samples(); start += N ){
-    energies.push_back( goertzel(buf,start,start+N,(float)freq/SAMPLE_RATE) );
+    energies.push_back( bartlett(buf,start,start+N,
+				 (float)freq/SAMPLE_RATE,BARTLETT_WINDOWS) );
   }
 
   // calculate statistics
