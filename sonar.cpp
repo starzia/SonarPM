@@ -546,6 +546,21 @@ void SysInterface::sleep( duration_t duration ){
   Pa_Sleep( (int)(duration*1000) );
 }
 
+void SysInterface::wait_until_active(){
+  duration_t prev_idle_time = SysInterface::idle_seconds();
+  duration_t current_idle_time = SysInterface::idle_seconds();
+  while( current_idle_time >= prev_idle_time ){
+    SysInterface::sleep( SLEEP_TIME );
+    prev_idle_time = current_idle_time;
+    current_idle_time = SysInterface::idle_seconds();
+  }
+}
+void SysInterface::wait_until_idle(){
+  while( SysInterface::idle_seconds() < IDLE_THRESH ){
+    SysInterface::sleep( SLEEP_TIME ); //don't poll idle_seconds() constantly
+  }
+}
+
 long SysInterface::current_time(){
 #if defined PLATFORM_WINDOWS
   cerr << "unimplemented\n";
@@ -667,7 +682,7 @@ f4v quad_goertzel( const indexable & arr, unsigned int start_index,
   i.f[1] = start_index + 1*window_size;
   i.f[2] = start_index + 2*window_size;
   i.f[3] = start_index + 3*window_size;
-  for(; i.f[0]<window_size; i.v = i.v+one ){
+  for(; i.f[0]<start_index+window_size; i.v = i.v+one ){
     f4v s,a;
     a.f[0] = arr[i.f[0]];
     a.f[1] = arr[i.f[1]];
@@ -752,38 +767,32 @@ void power_management( AudioDev & audio, Config & conf ){
   cout << "Begin pinging loop at frequency of " <<conf.ping_freq<<"Hz"<<endl;
   PaStream* s = audio.nonblocking_play_loop( ping );
   while( 1 ){
-    SysInterface::sleep( SLEEP_TIME ); // don't poll idle_seconds constantly
-    while( SysInterface::idle_seconds() > IDLE_THRESH ){
+    SysInterface::wait_until_idle();
+
+    //-- THRESHOLD RAISING
+    if( SysInterface::idle_seconds() > IDLE_SAFETYNET ){
       // if we've been tring to detect use for too long, then this probably
       // means that the threshold is too low.
-      if( SysInterface::idle_seconds() > IDLE_SAFETYNET ){
-	  cout << "False attention detected." <<endl;
-	  conf.threshold *= DYNAMIC_THRESH_FACTOR;
-	  conf.write_config_file( CONFIG_FILENAME ); // config save changes	
-      }
+      cout << "False attention detected." <<endl;
+      conf.threshold *= DYNAMIC_THRESH_FACTOR;
+      conf.write_config_file( CONFIG_FILENAME ); // config save changes
+    }
 
-      AudioBuf rec = audio.blocking_record( RECORDING_PERIOD );
-      Statistics s = measure_stats( rec, conf.ping_freq );
-      cout << s << endl;
-      if( s.delta < conf.threshold ){
-	// sleep monitor
-	SysInterface::sleep_monitor();
-	long sleep_time = SysInterface::current_time();
-
-	// wait until woken up again
-	duration_t prev_idle_time = SysInterface::idle_seconds();
-	duration_t current_idle_time = SysInterface::idle_seconds();
-	while( current_idle_time >= prev_idle_time ){
-	  SysInterface::sleep( SLEEP_TIME );
-	  prev_idle_time = current_idle_time;
-	  current_idle_time = SysInterface::idle_seconds();
-	}
-	// waking up too soon means that we've just irritated the user
-	if( SysInterface::current_time() - sleep_time < IDLE_THRESH ){
-	  cout << "False sleep detected." <<endl;
-	  conf.threshold /= DYNAMIC_THRESH_FACTOR;
-	  conf.write_config_file( CONFIG_FILENAME ); // config save changes
-	}
+    AudioBuf rec = audio.blocking_record( RECORDING_PERIOD );
+    Statistics s = measure_stats( rec, conf.ping_freq );
+    cout << s << endl;
+    if( s.delta < conf.threshold ){
+      // sleep monitor
+      SysInterface::sleep_monitor();
+      long sleep_timestamp = SysInterface::current_time();
+      SysInterface::wait_until_active(); // OS will have turned on monitor
+      
+      //-- THRESHOLD LOWERING
+      // waking up too soon means that we've just irritated the user
+      if( SysInterface::current_time() - sleep_timestamp < IDLE_THRESH ){
+	cout << "False sleep detected." <<endl;
+	conf.threshold /= DYNAMIC_THRESH_FACTOR;
+	conf.write_config_file( CONFIG_FILENAME ); // config save changes
       }
     }
   }
@@ -799,7 +808,6 @@ void poll( AudioDev & audio, Config & conf ){
   cout << "Begin pinging loop at frequency of " <<conf.ping_freq<<"Hz"<<endl;
   PaStream* s = audio.nonblocking_play_loop( ping );
   while( 1 ){
-    SysInterface::sleep( SLEEP_TIME ); // don't poll idle_seconds constantly
     AudioBuf rec = audio.blocking_record( RECORDING_PERIOD );
     Statistics s = measure_stats( rec, conf.ping_freq );
     cout << s << endl;

@@ -159,6 +159,10 @@ class SysInterface{
   static duration_t idle_seconds();
   /** blocks the process for the specified time */
   static void sleep( duration_t duration );
+  /** returns shortly after HID activity */
+  static void wait_until_active();
+  /** returns after there has been no HID for some time */ 
+  static void wait_until_idle();
   /** returns glibc style time, ie epoch seconds */
   static long current_time();
   /** appends message to log */
