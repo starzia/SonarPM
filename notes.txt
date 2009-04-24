@@ -8,7 +8,6 @@ Platform specific portions:
 - time epoch
 
 Other TODO items:
-- dynamic threshold adjustment.
 - termination signal handler.
 - logging
 - use strings instead of indices to identify audio devices to allow for device
@@ -16,3 +15,4 @@ Other TODO items:
 - fix memory leaks
 - Only works with Portaudio 1.9, which is only in the bleeding edge distros
 - must create ~/.sonarPM manually
+- sonar playback oscillator crackles every so often.  Fix this somehow.

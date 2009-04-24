@@ -16,8 +16,8 @@
 // this is the time period over which stats are calulated
 #define RECORDING_PERIOD (2.0) 
 #define WINDOW_SIZE (0.1) // sliding window size
-#define BARTLETT_WINDOWS (8) // num windows in bartlett's method
-#define SAMPLE_RATE (44100)
+#define BARTLETT_WINDOWS (10) // num windows in bartlett's method
+#define SAMPLE_RATE (96000)
 #define CONFIG_FILENAME "/home/steve/.sonarPM/sonarPM.cfg"
 #define LOG_FILENAME "/home/steve/.sonarPM/log.txt"
 #define PHONE_HOME_ADDR "storage@stevetarzia.com"
@@ -299,15 +299,14 @@ PaStream* AudioDev::nonblocking_play_loop( const AudioBuf & buf ){
 AudioBuf AudioDev::blocking_record( duration_t duration ){
   PaStream *stream;
   AudioRequest *rec_request = new AudioRequest( duration );
-  /* Open an audio I/O stream. Opening a *default* stream means opening 
-     the default input and output devices */
-  check_error( Pa_OpenDefaultStream( 
-	 &stream,
-	 1,          /* mono input */
-	 0,          /* no output channels */
-	 paFloat32,  /* 32 bit floating point output */
+  /* Open an audio I/O stream. */
+  check_error( Pa_OpenStream (
+	 &stream, 
+	 &(this->in_params),
+	 NULL,       /* no output channels */
 	 SAMPLE_RATE,
 	 256,        /* frames per buffer */
+	 paNoFlag, 
 	 AudioDev::recorder_callback, /* this is your callback function */
 	 rec_request ) ); /*This is a pointer that will be passed to
 			     your callback*/
