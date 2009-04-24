@@ -763,10 +763,14 @@ void power_management( AudioDev & audio, Config & conf ){
   // buffer duration is one second, but actually it just needs to be a multiple
   // of the ping_period.
   AudioBuf ping = tone( 1, conf.ping_freq, 0,0 ); // no fade since we loop it
-  cout << "Begin pinging loop at frequency of " <<conf.ping_freq<<"Hz"<<endl;
-  PaStream* s = audio.nonblocking_play_loop( ping );
+  cout << "Begin power management loop at frequency of " 
+       <<conf.ping_freq<<"Hz"<<endl;
+  PaStream* strm;
+  strm = audio.nonblocking_play_loop( ping ); // initialize and start ping
+  AudioDev::check_error( Pa_StopStream( strm ) ); // stop ping
   while( 1 ){
     SysInterface::wait_until_idle();
+    AudioDev::check_error( Pa_StartStream( strm ) ); // resume ping
 
     //-- THRESHOLD RAISING
     if( SysInterface::idle_seconds() > IDLE_SAFETYNET ){
@@ -777,9 +781,12 @@ void power_management( AudioDev & audio, Config & conf ){
       conf.write_config_file( CONFIG_FILENAME ); // config save changes
     }
 
+    // record and process
     AudioBuf rec = audio.blocking_record( RECORDING_PERIOD );
+    AudioDev::check_error( Pa_StopStream( strm ) ); // stop ping
     Statistics s = measure_stats( rec, conf.ping_freq );
     cout << s << endl;
+
     if( s.delta < conf.threshold ){
       // sleep monitor
       SysInterface::sleep_monitor();
@@ -796,14 +803,14 @@ void power_management( AudioDev & audio, Config & conf ){
     }
   }
   // TODO: we never get here, so a signal handler needs to free the dev.
-  AudioDev::check_error( Pa_CloseStream( s ) ); // close stream to free up dev
+  AudioDev::check_error( Pa_CloseStream( strm ) ); // close ping stream
 }
 
 
 /** poll is a simplified version of the power management loop wherein we just
     constantly take readings */
 void poll( AudioDev & audio, Config & conf ){
-  AudioBuf ping = tone( 1, conf.ping_freq, 0,0 ); // no fade since we loop it  
+  AudioBuf ping = tone( 1, conf.ping_freq, 0,0 ); // no fade since we loop it 
   cout << "Begin pinging loop at frequency of " <<conf.ping_freq<<"Hz"<<endl;
   PaStream* s = audio.nonblocking_play_loop( ping );
   while( 1 ){

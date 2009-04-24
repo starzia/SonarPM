@@ -6,6 +6,7 @@ Platform specific portions:
 - filesystem access for logfile and creating config dir.
    also, finding suitable home directory to store conf dir.
 - time epoch
+- "/home/steve" is hardcoded
 
 Other TODO items:
 - termination signal handler.
@@ -16,3 +17,4 @@ Other TODO items:
 - Only works with Portaudio 1.9, which is only in the bleeding edge distros
 - must create ~/.sonarPM manually
 - sonar playback oscillator crackles every so often.  Fix this somehow.
+- user's volume settings will affect calibration.  Can we solve this by using ration of delta to mean in recording?
