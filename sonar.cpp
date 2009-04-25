@@ -17,7 +17,7 @@
 #define RECORDING_PERIOD (2.0) 
 #define WINDOW_SIZE (0.1) // sliding window size
 #define BARTLETT_WINDOWS (10) // num windows in bartlett's method
-#define SAMPLE_RATE (96000)
+int SAMPLE_RATE;
 #define CONFIG_FILENAME "/home/steve/.sonarPM/sonarPM.cfg"
 #define LOG_FILENAME "/home/steve/.sonarPM/log.txt"
 #define PHONE_HOME_ADDR "storage@stevetarzia.com"
@@ -153,6 +153,18 @@ void AudioDev::choose_device( unsigned int in_dev_num,
   this->out_params.sampleFormat = paFloat32;
   this->out_params.suggestedLatency = Pa_GetDeviceInfo(out_dev_num)->defaultLowOutputLatency ;
   this->out_params.hostApiSpecificStreamInfo = NULL; //See you specific host's API docs for info on using this field
+
+  // set global SAMPLE_RATE
+  int i;
+  const int rates[6] = {96000, 48000, 44100, 22050, 16000, 8000};
+  for( i=0; i<6; i++ ){
+    if( Pa_IsFormatSupported( &this->in_params,NULL,rates[i] ) == paNoError ){
+      SAMPLE_RATE=rates[i];
+      cerr << "Sample rate = "<<SAMPLE_RATE<<"Hz"<<endl;
+      return;
+    }
+  }
+  cerr<<"ERROR: no supported sample rate found!"<<endl;
 }
 
 pair<unsigned int,unsigned int> AudioDev::prompt_device(){
@@ -174,9 +186,9 @@ pair<unsigned int,unsigned int> AudioDev::prompt_device(){
 
   unsigned int in_dev_num, out_dev_num;
   // prompt user on which of the above devices to use
-  cout << "\nPlease enter an input device number: " << endl;
+  cout << endl << "Please enter an input device number: " << endl;
   cin >> in_dev_num;
-  cout << "\nPlease enter an output device number: " << endl;
+  cout << endl << "Please enter an output device number: " << endl;
   cin >> out_dev_num;
 
   return make_pair( in_dev_num, out_dev_num );
@@ -332,7 +344,7 @@ AudioBuf AudioDev::recordback( const AudioBuf & buf ){
 
 inline void AudioDev::check_error( PaError err ){
   if( err != paNoError )
-    printf(  "PortAudio error: %s\n", Pa_GetErrorText( err ) );
+    cerr << "PortAudio error: " << Pa_GetErrorText( err ) << endl;
 }
 
 /** call calibration functions to create a new configuration */
