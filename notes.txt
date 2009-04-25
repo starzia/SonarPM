@@ -18,3 +18,13 @@ Other TODO items:
 - must create ~/.sonarPM manually
 - sonar playback oscillator crackles every so often.  Fix this somehow.
 - user's volume settings will affect calibration.  Can we solve this by using ration of delta to mean in recording?
+
+mingw32 notes:
+- must compile portaudio.a first:
+  - requires pthread: yum install mingw32-pthreads, then:
+     cd /usr/i686-pc-mingw32/sys-root/mingw/lib/
+     sudo ln -s libpthreadGC2.a libpthread.a
+  - wget http://portaudio.com/archives/pa_stable_v19_20071207.tar.gz
+  - cd portaudio; mingw32-env; cp ../Makefile.portaudio-mingw32 Makefile; make
+- to build sonar: run mingw32-env; make
+  

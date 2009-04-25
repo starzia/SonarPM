@@ -5,7 +5,11 @@
  * Under Fedora Linux, package requirements are portaudio-devel
  */
 #include <string>
+#ifdef PLATFORM_WINDOWS
+#include "/usr/include/portaudio.h"
+#else
 #include <portaudio.h>
+#endif
 
 typedef float duration_t; /* durations are expressed as seconds, with floats */
 typedef float frequency;

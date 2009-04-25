@@ -32,6 +32,7 @@
 //#define PLATFORM_WINDOWS
 //#define PLATFORM_MAC
 
+#include <ctime>
 #if defined PLATFORM_LINUX
 /* The following headers are provided by these packages on a Redhat system:
  * libX11-devel, libXext-devel, libScrnSaver-devel
@@ -44,7 +45,6 @@
 #elif defined PLATFORM_MAC
 #endif
 #ifndef PLATFORM_WINDOWS
-#include <ctime>
 #include <stdlib.h>
 #endif
 
