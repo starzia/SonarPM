@@ -42,7 +42,8 @@ int SAMPLE_RATE;
 #include <X11/Xos.h>
 #include <X11/extensions/scrnsaver.h>
 #elif defined PLATFORM_WINDOWS
-//#include <userenv.h>
+#include <ddk/ntddvdeo.h> // backlight control
+//#include <userenv.h> // home path query
 #elif defined PLATFORM_MAC
 #endif
 #ifndef PLATFORM_WINDOWS
@@ -365,7 +366,8 @@ Config::Config( AudioDev & audio, string filename ){
     // set audio object to use the desired devices
     audio.choose_device( this->rec_dev, this->play_dev );
     this->warn_audio_level( audio );
-    this->choose_ping_freq( audio );
+    //this->choose_ping_freq( audio );
+    this->ping_freq=22000;
     this->choose_ping_threshold( audio, this->ping_freq );
     //this->choose_phone_home( );
     this->allow_phone_home=true;
@@ -531,6 +533,20 @@ bool phone_home(){
 bool SysInterface::sleep_monitor(){
 #if defined PLATFORM_LINUX
   system( "xset dpms force standby" );
+  return true;
+#elif defined PLATFORM_WINDOWS
+  /*
+  DeviceIoControl(
+		  (HANDLE) hDevice,            // handle to device
+		  IOCTL_VIDEO_SET_DISPLAY_BRIGHTNESS, // dwIoControlCode
+		  (LPVOID) lpInBuffer,         // input buffer
+		  (DWORD) nInBufferSize,       // size of the input buffer
+		  NULL,                        // lpOutBuffer
+		  0,                           // nOutBufferSize 
+		  (LPDWORD) lpBytesReturned,   // number of bytes returned
+		  (LPOVERLAPPED) lpOverlapped  // OVERLAPPED structure
+		  );
+  */
   return true;
 #else
   cout << "Monitor sleep unimplemented for this platform."<<endl;

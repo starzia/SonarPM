@@ -26,4 +26,5 @@ mingw32 notes:
   - wget http://portaudio.com/archives/pa_stable_v19_20071207.tar.gz
   - cd portaudio; mingw32-env; cp ../Makefile.portaudio-mingw32 Makefile; make
 - to build sonar: run mingw32-env; make
-  
+- In Vista and later, WmiMonitorBrightnessMethods can be used to set LCD bright
+- In XP there is http://msdn.microsoft.com/en-us/library/aa372656(VS.85).aspx
