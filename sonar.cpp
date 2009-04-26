@@ -18,8 +18,8 @@
 #define WINDOW_SIZE (0.1) // sliding window size
 #define BARTLETT_WINDOWS (10) // num windows in bartlett's method
 int SAMPLE_RATE;
-#define CONFIG_FILENAME "/home/steve/.sonarPM/sonarPM.cfg"
-#define LOG_FILENAME "/home/steve/.sonarPM/log.txt"
+#define CONFIG_FILENAME ".sonarPM.cfg"
+#define LOG_FILENAME ".sonarPM.log"
 #define PHONE_HOME_ADDR "storage@stevetarzia.com"
 #define SLEEP_TIME (0.2) // sleep time between idleness checks
 #define IDLE_THRESH (5) // don't activate sonar until idle for this long
@@ -42,10 +42,11 @@ int SAMPLE_RATE;
 #include <X11/Xos.h>
 #include <X11/extensions/scrnsaver.h>
 #elif defined PLATFORM_WINDOWS
+//#include <userenv.h>
 #elif defined PLATFORM_MAC
 #endif
 #ifndef PLATFORM_WINDOWS
-#include <stdlib.h>
+#include <stdlib.h> //getenv, etc.
 #endif
 
 using namespace std;
@@ -349,7 +350,8 @@ inline void AudioDev::check_error( PaError err ){
 
 /** call calibration functions to create a new configuration */
 Config::Config( AudioDev & audio, string filename ){
-  // try to load from a data file                                                    
+  this->filename = filename;
+  // try to load from a data file
   CSimpleIniA ini(false,false,false);
   SI_Error rc = ini.LoadFile( filename.c_str() );
   if (rc < 0){
@@ -369,7 +371,7 @@ Config::Config( AudioDev & audio, string filename ){
     this->allow_phone_home=true;
     
     // write configuration to file
-    this->write_config_file( CONFIG_FILENAME );
+    this->write_config_file();
   }else{
     // if file open successful, then get the config key values from it.
     try{
@@ -401,7 +403,7 @@ Config::Config( AudioDev & audio, string filename ){
   }
 }
 
-bool Config::write_config_file( string filename ){
+bool Config::write_config_file(){
   CSimpleIniA ini(false,false,false);
   // set the key values
   ostringstream ss;
@@ -423,12 +425,12 @@ bool Config::write_config_file( string filename ){
   ini.SetValue("calibration","threshold", ss.str().c_str());
 
   // write to file
-  SI_Error rc = ini.SaveFile( filename.c_str() );
+  SI_Error rc = ini.SaveFile( this->filename.c_str() );
   if (rc < 0){
-    cerr<< "Error saving config file "<<filename<<endl;
+    cerr<< "Error saving config file "<<this->filename<<endl;
     return false;
   }else{
-    cerr<< "Saved config file "<<filename<<" with threshold: "
+    cerr<< "Saved config file "<<this->filename<<" with threshold: "
 	<< this->threshold <<endl;
   }
   return true;
@@ -436,7 +438,7 @@ bool Config::write_config_file( string filename ){
 
 void Config::disable_phone_home(){
   this->allow_phone_home = false;
-  this->write_config_file( CONFIG_FILENAME );
+  this->write_config_file();
 }
   
 void Config::choose_ping_freq( AudioDev & audio ){
@@ -586,6 +588,20 @@ bool SysInterface::log( string message ){
   cerr << "unimplemented" <<endl;
   return true;
 }
+
+string SysInterface::config_dir(){
+#if defined PLATFORM_WINDOWS
+  //char[80] cbuf;
+  //PHANDLE process_token;
+  //if( !OpenProcessToken( TOKEN_READ
+  //if( !GetUserProfileDirectory( ) )
+  //  cerr << "ERROR: couldn't obtain home directory name"<<endl;
+  return "C:\\";
+#else
+  return string( getenv("HOME") ) + '/';
+#endif
+}
+
 
 AudioBuf tone( duration_t duration, frequency freq, duration_t delay, 
 	       unsigned int fade_samples ){
@@ -790,7 +806,7 @@ void power_management( AudioDev & audio, Config & conf ){
       // means that the threshold is too low.
       cout << "False attention detected." <<endl;
       conf.threshold *= DYNAMIC_THRESH_FACTOR;
-      conf.write_config_file( CONFIG_FILENAME ); // config save changes
+      conf.write_config_file(); // config save changes
     }
 
     // record and process
@@ -810,7 +826,7 @@ void power_management( AudioDev & audio, Config & conf ){
       if( SysInterface::current_time() - sleep_timestamp < IDLE_THRESH ){
 	cout << "False sleep detected." <<endl;
 	conf.threshold /= DYNAMIC_THRESH_FACTOR;
-	conf.write_config_file( CONFIG_FILENAME ); // config save changes
+	conf.write_config_file(); // config save changes
       }
     }
   }
@@ -853,7 +869,7 @@ int main( int argc, char* argv[] ){
 
   // set audio device, loading from config file if present
   AudioDev my_audio = AudioDev();
-  Config conf( my_audio, CONFIG_FILENAME );
+  Config conf( my_audio, SysInterface::config_dir()+CONFIG_FILENAME );
 
   if( debug ){
     // This next block is a debugging audio test

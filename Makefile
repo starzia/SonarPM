@@ -1,9 +1,9 @@
 FLAGS=-O3 -Wall
 #     -msse2 -ggdb
 
-PLATFORM=LINUX
+#PLATFORM=LINUX
 #PLATFORM=MAC
-#PLATFORM=WINDOWS
+PLATFORM=WINDOWS
 
 sonar: sonar.cpp sonar.hpp
 ifeq ($(PLATFORM),LINUX)

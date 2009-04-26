@@ -119,7 +119,7 @@ public:
       filename.  If unsuccessful, then call the calibration functions and
       write a new config file to use next time.*/
   Config( AudioDev & audio, std::string filename );
-  bool write_config_file( std::string filename );
+  bool write_config_file();
   /** this would be called after we've already phoned home */
   void disable_phone_home();
   
@@ -130,6 +130,7 @@ public:
   unsigned int play_dev;
 
 private:
+  std::string filename;
   /** CALIBRATION FUNCTIONS */
   /** Prompt the user to find the best ping frequency.
       Generally, we want to choose a frequency that is both low enough to
@@ -171,6 +172,8 @@ class SysInterface{
   static long current_time();
   /** appends message to log */
   static bool log( std::string message );
+  /** returns the name of configuration directory, creating if nonexistant */
+  static std::string config_dir();
 };
 
 /** duration is in seconds and freq is the  tone pitch.  
