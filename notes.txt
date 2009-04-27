@@ -28,3 +28,5 @@ mingw32 notes:
 - to build sonar: run mingw32-env; make
 - In Vista and later, WmiMonitorBrightnessMethods can be used to set LCD bright
 - In XP there is http://msdn.microsoft.com/en-us/library/aa372656(VS.85).aspx
+   see also: http://msdn.microsoft.com/en-us/magazine/cc163415.aspx
+   see also: http://msdn.microsoft.com/en-us/library/ms800485.aspx

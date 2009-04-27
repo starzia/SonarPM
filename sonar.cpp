@@ -43,6 +43,8 @@ int SAMPLE_RATE;
 #include <X11/extensions/scrnsaver.h>
 #elif defined PLATFORM_WINDOWS
 #include <ddk/ntddvdeo.h> // backlight control
+#define IOCTL_VIDEO_QUERY_SUPPORTED_BRIGHTNESS \
+  CTL_CODE(FILE_DEVICE_VIDEO, 0x125, METHOD_BUFFERED, FILE_ANY_ACCESS)
 //#include <userenv.h> // home path query
 #elif defined PLATFORM_MAC
 #endif
@@ -58,7 +60,7 @@ AudioBuf::AudioBuf( ){
 }
 
 AudioBuf::AudioBuf( string filename ){
-  cerr << "unimplemented\n";
+  cerr << "audio file read unimplemented"<<endl;
 }
 
 AudioBuf::AudioBuf( duration_t length ){
@@ -75,7 +77,7 @@ sample_t& AudioBuf::operator[]( unsigned int index ) const{
 }
 
 void AudioBuf::prepend_silence( duration_t silence_duration ){
-  cerr << "unimplemented\n";
+  cerr << "prepend_silence unimplemented"<<endl;
 }
 
 duration_t AudioBuf::get_length() const{
@@ -111,7 +113,7 @@ AudioBuf AudioBuf::repeat( int repetitions ) const{
 }
 
 bool AudioBuf::write_to_file( string filename ) const{
-  cerr << "unimplemented\n";
+  cerr << "audio file writing unimplemented"<<endl;
   return true;
 }
 
@@ -505,15 +507,15 @@ void Config::choose_ping_threshold( AudioDev & audio, frequency freq ){
 }
 
 void Config::choose_phone_home(){
-  cerr << "unimplemented\n";
+  cerr << "choose_phone_home() unimplemented"<<endl;
 }
   
 void Config::warn_audio_level( AudioDev & audio ){
-  cerr << "unimplemented\n";
+  cerr << "warn_audio_level() unimplemented"<<endl;
 }
 
 Emailer::Emailer( string dest_addr ){
-  cerr << "unimplemented\n";
+  cerr << "Emailer unimplemented"<<endl;
 }
 
 bool Emailer::phone_home( string filename ){
@@ -521,7 +523,7 @@ bool Emailer::phone_home( string filename ){
 #elif defined PLATFORM_WINDOWS
 #elif defined PLATFORM_MAC
 #endif
-  cerr << "unimplemented\n";
+  cerr << "phone_home unimplemented"<<endl;
   return true;
 }
 
@@ -535,9 +537,42 @@ bool SysInterface::sleep_monitor(){
   system( "xset dpms force standby" );
   return true;
 #elif defined PLATFORM_WINDOWS
+  //open LCD device handle
+  HANDLE lcd_handle = CreateFile( 
+	"\\\\.\\LCD",  /*__in      LPCTSTR lpFileName=@"\\.\LCD"*/
+	GENERIC_READ | GENERIC_WRITE,/*__in      DWORD dwDesiredAccess*/
+	0,             /*__in      DWORD dwShareMode*/
+	NULL,          /*__in_opt  LPSECURITY_ATTRIBUTES lpSecurityAttributes*/
+	OPEN_EXISTING, /*__in      DWORD dwCreationDisposition*/
+	FILE_ATTRIBUTE_NORMAL, /*__in      DWORD dwFlagsAndAttributes*/
+	NULL ); /*__in_opt  HANDLE hTemplateFile*/
+  if( lcd_handle == INVALID_HANDLE_VALUE ){
+    cerr << "ERROR: could not open LCD handle"<<endl;
+    return false;
+  }
+  // read LCD's brightness range
+  char buf[256];
+  DWORD num_levels=0;
+  if( DeviceIoControl( lcd_handle,                // handle to device
+		       IOCTL_VIDEO_QUERY_SUPPORTED_BRIGHTNESS,//dwIoControlCode
+		       NULL,                      // lpInBuffer
+		       0,                         // nInBufferSize
+		       buf,                       // output buffer
+		       256,                       // size of output buffer
+		       &num_levels,               // number of bytes returned
+		       NULL )                     // OVERLAPPED structure
+      == FALSE ){
+    return false;
+  }
+  if( num_levels==0 ){
+    cerr<<"ERROR: hardware does not support LCD brightness control!"<<endl;
+  }
+  unsigned int i;
+  for( i=0; i<num_levels; i++ ){
+    cout << "level["<<i<<"]="<<buf[i]<<endl;
+  }
   /*
-  DeviceIoControl(
-		  (HANDLE) hDevice,            // handle to device
+  DeviceIoControl( lcd_handle,                 // handle to device
 		  IOCTL_VIDEO_SET_DISPLAY_BRIGHTNESS, // dwIoControlCode
 		  (LPVOID) lpInBuffer,         // input buffer
 		  (DWORD) nInBufferSize,       // size of the input buffer
@@ -565,8 +600,15 @@ duration_t SysInterface::idle_seconds(){
   duration_t ret = (info->idle)/1000.0;
   XCloseDisplay( dis );
   return ret;
+#elif defined PLATFORM_WINDOWS
+  LASTINPUTINFO info;
+  info.cbSize = sizeof(LASTINPUTINFO); // prep info struct
+  if( !GetLastInputInfo( &info ) )
+    cerr<<"ERROR: could not getLastInputInfo"<<endl;
+  unsigned int idleTicks = GetTickCount() - info.dwTime; // compute idle time
+  return (idleTicks/1000); // returns idle time in seconds
 #else
-  return 99999;
+  return 60;
 #endif
 }
 
@@ -592,8 +634,13 @@ void SysInterface::wait_until_idle(){
 
 long SysInterface::current_time(){
 #if defined PLATFORM_WINDOWS
-  cerr << "unimplemented\n";
-  return 1;
+  SYSTEMTIME st;
+  FILETIME ft; // in 100 ns increments
+  GetSystemTime( &st );
+  SystemTimeToFileTime( &st, &ft );
+  unsigned long long high_bits = ft.dwHighDateTime;
+  unsigned long long t = ft.dwLowDateTime+(high_bits<<32);
+  return t/10000000;
 #else
   time_t ret;
   return time(&ret);
@@ -601,7 +648,7 @@ long SysInterface::current_time(){
 }
 
 bool SysInterface::log( string message ){
-  cerr << "unimplemented" <<endl;
+  cerr << "log() unimplemented" <<endl;
   return true;
 }
 
@@ -795,11 +842,11 @@ Statistics measure_stats( const AudioBuf & buf, frequency freq ){
 }
 
 void term_handler( int signum, int frame ){
-  cerr << "unimplemented\n";
+  cerr << "term_handler() unimplemented"<<endl;
 }
 
 long get_log_start_time( ){
-  cerr << "unimplemented\n";
+  cerr << "log_start_time() unimplemented"<<endl;
   return 0;
 }
 
@@ -890,10 +937,10 @@ int main( int argc, char* argv[] ){
   if( debug ){
     // This next block is a debugging audio test
     duration_t test_length = 3;
-    cout<<"First, we are going to record and playback to test the audio HW.\n";
-    cout<<"recording audio...\n";
+    cout<<"First, we are going to record and playback to test the audio HW."<<endl;
+    cout<<"recording audio..."<<endl;
     AudioBuf my_buf = my_audio.blocking_record( test_length );
-    cout<<"playing back the recording...\n";
+    cout<<"playing back the recording..."<<endl;
     PaStream* s = my_audio.nonblocking_play( my_buf ); 
     SysInterface::sleep( test_length ); // give the audio some time to play
     AudioDev::check_error( Pa_CloseStream( s ) ); // close stream to free dev
