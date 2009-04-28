@@ -199,6 +199,8 @@ template<class indexable,class precision>
 precision bartlett( const indexable & arr, unsigned int start_index, 
 		    unsigned int end_index, precision norm_freq, 
 		    unsigned int num_windows );
+template<class precision> 
+precision bartlett( const AudioBuf & arr, precision norm_freq );
 
 
 struct Statistics{

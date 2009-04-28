@@ -12,9 +12,7 @@
 #include <sstream>
 #include <exception>
 
-#define TONE_LENGTH (1) // sonar ping length for calibration
-// this is the time period over which stats are calulated
-#define RECORDING_PERIOD (10.0) 
+#define RECORDING_PERIOD (2.0) 
 #define WINDOW_SIZE (0.1) // sliding window size
 #define BARTLETT_WINDOWS (10) // num windows in bartlett's method
 int SAMPLE_RATE;
@@ -369,8 +367,7 @@ Config::Config( AudioDev & audio, string filename ){
     // set audio object to use the desired devices
     audio.choose_device( this->rec_dev, this->play_dev );
     this->warn_audio_level( audio );
-    //this->choose_ping_freq( audio );
-    this->ping_freq=22000;
+    this->choose_ping_freq( audio );
     this->choose_ping_threshold( audio, this->ping_freq );
     //this->choose_phone_home( );
     this->allow_phone_home=true;
@@ -447,7 +444,6 @@ void Config::disable_phone_home(){
 }
   
 void Config::choose_ping_freq( AudioDev & audio ){
-  // We start with 20khz and reduce it until we get a reading on the mic.
   cout <<""<<endl
        <<"This power management system uses sonar to detect whether you are sitting"<<endl
        <<"in front of the computer.  This means that the computer plays a very high"<<endl
@@ -458,42 +454,41 @@ void Config::choose_ping_freq( AudioDev & audio ){
        <<"younger persons and animals are generally more sensitive to high frequency"<<endl
        <<"noises.  Therefore, we advise you not to use this software in the company"<<endl
        <<"of children or pets."<<endl;
-  ///AudioBuf silence = tone( TONE_LENGTH, 0 );
-  ///AudioBuf silence_rec = audio.recordback( silence );
-  frequency start_freq = 22000;
-  frequency freq = start_freq;
-  // below, we subtract two readings because they are logarithms
-  frequency scaling_factor = 0.95;
+
   cout << endl
-       <<"Please press <enter> and listen carefully to continue with the "<<endl
-       <<"calibration."<<endl;
+       <<"Please adjust your speaker and micrphone volume to normal levels."<<endl
+       <<"Several seconds of white noise will be played.  Do not be alarmed and"<<endl
+       <<"do not adjust your speaker volume level."<<endl
+       <<"This is a normal part of the system calibration procedure."<<endl<<endl
+       <<"Press <enter> to continue"<<endl;
   cin.ignore();
   cin.get();
-  while( 1 ){
-    freq *= scaling_factor;
-    AudioBuf blip = tone( TONE_LENGTH, freq );
-    AudioBuf rec = audio.recordback( blip );
-    Statistics blip_s = measure_stats( rec, freq );
-    ///Statistics silence_s = measure_stats( silence_rec, freq );
-    cout << "Did you just hear a high frequency ("<<round(freq)<<"Hz) tone? [yes/no]"
-	 <<endl;
-    string ans;
-    cin >> ans;
-    if( ans == "yes" or ans == "Yes" or ans == "YES" or ans=="Y" or ans=="y"){
-      freq /= scaling_factor;
-      break;
-    }
+  cout << "Please wait while the system is calibrated..."<<endl;
+
+  // record silence (as a reference point)
+  AudioBuf silence = tone( RECORDING_PERIOD, 0 );
+  AudioBuf silence_rec = audio.recordback( silence );
+  // record white noise
+  AudioBuf noise = gaussian_white_noise( RECORDING_PERIOD );
+  AudioBuf noise_rec = audio.recordback( noise );
+
+  // now choose highest freq with energy reading well above that of silence
+  frequency freq, start_freq = SAMPLE_RATE / 2; // start with Nyquist freq
+  float scaling_factor = 0.95;
+  float required_gain = 100; // choose a ping frequency only if this gain 
+                             // of ping/silence is observed
+  frequency abort_point = 10000;  // if chosen freq is below this, abort.
+  for( freq = start_freq; 
+       required_gain * bartlett(silence_rec,freq) > bartlett(noise_rec,freq);
+       freq *= scaling_factor ){
     // at some point stop descending frequency loop
-    if( freq >= start_freq ){
-      cout << "Your hearing is too good (or your speakers are too noisy)."<<endl;
-      cout <<"CANNOT CONTINUE"<<endl;
+    if( freq >= abort_point ){
+      cerr << "ERROR: Your speakers and/or your speakers are not sensitive enough to proceed!"<<endl;
       SysInterface::log( "freq>=start_freq" );
       phone_home();
       exit(-1);
     }
   }
-  freq = round( freq );
-  cout << "chose frequency of "<<freq<<endl;
   this->ping_freq = freq;
 }
   
@@ -842,6 +837,10 @@ precision bartlett( const indexable & arr, unsigned int start_index,
     }  
   }
   return mean( energies );
+}
+template<class precision> 
+precision bartlett( const AudioBuf & arr, precision norm_freq ){
+  return bartlett(arr, 0, arr.get_num_samples(), norm_freq, BARTLETT_WINDOWS);
 }
 
 
