@@ -511,7 +511,7 @@ void Config::choose_phone_home(){
 }
   
 void Config::warn_audio_level( AudioDev & audio ){
-  cerr << "warn_audio_level() unimplemented"<<endl;
+  //TODO: cerr << "warn_audio_level() unimplemented"<<endl;
 }
 
 Emailer::Emailer( string dest_addr ){
@@ -537,6 +537,13 @@ bool SysInterface::sleep_monitor(){
   system( "xset dpms force standby" );
   return true;
 #elif defined PLATFORM_WINDOWS
+  // send monitor off message
+  SendMessage( GetDesktopWindow(), WM_SYSCOMMAND, SC_MONITORPOWER, 1 ); 
+  //                               -1 for "on", 1 for "low power", 2 for "off".
+  //SendMessage( h, WM_SYSCOMMAND, SC_SCREENSAVE, NULL ); // activate scrnsaver
+  cout << "monitor in standby mode."<<endl;
+  return true;
+#elif 0 // the following is Windows LCD brightness control code
   //open LCD device handle
   HANDLE lcd_handle = CreateFile( 
 	"\\\\.\\LCD",  /*__in      LPCTSTR lpFileName=@"\\.\LCD"*/
