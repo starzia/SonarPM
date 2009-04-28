@@ -14,10 +14,11 @@
 
 #define TONE_LENGTH (1) // sonar ping length for calibration
 // this is the time period over which stats are calulated
-#define RECORDING_PERIOD (2.0) 
+#define RECORDING_PERIOD (10.0) 
 #define WINDOW_SIZE (0.1) // sliding window size
 #define BARTLETT_WINDOWS (10) // num windows in bartlett's method
 int SAMPLE_RATE;
+#define FRAMES_PER_BUFFER (4096) // PortAudio buf size. default is 256
 #define CONFIG_FILENAME ".sonarPM.cfg"
 #define LOG_FILENAME ".sonarPM.log"
 #define PHONE_HOME_ADDR "storage@stevetarzia.com"
@@ -281,7 +282,7 @@ PaStream* AudioDev::nonblocking_play( const AudioBuf & buf ){
 	 NULL,          /* no input channels */
 	 &(this->out_params),
 	 SAMPLE_RATE,
-	 256,   /* frames per buffer */
+	 FRAMES_PER_BUFFER,
 	 paNoFlag,
 	 AudioDev::player_callback, /* this is your callback function */
 	 play_request ) ); /*This is a pointer that will be passed to
@@ -301,7 +302,7 @@ PaStream* AudioDev::nonblocking_play_loop( const AudioBuf & buf ){
 	 NULL,          /* no input channels */
 	 &(this->out_params),
 	 SAMPLE_RATE,
-	 256,   /* frames per buffer */
+	 FRAMES_PER_BUFFER,   /* frames per buffer */
 	 paNoFlag,
 	 AudioDev::oscillator_callback, /* this is your callback function */
 	 play_request ) ); /*This is a pointer that will be passed to
@@ -321,7 +322,7 @@ AudioBuf AudioDev::blocking_record( duration_t duration ){
 	 &(this->in_params),
 	 NULL,       /* no output channels */
 	 SAMPLE_RATE,
-	 256,        /* frames per buffer */
+	 FRAMES_PER_BUFFER,        /* frames per buffer */
 	 paNoFlag, 
 	 AudioDev::recorder_callback, /* this is your callback function */
 	 rec_request ) ); /*This is a pointer that will be passed to
@@ -499,7 +500,7 @@ void Config::choose_ping_freq( AudioDev & audio ){
 /** current implementation just chooses a threshold in the correct neighborhood
     and relies on dynamic runtime adjustment for fine-tuning */
 void Config::choose_ping_threshold( AudioDev & audio, frequency freq ){
-  AudioBuf blip = tone( TONE_LENGTH, freq );
+  AudioBuf blip = tone( RECORDING_PERIOD, freq );
   AudioBuf rec = audio.recordback( blip );
   Statistics blip_s = measure_stats( rec, freq );
   cout << "chose preliminary threshold of "<<blip_s.delta<<endl;
