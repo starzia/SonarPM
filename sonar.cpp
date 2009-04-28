@@ -539,7 +539,8 @@ bool SysInterface::sleep_monitor(){
   return true;
 #elif defined PLATFORM_WINDOWS
   // send monitor off message
-  SendMessage( GetDesktopWindow(), WM_SYSCOMMAND, SC_MONITORPOWER, 1 ); 
+  SendMessage( HWND_TOPMOST, WM_SYSCOMMAND, SC_MONITORPOWER, 1 ); 
+  ///SendMessage( GetDesktopWindow(), WM_SYSCOMMAND, SC_MONITORPOWER, 1 ); 
   //                               -1 for "on", 1 for "low power", 2 for "off".
   //SendMessage( h, WM_SYSCOMMAND, SC_SCREENSAVE, NULL ); // activate scrnsaver
   cout << "monitor in standby mode."<<endl;
@@ -687,6 +688,20 @@ AudioBuf tone( duration_t duration, frequency freq, duration_t delay,
     float attenuation = 1.0*i/fade_samples;
     buf[i] = attenuation * buf[i];
     buf[end_i-1-i] = attenuation * buf[end_i-1-i];
+  }
+  return buf;
+}
+
+AudioBuf gaussian_white_noise( duration_t duration ){
+  // create empty buffer
+  AudioBuf buf = AudioBuf( duration );
+  unsigned int i, end_i = buf.get_num_samples();
+
+  /* inner loop taken from http://www.musicdsp.org/showone.php?id=113 */
+  for( i=0; i < end_i; i++ ){
+    float R1 = (float) rand() / (float) RAND_MAX;
+    float R2 = (float) rand() / (float) RAND_MAX;
+    buf[i] = (float) sqrt( -2.0f * log( R1 )) * cos( 2.0f * M_PI * R2 );
   }
   return buf;
 }

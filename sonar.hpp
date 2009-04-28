@@ -182,6 +182,9 @@ class SysInterface{
 AudioBuf tone( duration_t duration=0.5, frequency freq=440, duration_t delay=0, 
 	       unsigned int fade_samples=441 );
 
+/** duration is in seconds. */
+AudioBuf gaussian_white_noise( duration_t duration=1 );
+
 
 /** Geortzel's algorithm for finding the energy of a signal at a certain
     frequency.  Note that end_index is one past the last valid value. 
