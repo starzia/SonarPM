@@ -161,7 +161,8 @@ void AudioDev::choose_device( unsigned int in_dev_num,
   int i;
   const int rates[6] = {96000, 48000, 44100, 22050, 16000, 8000};
   for( i=0; i<6; i++ ){
-    if( Pa_IsFormatSupported( &this->in_params,NULL,rates[i] ) == paNoError ){
+    if( Pa_IsFormatSupported( &this->in_params,NULL,rates[i] ) == paNoError &&
+	Pa_IsFormatSupported( NULL,&this->out_params,rates[i] ) == paNoError ){
       SAMPLE_RATE=rates[i];
       cerr << "Sample rate = "<<SAMPLE_RATE<<"Hz"<<endl;
       return;
@@ -473,7 +474,7 @@ void Config::choose_ping_freq( AudioDev & audio ){
   AudioBuf noise_rec = audio.recordback( noise );
 
   // now choose highest freq with energy reading well above that of silence
-  frequency freq, start_freq = SAMPLE_RATE / 2; // start with Nyquist freq
+  frequency freq, start_freq = SAMPLE_RATE / 2.2; // start below Nyquist freq
   float scaling_factor = 0.95;
   float required_gain = 100; // choose a ping frequency only if this gain 
                              // of ping/silence is observed
