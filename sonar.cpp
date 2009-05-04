@@ -12,7 +12,7 @@
 #include <sstream>
 #include <exception>
 
-#define RECORDING_PERIOD (2.0) 
+#define RECORDING_PERIOD (10.0) 
 #define WINDOW_SIZE (0.1) // sliding window size
 #define BARTLETT_WINDOWS (10) // num windows in bartlett's method
 int SAMPLE_RATE;
@@ -22,7 +22,8 @@ int SAMPLE_RATE;
 #define PHONE_HOME_ADDR "storage@stevetarzia.com"
 #define SLEEP_TIME (0.2) // sleep time between idleness checks
 #define IDLE_THRESH (5) // don't activate sonar until idle for this long
-#define IDLE_SAFETYNET (300) // assume that if idle for this long, user is gone.
+#define IDLE_SAFETYNET (300) // assume that if idle for this long, user is gone
+#define DEFAULT_PING_FREQ (22000)
 #define DYNAMIC_THRESH_FACTOR (1.3) // how rapidly does dynamic threshold move
 
 // One of the following should be defined to activate platform-specific code.
@@ -368,7 +369,8 @@ Config::Config( AudioDev & audio, string filename ){
     // set audio object to use the desired devices
     audio.choose_device( this->rec_dev, this->play_dev );
     this->warn_audio_level( audio );
-    this->choose_ping_freq( audio );
+    //this->choose_ping_freq( audio );
+    this->ping_freq = DEFAULT_PING_FREQ;
     this->choose_ping_threshold( audio, this->ping_freq );
     //this->choose_phone_home( );
     this->allow_phone_home=true;
@@ -457,7 +459,7 @@ void Config::choose_ping_freq( AudioDev & audio ){
        <<"of children or pets."<<endl;
 
   cout << endl
-       <<"Please adjust your speaker and micrphone volume to normal levels."<<endl
+       <<"Please adjust your speaker and microphone volume to normal levels."<<endl
        <<"Several seconds of white noise will be played.  Do not be alarmed and"<<endl
        <<"do not adjust your speaker volume level."<<endl
        <<"This is a normal part of the system calibration procedure."<<endl<<endl
@@ -474,28 +476,36 @@ void Config::choose_ping_freq( AudioDev & audio ){
   AudioBuf noise_rec = audio.recordback( noise );
 
   // now choose highest freq with energy reading well above that of silence
-  frequency freq, start_freq = SAMPLE_RATE / 2.2; // start below Nyquist freq
+  frequency freq, start_freq = SAMPLE_RATE / 2; // Nyquist freq
   float scaling_factor = 0.95;
-  float required_gain = 100; // choose a ping frequency only if this gain 
-                             // of ping/silence is observed
-  frequency abort_point = 10000;  // if chosen freq is below this, abort.
+  frequency best_freq = 0;
+  float best_gain = -999999;
+  frequency abort_point = 20000;  // if chosen freq is below this, abort.
+  cout << "Frequency response:"<<endl;
   for( freq = start_freq; 
-       required_gain * bartlett(silence_rec,freq) > bartlett(noise_rec,freq);
+       freq >= abort_point;
        freq *= scaling_factor ){
-    // at some point stop descending frequency loop
-    if( freq >= abort_point ){
-      cerr << "ERROR: Your speakers and/or your speakers are not sensitive enough to proceed!"<<endl;
-      SysInterface::log( "freq>=start_freq" );
-      phone_home();
-      exit(-1);
+    float gain = measure_stats(noise_rec,freq).mean / 
+                                          measure_stats(silence_rec,freq).mean;
+    cout << freq <<"Hz  \t"<<gain<<endl;
+    if( gain > best_gain ){
+      best_gain = gain;
+      best_freq = freq;
     }
   }
-  this->ping_freq = freq;
+  if( best_gain < 10 ){
+    cerr << "ERROR: Your mic and/or speakers are not sensitive enough to proceed!"<<endl;
+    SysInterface::log( "freq>=start_freq" );
+    phone_home();
+    exit(-1);
+  }
+  this->ping_freq = best_freq;
 }
   
 /** current implementation just chooses a threshold in the correct neighborhood
     and relies on dynamic runtime adjustment for fine-tuning */
 void Config::choose_ping_threshold( AudioDev & audio, frequency freq ){
+  cout << "Please wait while the system is calibrated."<<endl;
   AudioBuf blip = tone( RECORDING_PERIOD, freq );
   AudioBuf rec = audio.recordback( blip );
   Statistics blip_s = measure_stats( rec, freq );
@@ -535,11 +545,12 @@ bool SysInterface::sleep_monitor(){
   return true;
 #elif defined PLATFORM_WINDOWS
   // send monitor off message
-  SendMessage( HWND_TOPMOST, WM_SYSCOMMAND, SC_MONITORPOWER, 1 ); 
+  PostMessage( HWND_TOPMOST, WM_SYSCOMMAND, SC_MONITORPOWER, 1 ); 
   ///SendMessage( GetDesktopWindow(), WM_SYSCOMMAND, SC_MONITORPOWER, 1 ); 
   //                               -1 for "on", 1 for "low power", 2 for "off".
   //SendMessage( h, WM_SYSCOMMAND, SC_SCREENSAVE, NULL ); // activate scrnsaver
   cout << "monitor in standby mode."<<endl;
+  SysInterface::sleep( 0.5 ); // give system time to process message
   return true;
 #elif 0 // the following is Windows LCD brightness control code
   //open LCD device handle
@@ -901,7 +912,9 @@ void power_management( AudioDev & audio, Config & conf ){
     Statistics s = measure_stats( rec, conf.ping_freq );
     cout << s << endl;
 
-    if( s.delta < conf.threshold ){
+    // if sonar reading below thresh. and user is still idle ...
+    if( s.delta < conf.threshold 
+	&& SysInterface::idle_seconds() > IDLE_THRESH ){
       // sleep monitor
       SysInterface::sleep_monitor();
       long sleep_timestamp = SysInterface::current_time();
