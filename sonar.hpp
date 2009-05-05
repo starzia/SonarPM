@@ -151,6 +151,7 @@ public:
   Emailer( std::string dest_addr );
   /** sends the filename to destination_address */
   bool phone_home( std::string filename );
+private:
   /** this is the email address that we phone home to */
   std::string destination_address;
 };

@@ -522,16 +522,19 @@ void Config::warn_audio_level( AudioDev & audio ){
 }
 
 Emailer::Emailer( string dest_addr ){
-  cerr << "Emailer unimplemented"<<endl;
+  this->destination_address = dest_addr;
 }
 
 bool Emailer::phone_home( string filename ){
-#if defined PLATFORM_LINUX
-#elif defined PLATFORM_WINDOWS
-#elif defined PLATFORM_MAC
-#endif
-  cerr << "phone_home unimplemented"<<endl;
+#if defined PLATFORM_WINDOWS
+  const char* szCmd="IEXPLORE.EXE";
+  const char* szParm="HTTP://GOOGLE.COM";
+  ShellExecute(NULL,"open",szCmd,szParm,NULL,SW_SHOW);
   return true;
+#else
+  cerr << "phone_home unimplemented"<<endl;
+  return false;
+#endif
 }
 
 bool phone_home(){
@@ -955,12 +958,14 @@ int main( int argc, char* argv[] ){
   int i;
   for( i=1; i<argc; i++ ){
     if( string(argv[i]) == string("--help") ){
-      cout<<"usage is "<<argv[0]<<" [ --help | --poll | --debug ]"<<endl;
+      cout<<"usage is "<<argv[0]<<" [ --help | --poll | --debug | --phonehome ]"<<endl;
       exit(0);
     }else if( string(argv[i]) == string("--poll") ){
       do_poll=true;
     }else if( string(argv[i]) == string("--debug") ){
       debug=true;
+    }else if( string(argv[i]) == string("--phonehome") ){
+      phone_home();
     }else{
       cerr << "unrecognized parameter: " << argv[i] <<endl;
     }
