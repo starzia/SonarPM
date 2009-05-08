@@ -107,6 +107,10 @@ public:
   /** Record the echo of buf */
   AudioBuf recordback( const AudioBuf & buf );
 
+  /** tests the frequency response of the audio hardware and returns the most 
+      reponsive ultrasonic frequency */
+  float* test_freq_response();
+
   PaStreamParameters out_params, in_params;
   /** prints PortAudio error message, if any */
   static inline void check_error( PaError err );

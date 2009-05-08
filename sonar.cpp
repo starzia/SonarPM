@@ -347,6 +347,39 @@ AudioBuf AudioDev::recordback( const AudioBuf & buf ){
   return ret;
 }
 
+/** @return float[2] = { best_freq, best_gain } */
+float* AudioDev::test_freq_response(){
+  cout << "Please wait while the system is calibrated..."<<endl;
+
+  // record silence (as a reference point)
+  AudioBuf silence = tone( RECORDING_PERIOD, 0 );
+  AudioBuf silence_rec = this->recordback( silence );
+  // record white noise
+  AudioBuf noise = gaussian_white_noise( RECORDING_PERIOD );
+  AudioBuf noise_rec = this->recordback( noise );
+
+  // now choose highest freq with energy reading well above that of silence
+  float scaling_factor = 1.02; // freq bin scaling factor
+  frequency best_freq = 0;
+  float best_gain = -999999;
+  frequency freq, lowest_freq = 20000, highest_freq = SAMPLE_RATE/2; //Nyquist
+  cout << "Frequency response:"<<endl;
+  for( freq = lowest_freq; 
+       freq <= highest_freq;
+       freq *= scaling_factor ){
+    float gain = measure_stats(noise_rec,freq).mean / 
+                                          measure_stats(silence_rec,freq).mean;
+    cout << freq <<"Hz  \t"<<gain<<endl;
+    if( gain > best_gain ){
+      best_gain = gain;
+      best_freq = freq;
+    }
+  }
+  float* ret = new float[2];
+  ret[0] = best_freq; ret[1] = best_gain;
+  return ret;
+}
+
 inline void AudioDev::check_error( PaError err ){
   if( err != paNoError )
     cerr << "PortAudio error: " << Pa_GetErrorText( err ) << endl;
@@ -445,7 +478,7 @@ void Config::disable_phone_home(){
   this->allow_phone_home = false;
   this->write_config_file();
 }
-  
+
 void Config::choose_ping_freq( AudioDev & audio ){
   cout <<""<<endl
        <<"This power management system uses sonar to detect whether you are sitting"<<endl
@@ -466,33 +499,12 @@ void Config::choose_ping_freq( AudioDev & audio ){
        <<"Press <enter> to continue"<<endl;
   cin.ignore();
   cin.get();
-  cout << "Please wait while the system is calibrated..."<<endl;
+  
+  float* best = audio.test_freq_response();
+  float best_freq = best[0];
+  float best_gain = best[1];
+  delete best;
 
-  // record silence (as a reference point)
-  AudioBuf silence = tone( RECORDING_PERIOD, 0 );
-  AudioBuf silence_rec = audio.recordback( silence );
-  // record white noise
-  AudioBuf noise = gaussian_white_noise( RECORDING_PERIOD );
-  AudioBuf noise_rec = audio.recordback( noise );
-
-  // now choose highest freq with energy reading well above that of silence
-  frequency freq, start_freq = SAMPLE_RATE / 2; // Nyquist freq
-  float scaling_factor = 0.95;
-  frequency best_freq = 0;
-  float best_gain = -999999;
-  frequency abort_point = 20000;  // if chosen freq is below this, abort.
-  cout << "Frequency response:"<<endl;
-  for( freq = start_freq; 
-       freq >= abort_point;
-       freq *= scaling_factor ){
-    float gain = measure_stats(noise_rec,freq).mean / 
-                                          measure_stats(silence_rec,freq).mean;
-    cout << freq <<"Hz  \t"<<gain<<endl;
-    if( gain > best_gain ){
-      best_gain = gain;
-      best_freq = freq;
-    }
-  }
   if( best_gain < 10 ){
     cerr << "ERROR: Your mic and/or speakers are not sensitive enough to proceed!"<<endl;
     SysInterface::log( "freq>=start_freq" );
@@ -528,8 +540,9 @@ Emailer::Emailer( string dest_addr ){
 bool Emailer::phone_home( string filename ){
 #if defined PLATFORM_WINDOWS
   const char* szCmd="IEXPLORE.EXE";
-  const char* szParm="HTTP://GOOGLE.COM";
-  ShellExecute(NULL,"open",szCmd,szParm,NULL,SW_SHOW);
+  string szParm="mailto:"+this->destination_address;
+  szParm += "&body=line1%0Aline2";
+  ShellExecute(NULL,"open",szCmd,szParm.c_str(),NULL,SW_SHOW);
   return true;
 #else
   cerr << "phone_home unimplemented"<<endl;
@@ -954,18 +967,23 @@ void poll( AudioDev & audio, Config & conf ){
 
 int main( int argc, char* argv[] ){
   // parse commandline arguments
-  bool do_poll=false, debug=false;
+  bool do_poll=false, echo=false, response=false;
   int i;
+  frequency poll_freq = 0;
   for( i=1; i<argc; i++ ){
     if( string(argv[i]) == string("--help") ){
-      cout<<"usage is "<<argv[0]<<" [ --help | --poll | --debug | --phonehome ]"<<endl;
+      cout<<"usage is "<<argv[0]<<" [ --help | --poll [freq] | --echo | --response | --phonehome ]"<<endl;
       exit(0);
     }else if( string(argv[i]) == string("--poll") ){
       do_poll=true;
-    }else if( string(argv[i]) == string("--debug") ){
-      debug=true;
+    }else if( string(argv[i-1]) == string("--poll") && argv[i][0] != '-' ){
+      poll_freq = atof( argv[i] );
+    }else if( string(argv[i]) == string("--echo") ){
+      echo=true;
     }else if( string(argv[i]) == string("--phonehome") ){
       phone_home();
+    }else if( string(argv[i]) == string("--response") ){
+      response=true;
     }else{
       cerr << "unrecognized parameter: " << argv[i] <<endl;
     }
@@ -975,7 +993,7 @@ int main( int argc, char* argv[] ){
   AudioDev my_audio = AudioDev();
   Config conf( my_audio, SysInterface::config_dir()+CONFIG_FILENAME );
 
-  if( debug ){
+  if( echo ){
     // This next block is a debugging audio test
     duration_t test_length = 3;
     cout<<"First, we are going to record and playback to test the audio HW."<<endl;
@@ -985,10 +1003,17 @@ int main( int argc, char* argv[] ){
     PaStream* s = my_audio.nonblocking_play( my_buf ); 
     SysInterface::sleep( test_length ); // give the audio some time to play
     AudioDev::check_error( Pa_CloseStream( s ) ); // close stream to free dev
+    return 0;
+  }
+  
+  if( response ){
+    my_audio.test_freq_response();
+    return 0;
   }
 
   // choose operating mode
   if( do_poll ){
+    if( poll_freq != 0 ) conf.ping_freq = poll_freq;
     poll( my_audio, conf );
   }else{
     power_management( my_audio, conf );
