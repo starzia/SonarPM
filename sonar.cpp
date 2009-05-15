@@ -16,7 +16,7 @@
 #define WINDOW_SIZE (0.1) // sliding window size
 #define BARTLETT_WINDOWS (10) // num windows in bartlett's method
 int SAMPLE_RATE;
-#define FRAMES_PER_BUFFER (4096) // PortAudio buf size. default is 256
+#define FRAMES_PER_BUFFER (32768)//(4096) // PortAudio buf size. default is 256
 #define CONFIG_FILENAME ".sonarPM.cfg"
 #define LOG_FILENAME ".sonarPM.log"
 #define PHONE_HOME_ADDR "storage@stevetarzia.com"
