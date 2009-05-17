@@ -8,8 +8,6 @@ Platform specific portions:
 - time epoch
 
 Other TODO items:
-- termination signal handler.
-- logging
 - use strings instead of indices to identify audio devices to allow for device
    removal or addition.  Also, hide OSS devices because their names change.
 - fix memory leaks
@@ -17,8 +15,6 @@ Other TODO items:
 - create ~/.sonarPM directory to store all associated files
 - sonar playback oscillator crackles every so often.  Fix this somehow.
 - user's volume settings will affect calibration.  Can we solve this by using ration of delta to mean in recording?
-- determine audio hardware's freq response by playing and recording whitenoise.
-   use minimum of playback and recording rates.
 
 mingw32 notes:
 - must compile portaudio.a first:

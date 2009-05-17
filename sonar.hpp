@@ -179,6 +179,8 @@ class SysInterface{
   static bool log( std::string message );
   /** returns the name of configuration directory, creating if nonexistant */
   static std::string config_dir();
+  /** register fcn to clean up on terminattion */
+  static void register_term_handler();
 };
 
 /** duration is in seconds and freq is the  tone pitch.  
@@ -219,8 +221,6 @@ std::ostream& operator<<(std::ostream& os, Statistics& s);
 /** Returns the mean and variance of the intensities of a given frequency
     in the audio buffer sampled in windows spread throughout the recording. */
 Statistics measure_stats( const AudioBuf & buf, frequency freq );
-/** cleans up and terminates the program when SIGTERM is received */
-void term_handler( int signum, int frame );
 /** returns the time at which the program was first run, as indicated in
     the logfile. */
 long get_log_start_time( );

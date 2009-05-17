@@ -2,7 +2,7 @@
  * Northwestern University, EECC Dept.
  * Nov 25 2008
  *
- * Under Fedora Linux, package requirements are portaudio-devel
+ * see README.txt
  */
 #include "sonar.hpp"
 #include "SimpleIni.h" // for config files
@@ -11,6 +11,8 @@
 #include <vector>
 #include <sstream>
 #include <exception>
+#include <iostream>// for logfile writing
+#include <fstream> // for logfile writing
 
 #define RECORDING_PERIOD (10.0) 
 #define WINDOW_SIZE (0.1) // sliding window size
@@ -46,10 +48,16 @@ int SAMPLE_RATE;
 #define IOCTL_VIDEO_QUERY_SUPPORTED_BRIGHTNESS \
   CTL_CODE(FILE_DEVICE_VIDEO, 0x125, METHOD_BUFFERED, FILE_ANY_ACCESS)
 //#include <userenv.h> // home path query
+#include <shlobj.h> // for CSIDL, SHGetFolderPath
+typedef enum {
+  SHGFP_TYPE_CURRENT = 0,
+  SHGFP_TYPE_DEFAULT = 1,
+} SHGFP_TYPE; // this should be in <shlobj.h> anyway
 #elif defined PLATFORM_MAC
 #endif
 #ifndef PLATFORM_WINDOWS
 #include <stdlib.h> //getenv, etc.
+#include <signal.h>
 #endif
 
 using namespace std;
@@ -470,6 +478,9 @@ bool Config::write_config_file(){
   }else{
     cerr<< "Saved config file "<<this->filename<<" with threshold: "
 	<< this->threshold <<endl;
+    ostringstream msg;
+    msg << "threshold " << this->threshold;
+    SysInterface::log( msg.str() );
   }
   return true;
 }
@@ -556,6 +567,7 @@ bool phone_home(){
 }
 
 bool SysInterface::sleep_monitor(){
+  SysInterface::log( "sleep" );
 #if defined PLATFORM_LINUX
   system( "xset dpms force standby" );
   return true;
@@ -634,7 +646,7 @@ duration_t SysInterface::idle_seconds(){
   return ret;
 #elif defined PLATFORM_WINDOWS
   LASTINPUTINFO info;
-  info.cbSize = sizeof(LASTINPUTINFO); // prep info struct
+  info.cbSize = sizeof(LASTINPUTINFO); // prepare info struct
   if( !GetLastInputInfo( &info ) )
     cerr<<"ERROR: could not getLastInputInfo"<<endl;
   unsigned int idleTicks = GetTickCount() - info.dwTime; // compute idle time
@@ -657,11 +669,13 @@ void SysInterface::wait_until_active(){
     prev_idle_time = current_idle_time;
     current_idle_time = SysInterface::idle_seconds();
   }
+  SysInterface::log( "active" );
 }
 void SysInterface::wait_until_idle(){
   while( SysInterface::idle_seconds() < IDLE_THRESH ){
     SysInterface::sleep( SLEEP_TIME ); //don't poll idle_seconds() constantly
   }
+  SysInterface::log( "idle" );
 }
 
 long SysInterface::current_time(){
@@ -680,7 +694,10 @@ long SysInterface::current_time(){
 }
 
 bool SysInterface::log( string message ){
-  cerr << "log() unimplemented" <<endl;
+  string logfile = SysInterface::config_dir() + LOG_FILENAME;
+  ofstream logstream( logfile.c_str(), ios::app ); // append mode
+  logstream << SysInterface::current_time() << ": " << message << endl;
+  logstream.close();
   return true;
 }
 
@@ -691,12 +708,51 @@ string SysInterface::config_dir(){
   //if( !OpenProcessToken( TOKEN_READ
   //if( !GetUserProfileDirectory( ) )
   //  cerr << "ERROR: couldn't obtain home directory name"<<endl;
-  return "C:\\";
+  char buf[MAX_PATH];
+  SHGetFolderPath( HWND_TOPMOST, CSIDL_APPDATA, 
+		   NULL, SHGFP_TYPE_CURRENT, buf );
+  return string( buf ) + '\\';
+  //return "C:\\";
 #else
   return string( getenv("HOME") ) + '/';
 #endif
 }
 
+#ifdef PLATFORM_WINDOWS
+BOOL windows_term_handler( DWORD fdwCtrlType ) {
+  switch( fdwCtrlType ) { 
+  case CTRL_C_EVENT: 
+  case CTRL_CLOSE_EVENT: 
+  case CTRL_BREAK_EVENT: 
+  case CTRL_LOGOFF_EVENT: 
+  case CTRL_SHUTDOWN_EVENT: 
+    SysInterface::log( "quit" );
+    exit( 0 );
+    return true;   
+  // Pass other signals to the next handler.  (by returning false)
+  default: 
+    return false; 
+  }  
+}
+#else
+void posix_term_handler( int signum ){
+  SysInterface::log( "quit" );
+  exit( 0 );
+}
+#endif
+
+
+void SysInterface::register_term_handler(){
+#ifdef PLATFORM_WINDOWS
+  if(!SetConsoleCtrlHandler( (PHANDLER_ROUTINE) windows_term_handler, TRUE ))
+    cerr << "register handler failed!" <<endl;
+#else
+  signal( SIGINT, posix_term_handler );
+  signal( SIGQUIT, posix_term_handler );
+  signal( SIGTERM, posix_term_handler );
+  signal( SIGKILL, posix_term_handler );
+#endif
+}
 
 AudioBuf tone( duration_t duration, frequency freq, duration_t delay, 
 	       unsigned int fade_samples ){
@@ -891,10 +947,6 @@ Statistics measure_stats( const AudioBuf & buf, frequency freq ){
   return ret;
 }
 
-void term_handler( int signum, int frame ){
-  cerr << "term_handler() unimplemented"<<endl;
-}
-
 long get_log_start_time( ){
   cerr << "log_start_time() unimplemented"<<endl;
   return 0;
@@ -903,12 +955,14 @@ long get_log_start_time( ){
 void power_management( AudioDev & audio, Config & conf ){
   // buffer duration is one second, but actually it just needs to be a multiple
   // of the ping_period.
+  SysInterface::register_term_handler();
   AudioBuf ping = tone( 1, conf.ping_freq, 0,0 ); // no fade since we loop it
   cout << "Begin power management loop at frequency of " 
        <<conf.ping_freq<<"Hz"<<endl;
   PaStream* strm;
   strm = audio.nonblocking_play_loop( ping ); // initialize and start ping
   AudioDev::check_error( Pa_StopStream( strm ) ); // stop ping
+  SysInterface::log( "begin" );
   while( 1 ){
     SysInterface::wait_until_idle();
     AudioDev::check_error( Pa_StartStream( strm ) ); // resume ping

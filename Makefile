@@ -17,7 +17,7 @@ test: sonar
 	./sonar --debug --poll
 
 clean:
-	rm -f sonar *~
+	rm -f sonar sonar.exe *~
 
 sonar.tar.gz:
 	rm -Rf sonar_dist
