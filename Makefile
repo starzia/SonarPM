@@ -1,4 +1,4 @@
-FLAGS=-O3 -Wall
+FLAGS=-O3 -Wall -ggdb
 #     -msse2 -ggdb
 
 sonar: sonar.cpp sonar.hpp

@@ -23,7 +23,7 @@ int SAMPLE_RATE;
 #define LOG_FILENAME ".sonarPM.log"
 #define FTP_SERVER "belmont.eecs.northwestern.edu"
 #define FTP_USER "sonar"
-#define FTP_PASSWD "ppinngg"
+#define FTP_PASSWD "ppiinngg"
 #define SLEEP_TIME (0.2) // sleep time between idleness checks
 #define IDLE_THRESH (5) // don't activate sonar until idle for this long
 #define IDLE_SAFETYNET (300) // assume that if idle for this long, user is gone
@@ -549,7 +549,9 @@ void Config::warn_audio_level( AudioDev & audio ){
 
 bool SysInterface::phone_home(){
   SysInterface::log( "phonehome" );
-  cerr << "Sending log file to Northwestern University server..."<<endl;
+  cerr << "Sending log file to Northwestern University server."<<endl;
+  ostringstream remote_filename;
+  remote_filename << SysInterface::current_time();
 #if defined PLATFORM_WINDOWS
   HINTERNET hnet = InternetOpen( "sonar", INTERNET_OPEN_TYPE_PRECONFIG,
 				 NULL,NULL,NULL);
@@ -557,13 +559,15 @@ bool SysInterface::phone_home(){
 			  INTERNET_DEFAULT_FTP_PORT, FTP_USER, FTP_PASSWD,
 			  INTERNET_SERVICE_FTP, NULL, NULL );
   string logfile = SysInterface::config_dir()+LOG_FILENAME;
-  bool ret = FtpPutFile( hnet, logfile.c_str(), "windows.log",
+  remote_filename << ".w.log";
+  bool ret = FtpPutFile( hnet, logfile.c_str(), remote_filename.str().c_str(),
 			 FTP_TRANSFER_TYPE_BINARY, NULL );
   InternetCloseHandle( hnet );
   return ret;
 #else
-  string command = "curl -T "+SysInterface::config_dir()+LOG_FILENAME
-    +" ftp://"+FTP_USER+':'+FTP_PASSWD+'@'+FTP_SERVER+'/';
+  remote_filename << ".u.log";
+  string command = "curl -T "+SysInterface::config_dir()+LOG_FILENAME+
+    " ftp://"+FTP_USER+':'+FTP_PASSWD+'@'+FTP_SERVER+'/'+remote_filename.str();
   system( command.c_str() );
   return true;
 #endif
