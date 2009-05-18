@@ -5,6 +5,7 @@
  * Under Fedora Linux, package requirements are portaudio-devel
  */
 #include <string>
+#include <vector>
 #ifdef PLATFORM_WINDOWS
 #include "/usr/include/portaudio.h"
 #else
@@ -61,6 +62,8 @@ public:
   unsigned int progress_index;
 };
 
+typedef std::vector< std::pair<frequency,float> > freq_response;
+
 class AudioDev{
 public:
   /** Default constructor prompts user for HW devices, if multiple exist */
@@ -109,7 +112,7 @@ public:
 
   /** tests the frequency response of the audio hardware and returns the most 
       reponsive ultrasonic frequency */
-  float* test_freq_response();
+  freq_response test_freq_response();
 
   PaStreamParameters out_params, in_params;
   /** prints PortAudio error message, if any */
@@ -119,14 +122,19 @@ public:
 /** stores and elicits the program configuration */
 class Config{
 public:
-  /** This contructor first tries to read the configuration from the passed 
+  /** empty constructor */
+  Config();
+  /** load() first tries to read the configuration from the passed 
       filename.  If unsuccessful, then call the calibration functions and
-      write a new config file to use next time.*/
-  Config( AudioDev & audio, std::string filename );
+      write a new config file to use next time.
+  @return true iff a new configuration was created (config file didn't exist)*/
+  bool load( AudioDev & audio, std::string filename );
   bool write_config_file();
   /** this would be called after we've already phoned home */
   void disable_phone_home();
-  
+  /** tests the frequency response and records it in the log file */
+  void log_freq_response( AudioDev & audio );
+
   frequency ping_freq;
   float threshold;
   bool allow_phone_home;

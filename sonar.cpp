@@ -358,8 +358,7 @@ AudioBuf AudioDev::recordback( const AudioBuf & buf ){
   return ret;
 }
 
-/** @return float[2] = { best_freq, best_gain } */
-float* AudioDev::test_freq_response(){
+freq_response AudioDev::test_freq_response(){
   cout << "Please wait while the system is calibrated..."<<endl;
 
   // record silence (as a reference point)
@@ -369,10 +368,9 @@ float* AudioDev::test_freq_response(){
   AudioBuf noise = gaussian_white_noise( RECORDING_PERIOD );
   AudioBuf noise_rec = this->recordback( noise );
 
-  // now choose highest freq with energy reading well above that of silence
+  // now record ratio of stimulated to silent energy for a range of frequencies
   float scaling_factor = 1.02; // freq bin scaling factor
-  frequency best_freq = 0;
-  float best_gain = -999999;
+  vector< pair<frequency,float> > response;
   frequency freq, lowest_freq = 20000, highest_freq = SAMPLE_RATE/2; //Nyquist
   cout << "Frequency response:"<<endl;
   for( freq = lowest_freq; 
@@ -381,14 +379,9 @@ float* AudioDev::test_freq_response(){
     float gain = measure_stats(noise_rec,freq).mean / 
                                           measure_stats(silence_rec,freq).mean;
     cout << freq <<"Hz  \t"<<gain<<endl;
-    if( gain > best_gain ){
-      best_gain = gain;
-      best_freq = freq;
-    }
+    response.push_back( make_pair( freq, gain ) );
   }
-  float* ret = new float[2];
-  ret[0] = best_freq; ret[1] = best_gain;
-  return ret;
+  return response;
 }
 
 inline void AudioDev::check_error( PaError err ){
@@ -396,8 +389,11 @@ inline void AudioDev::check_error( PaError err ){
     cerr << "PortAudio error: " << Pa_GetErrorText( err ) << endl;
 }
 
+
+Config::Config(){}
+
 /** call calibration functions to create a new configuration */
-Config::Config( AudioDev & audio, string filename ){
+bool Config::load( AudioDev & audio, string filename ){
   this->filename = filename;
   // try to load from a data file
   CSimpleIniA ini(false,false,false);
@@ -406,6 +402,7 @@ Config::Config( AudioDev & audio, string filename ){
     // if file open unsuccessful, then run calibration
     cerr<< "Unable to open config file "<<filename<<endl;
     cerr<< "A new configuration file will now be created."<<endl;
+    this->choose_phone_home();
 
     pair<unsigned int,unsigned int> devices = audio.prompt_device();
     this->rec_dev = devices.first;
@@ -416,11 +413,9 @@ Config::Config( AudioDev & audio, string filename ){
     //this->choose_ping_freq( audio );
     this->ping_freq = DEFAULT_PING_FREQ;
     this->choose_ping_threshold( audio, this->ping_freq );
-    //this->choose_phone_home( );
-    this->allow_phone_home=true;
-    
     // write configuration to file
     this->write_config_file();
+    return true;
   }else{
     // if file open successful, then get the config key values from it.
     try{
@@ -449,6 +444,7 @@ Config::Config( AudioDev & audio, string filename ){
 	   <<"Please check the file for errors and correct or delete it"<<endl;
       exit(-1);
     }
+    return false;
   }
 }
 
@@ -514,10 +510,10 @@ void Config::choose_ping_freq( AudioDev & audio ){
   cin.ignore();
   cin.get();
   
-  float* best = audio.test_freq_response();
-  float best_freq = best[0];
-  float best_gain = best[1];
-  delete best;
+  freq_response f = audio.test_freq_response();
+  // TODO: search for maximum gain here
+  float best_freq = f[0].first;
+  float best_gain = f[0].second;
 
   if( best_gain < 10 ){
     cerr << "ERROR: Your mic and/or speakers are not sensitive enough to proceed!"<<endl;
@@ -540,7 +536,11 @@ void Config::choose_ping_threshold( AudioDev & audio, frequency freq ){
 }
 
 void Config::choose_phone_home(){
-  cerr << "choose_phone_home() unimplemented"<<endl;
+  cout << "Would you like to allow usage statistics to be sent back to Northwestern" << endl
+       << "University for the purpose of evaluating this software's performance and" << endl
+       << "improving future versions of the software? [yes/no]:" <<endl;
+    
+  this->allow_phone_home = true;
 }
   
 void Config::warn_audio_level( AudioDev & audio ){
@@ -759,6 +759,16 @@ void SysInterface::register_term_handler(){
   signal( SIGTERM, posix_term_handler );
   signal( SIGKILL, posix_term_handler );
 #endif
+}
+
+bool log_freq_response( AudioDev & audio ){
+  freq_response f = audio.test_freq_response();
+  ostringstream log_msg;
+  unsigned int i;
+  for( i=0; i<f.size(); i++ ){
+    log_msg << f[i].first << ':' << f[i].second << ' ';
+  }
+  return SysInterface::log( log_msg.str() );
 }
 
 AudioBuf tone( duration_t duration, frequency freq, duration_t delay, 
@@ -1006,8 +1016,6 @@ void power_management( AudioDev & audio, Config & conf ){
       }
     }
   }
-  // TODO: we never get here, so a signal handler needs to free the dev.
-  AudioDev::check_error( Pa_CloseStream( strm ) ); // close ping stream
 }
 
 
@@ -1050,9 +1058,16 @@ int main( int argc, char* argv[] ){
     }
   }
 
-  // set audio device, loading from config file if present
   AudioDev my_audio = AudioDev();
-  Config conf( my_audio, SysInterface::config_dir()+CONFIG_FILENAME );
+  Config conf;
+  // Try to Load config file.  If config file does not exist, this will prompt
+  // the user for first-time setup.  load() returns true if new config created
+  if( conf.load( my_audio, SysInterface::config_dir()+CONFIG_FILENAME ) ){
+    log_freq_response( my_audio );
+    // send initial configuration home
+    SysInterface::phone_home();
+  }
+
 
   if( echo ){
     // This next block is a debugging audio test

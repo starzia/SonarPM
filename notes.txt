@@ -10,13 +10,16 @@ Platform specific portions:
 - ftp upload (phone home)
 
 Other TODO items:
+- high-pass filter white noise in freq response measurement.
+- trigger phone_home after some time period and choose unique remote filename.
+- user's volume settings will affect calibration.  Can we solve this by using ration of delta to mean in recording?
 - use strings instead of indices to identify audio devices to allow for device
    removal or addition.  Also, hide OSS devices because their names change.
 - fix memory leaks
 - Only works with Portaudio 1.9, which is only in the bleeding edge distros
 - create ~/.sonarPM directory to store all associated files
-- user's volume settings will affect calibration.  Can we solve this by using ration of delta to mean in recording?
-- trigger phone_home after some time period and choose unique remote filename.
+- close portaudio stream on termination?
+   AudioDev::check_error( Pa_CloseStream( strm ) ); // close ping stream
 
 mingw32 notes:
 - must compile portaudio.a first:
