@@ -7,7 +7,7 @@ Under Linux, there are two main libraries required to build this code:
 - X Screen Saver extension library
     This is available in Fedora as package "libScrnSaver-devel"
     and in Debian as package "libxss-dev"
-
+- curl is required for FTP uploading of the log file.
 
 COMPILATION
 -----------

@@ -11,7 +11,7 @@ sonar_static: sonar.cpp sonar.hpp
 
 sonar.exe: sonar.cpp sonar.hpp
 	$(CXX) $(FLAGS) -DPLATFORM_WINDOWS -lm sonar.cpp libportaudio.a \
-           -lwinmm -o sonar.exe
+           -lwinmm -lwininet -o sonar.exe
 
 test: sonar
 	./sonar --debug --poll

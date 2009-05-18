@@ -150,19 +150,6 @@ private:
   void warn_audio_level( AudioDev & audio );
 };
 
-class Emailer{
-public:
-  Emailer( std::string dest_addr );
-  /** sends the filename to destination_address */
-  bool phone_home( std::string filename );
-private:
-  /** this is the email address that we phone home to */
-  std::string destination_address;
-};
-
-/** creates an Emailer object and calls its phone_home fcn */
-bool phone_home();
-
 class SysInterface{
  public:
   static bool sleep_monitor();
@@ -181,6 +168,8 @@ class SysInterface{
   static std::string config_dir();
   /** register fcn to clean up on terminattion */
   static void register_term_handler();
+  /** sends log back to us using FTP */
+  static bool phone_home();
 };
 
 /** duration is in seconds and freq is the  tone pitch.  

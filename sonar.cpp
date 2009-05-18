@@ -18,10 +18,12 @@
 #define WINDOW_SIZE (0.1) // sliding window size
 #define BARTLETT_WINDOWS (10) // num windows in bartlett's method
 int SAMPLE_RATE;
-#define FRAMES_PER_BUFFER (32768)//(4096) // PortAudio buf size. default is 256
+#define FRAMES_PER_BUFFER (32768) // PortAudio buf size.  The examples use 256.
 #define CONFIG_FILENAME ".sonarPM.cfg"
 #define LOG_FILENAME ".sonarPM.log"
-#define PHONE_HOME_ADDR "storage@stevetarzia.com"
+#define FTP_SERVER "belmont.eecs.northwestern.edu"
+#define FTP_USER "sonar"
+#define FTP_PASSWD "ppinngg"
 #define SLEEP_TIME (0.2) // sleep time between idleness checks
 #define IDLE_THRESH (5) // don't activate sonar until idle for this long
 #define IDLE_SAFETYNET (300) // assume that if idle for this long, user is gone
@@ -49,6 +51,7 @@ int SAMPLE_RATE;
   CTL_CODE(FILE_DEVICE_VIDEO, 0x125, METHOD_BUFFERED, FILE_ANY_ACCESS)
 //#include <userenv.h> // home path query
 #include <shlobj.h> // for CSIDL, SHGetFolderPath
+#include <wininet.h> //  for ftp
 typedef enum {
   SHGFP_TYPE_CURRENT = 0,
   SHGFP_TYPE_DEFAULT = 1,
@@ -519,7 +522,7 @@ void Config::choose_ping_freq( AudioDev & audio ){
   if( best_gain < 10 ){
     cerr << "ERROR: Your mic and/or speakers are not sensitive enough to proceed!"<<endl;
     SysInterface::log( "freq>=start_freq" );
-    phone_home();
+    SysInterface::phone_home();
     exit(-1);
   }
   this->ping_freq = best_freq;
@@ -544,26 +547,26 @@ void Config::warn_audio_level( AudioDev & audio ){
   //TODO: cerr << "warn_audio_level() unimplemented"<<endl;
 }
 
-Emailer::Emailer( string dest_addr ){
-  this->destination_address = dest_addr;
-}
-
-bool Emailer::phone_home( string filename ){
+bool SysInterface::phone_home(){
+  SysInterface::log( "phonehome" );
+  cerr << "Sending log file to Northwestern University server..."<<endl;
 #if defined PLATFORM_WINDOWS
-  const char* szCmd="IEXPLORE.EXE";
-  string szParm="mailto:"+this->destination_address;
-  szParm += "&body=line1%0Aline2";
-  ShellExecute(NULL,"open",szCmd,szParm.c_str(),NULL,SW_SHOW);
-  return true;
+  HINTERNET hnet = InternetOpen( "sonar", INTERNET_OPEN_TYPE_PRECONFIG,
+				 NULL,NULL,NULL);
+  hnet = InternetConnect( hnet, FTP_SERVER,
+			  INTERNET_DEFAULT_FTP_PORT, FTP_USER, FTP_PASSWD,
+			  INTERNET_SERVICE_FTP, NULL, NULL );
+  string logfile = SysInterface::config_dir()+LOG_FILENAME;
+  bool ret = FtpPutFile( hnet, logfile.c_str(), "windows.log",
+			 FTP_TRANSFER_TYPE_BINARY, NULL );
+  InternetCloseHandle( hnet );
+  return ret;
 #else
-  cerr << "phone_home unimplemented"<<endl;
-  return false;
+  string command = "curl -T "+SysInterface::config_dir()+LOG_FILENAME
+    +" ftp://"+FTP_USER+':'+FTP_PASSWD+'@'+FTP_SERVER+'/';
+  system( command.c_str() );
+  return true;
 #endif
-}
-
-bool phone_home(){
-  Emailer email( PHONE_HOME_ADDR );
-  return email.phone_home( LOG_FILENAME );
 }
 
 bool SysInterface::sleep_monitor(){
@@ -1035,7 +1038,7 @@ int main( int argc, char* argv[] ){
     }else if( string(argv[i]) == string("--echo") ){
       echo=true;
     }else if( string(argv[i]) == string("--phonehome") ){
-      phone_home();
+      SysInterface::phone_home();
     }else if( string(argv[i]) == string("--response") ){
       response=true;
     }else{
