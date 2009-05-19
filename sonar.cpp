@@ -463,6 +463,7 @@ bool log_freq_response( AudioDev & audio ){
   freq_response f = test_freq_response( audio );
   ostringstream log_msg;
   unsigned int i;
+  log_msg << "response ";
   for( i=0; i<f.size(); i++ ){
     log_msg << f[i].first << ':' << f[i].second << ' ';
   }

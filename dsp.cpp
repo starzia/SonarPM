@@ -84,11 +84,11 @@ template<class precision> precision delta( const vector<precision> & arr ){
 }
 
 ostream& operator<<(ostream& os, const Statistics& s){
-  os<< "{mean:" <<s.mean<< "\tvar:" <<s.variance<< "\tdelta:" <<s.delta<< '}';
+  os<< "stat {mean:" <<s.mean<< "\tvar:" <<s.variance<< "\tdelta:" <<s.delta<< '}';
   return os;
 }
 ostream& operator<<(ostream& os, Statistics& s){
-  os<< "{mean:" <<s.mean<< "\tvar:" <<s.variance<< "\tdelta:" <<s.delta<< '}';
+  os<< "stat {mean:" <<s.mean<< "\tvar:" <<s.variance<< "\tdelta:" <<s.delta<< '}';
   return os;
 }
 
