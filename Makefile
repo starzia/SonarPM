@@ -21,7 +21,7 @@ test: sonar
 	./sonar --debug --poll
 
 clean:
-	rm -f sonar sonar.exe ${OBJS} ${WINOBJS} *~
+	rm -f sonar sonar.exe ${OBJS} ${WINOBJS} *~ sonar.tar.gz
 
 %.o : %.cpp
 	$(CXX) $(FLAGS) -DPLATFORM_LINUX -c $< -o $@

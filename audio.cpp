@@ -2,12 +2,6 @@
 #include <iostream>
 #include <cmath>
 
-#ifdef PLATFORM_WINDOWS
-#include <windows.h> //for malloc
-#else
-#include <stdlib.h> //for malloc
-#endif
-
 #define FRAMES_PER_BUFFER (32768) // PortAudio buf size.  The examples use 256.
 int SAMPLE_RATE;
 
@@ -24,11 +18,11 @@ AudioBuf::AudioBuf( string filename ){
 
 AudioBuf::AudioBuf( duration_t length ){
   this->num_samples = (unsigned int)ceil( length * SAMPLE_RATE );
-  this->data = (sample_t*)malloc( sizeof(sample_t)*this->num_samples );
+  this->data = new sample_t[this->num_samples];
 }
 
 AudioBuf::~AudioBuf(){
-  if( this->data ) free( this->data ); // free sample array
+  if( this->data ) delete this->data; // free sample array
 }
 
 sample_t& AudioBuf::operator[]( unsigned int index ) const{

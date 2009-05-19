@@ -10,6 +10,9 @@ AudioBuf tone( duration_t duration=0.5, frequency freq=440, duration_t delay=0,
 /** duration is in seconds. */
 AudioBuf gaussian_white_noise( duration_t duration=1 );
 
+/** first order high-pass filter 
+@return a new audiobuf */
+AudioBuf high_pass( const AudioBuf & buf, frequency half_power_freq );
 
 /** Geortzel's algorithm for finding the energy of a signal at a certain
     frequency.  Note that end_index is one past the last valid value. 

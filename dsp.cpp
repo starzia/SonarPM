@@ -45,6 +45,18 @@ AudioBuf gaussian_white_noise( duration_t duration ){
   return buf;
 }
 
+AudioBuf high_pass( const AudioBuf & buf, frequency half_power_freq ){
+  AudioBuf filtered = AudioBuf( buf.get_length() );
+  double rc = 1.0 / (2*M_PI*half_power_freq);
+  double dt = 1.0 / SAMPLE_RATE;
+  double alpha = rc / (rc + dt);
+  unsigned int i;
+  filtered[0] = buf[0];
+  for( i=1; i<filtered.get_num_samples(); i++ )
+    filtered[i] = alpha * (filtered[i-1] + buf[i] - buf[i-1]);
+  return filtered;
+}
+
 /** statistical mean */
 template<class precision> precision mean( const vector<precision> & arr ){
   unsigned int i;
@@ -210,18 +222,20 @@ Statistics measure_stats( const AudioBuf & buf, frequency freq ){
 freq_response test_freq_response( AudioDev & audio ){
   cout << "Please wait while the system is calibrated..."<<endl;
   const duration_t test_period = 5;
+  frequency lowest_freq = 20000;
 
   // record silence (as a reference point)
   AudioBuf silence = tone( test_period, 0 );
   AudioBuf silence_rec = audio.recordback( silence );
   // record white noise
-  AudioBuf noise = gaussian_white_noise( test_period );
-  AudioBuf noise_rec = audio.recordback( noise );
+  AudioBuf noise = gaussian_white_noise(test_period);
+  AudioBuf filtered_noise = high_pass( noise, lowest_freq );
+  AudioBuf noise_rec = audio.recordback( filtered_noise );
 
   // now record ratio of stimulated to silent energy for a range of frequencies
   float scaling_factor = 1.02; // freq bin scaling factor
   vector< pair<frequency,float> > response;
-  frequency freq, lowest_freq = 20000, highest_freq = SAMPLE_RATE/2; //Nyquist
+  frequency freq, highest_freq = SAMPLE_RATE/2; //Nyquist
   cout << "Frequency response:"<<endl;
   for( freq = lowest_freq; 
        freq <= highest_freq;
