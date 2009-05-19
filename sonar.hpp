@@ -58,7 +58,8 @@ class SysInterface{
   /** returns glibc style time, ie epoch seconds */
   static long current_time();
   /** appends message to log */
-  static bool log( std::string message );
+  template <class msg>
+  static bool log( msg message );
   /** returns the name of configuration directory, creating if nonexistant */
   static std::string config_dir();
   /** register fcn to clean up on terminattion */

@@ -385,13 +385,15 @@ long SysInterface::current_time(){
 #endif
 }
 
-bool SysInterface::log( string message ){
+template <class msg>
+bool SysInterface::log( msg message ){
   string logfile = SysInterface::config_dir() + LOG_FILENAME;
   ofstream logstream( logfile.c_str(), ios::app ); // append mode
   logstream << SysInterface::current_time() << ": " << message << endl;
   logstream.close();
   return true;
 }
+
 
 string SysInterface::config_dir(){
 #if defined PLATFORM_WINDOWS
@@ -488,6 +490,7 @@ void power_management( AudioDev & audio, Config & conf ){
       // if we've been tring to detect use for too long, then this probably
       // means that the threshold is too low.
       cout << "False attention detected." <<endl;
+      SysInterface::log("false attention");
       conf.threshold *= DYNAMIC_THRESH_FACTOR;
       conf.write_config_file(); // config save changes
     }
@@ -497,6 +500,7 @@ void power_management( AudioDev & audio, Config & conf ){
     AudioDev::check_error( Pa_StopStream( strm ) ); // stop ping
     Statistics s = measure_stats( rec, conf.ping_freq );
     cout << s << endl;
+    SysInterface::log( s );
 
     // if sonar reading below thresh. and user is still idle ...
     if( s.delta < conf.threshold 
@@ -510,6 +514,7 @@ void power_management( AudioDev & audio, Config & conf ){
       // waking up too soon means that we've just irritated the user
       if( SysInterface::current_time() - sleep_timestamp < IDLE_THRESH ){
 	cout << "False sleep detected." <<endl;
+	SysInterface::log("false sleep");
 	conf.threshold /= DYNAMIC_THRESH_FACTOR;
 	conf.write_config_file(); // config save changes
       }
