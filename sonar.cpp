@@ -12,6 +12,7 @@
 #include <vector>
 #include <exception>
 #include <fstream> // for logfile writing
+#include <limits> // for numeric_limit
 
 #define RECORDING_PERIOD (10.0) 
 #define CONFIG_FILENAME ".sonarPM.cfg"
@@ -24,6 +25,7 @@
 #define IDLE_SAFETYNET (300) // assume that if idle for this long, user is gone
 #define DEFAULT_PING_FREQ (22000)
 #define DYNAMIC_THRESH_FACTOR (1.3) // how rapidly does dynamic threshold move
+#define PHONEHOME_TIME (604800) // number of seconds before phone home (1 week)
 
 // One of the following should be defined to activate platform-specific code.
 // It is best to make this choice in the Makefile, rather than uncommenting here
@@ -431,8 +433,14 @@ void SysInterface::register_term_handler(){
 }
 
 long get_log_start_time( ){
-  cerr << "log_start_time() unimplemented"<<endl;
-  return 0;
+  string logfilename = SysInterface::config_dir() + LOG_FILENAME;
+  ifstream logfile( logfilename.c_str() );
+  // default to very large value so that if error, phonehome does not occur.
+  long time = numeric_limits<long>::max();
+  if( logfile.good() ){
+    logfile >> time;
+  }
+  return time;
 }
 
 bool log_freq_response( AudioDev & audio ){
@@ -456,6 +464,7 @@ void power_management( AudioDev & audio, Config & conf ){
   strm = audio.nonblocking_play_loop( ping ); // initialize and start ping
   AudioDev::check_error( Pa_StopStream( strm ) ); // stop ping
   SysInterface::log( "begin" );
+  long start_time = get_log_start_time();
   while( 1 ){
     SysInterface::wait_until_idle();
     AudioDev::check_error( Pa_StartStream( strm ) ); // resume ping
@@ -491,6 +500,15 @@ void power_management( AudioDev & audio, Config & conf ){
 	conf.write_config_file(); // config save changes
       }
     }
+    //-- PHONE HOME, if enough time has passed
+    if( conf.allow_phone_home &&
+	(SysInterface::current_time()-start_time) > PHONEHOME_TIME ){
+      if( SysInterface::phone_home() ){
+	// if phone home was successful, then disable future phonehome attempts
+	conf.disable_phone_home();
+      }
+    }
+      
   }
 }
 
@@ -541,7 +559,7 @@ int main( int argc, char* argv[] ){
   if( conf.load( my_audio, SysInterface::config_dir()+CONFIG_FILENAME ) ){
     log_freq_response( my_audio );
     // send initial configuration home
-    SysInterface::phone_home();
+    if( conf.allow_phone_home ) SysInterface::phone_home();
   }
 
 
