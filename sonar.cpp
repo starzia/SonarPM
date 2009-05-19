@@ -210,12 +210,26 @@ void Config::choose_phone_home(){
   cout << "Would you like to allow usage statistics to be sent back to Northwestern" << endl
        << "University for the purpose of evaluating this software's performance and" << endl
        << "improving future versions of the software? [yes/no]:" <<endl;
-    
-  this->allow_phone_home = true;
+  string input;
+  while( cin >> input ){
+    if( input == "yes" || input == "YES" || input == "Yes" ){
+      this->allow_phone_home = true;
+      return;
+    }else if( input == "no" || input == "NO" || input == "No" ){
+      this->allow_phone_home = false;
+      return;
+    }
+    cout << "[yes/no]? ";
+  }
 }
   
 void Config::warn_audio_level( AudioDev & audio ){
-  //TODO: cerr << "warn_audio_level() unimplemented"<<endl;
+  cout << endl<<"In order for this software to function correctly, you must set your"<< endl 
+       << "audio volume level to a normal listening level and unplug any" <<endl
+       << "headphones so that the speakers are used."<<endl<<endl
+       << "Please adjust your volume settings now and press <ENTER> to continue."<<endl;
+  cin.ignore(256, '\n');
+  cin.get();
 }
 
 bool SysInterface::phone_home(){
