@@ -1,23 +1,40 @@
-FLAGS=-O3 -Wall -ggdb
+FLAGS=-O3 -Wall -ggdb 
 #     -msse2 -ggdb
 
-sonar: sonar.cpp sonar.hpp
-	g++ $(FLAGS) -DPLATFORM_LINUX -lXss -lportaudio -lm sonar.cpp -o sonar
+# note that there are two versions of each object file; capital 'O' for windows
+OBJS = audio.o dsp.o sonar.o
+WINOBJS = audio.O dsp.O sonar.O
+
+sonar: ${OBJS}
+	${CXX} $(FLAGS) -DPLATFORM_LINUX -lXss -lportaudio -lm ${OBJS} -o sonar
 ## Mac version:
-#g++ $(FLAGS) -DPLATFORM_MAC -lportaudio -lm sonar.cpp -o sonar
+#${CXX} $(FLAGS) -DPLATFORM_MAC -lportaudio -lm sonar.cpp -o sonar
 
-sonar_static: sonar.cpp sonar.hpp
-	g++ -static $(FLAGS) -DPLATFORM_LINUX -lXss -lportaudio -lm sonar.cpp -o sonar_static
+sonar_static: ${OBJS}
+	${CXX} -static $(FLAGS) -DPLATFORM_LINUX -lXss -lportaudio -lm ${OBJS} -o $@
 
-sonar.exe: sonar.cpp sonar.hpp
-	$(CXX) $(FLAGS) -DPLATFORM_WINDOWS -lm sonar.cpp libportaudio.a \
-           -lwinmm -lwininet -o sonar.exe
+sonar.exe: ${WINOBJS}
+	$(CXX) $(FLAGS) -DPLATFORM_WINDOWS -lm ${WINOBJS} libportaudio.a \
+           -lwinmm -lwininet -o $@
 
 test: sonar
 	./sonar --debug --poll
 
 clean:
-	rm -f sonar sonar.exe *~
+	rm -f sonar sonar.exe ${OBJS} ${WINOBJS} *~
+
+%.o : %.cpp
+	$(CXX) $(FLAGS) -DPLATFORM_LINUX -c $< -o $@
+%.O : %.cpp
+	$(CXX) $(FLAGS) -DPLATFORM_WINDOWS -c $< -o $@
+
+audio.o: audio.cpp audio.hpp
+dsp.o: dsp.cpp dsp.hpp audio.hpp
+sonar.o: sonar.cpp sonar.hpp audio.hpp dsp.hpp
+
+audio.O: audio.cpp audio.hpp
+dsp.O: dsp.cpp dsp.hpp audio.hpp
+sonar.O: sonar.cpp sonar.hpp audio.hpp dsp.hpp
 
 sonar.tar.gz:
 	rm -Rf sonar_dist
