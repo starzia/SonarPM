@@ -14,7 +14,7 @@
 #include <fstream> // for logfile writing
 #include <limits> // for numeric_limit
 
-#define RECORDING_PERIOD (10.0) 
+#define RECORDING_PERIOD (2.0) 
 #define CONFIG_FILENAME ".sonarPM.cfg"
 #define LOG_FILENAME ".sonarPM.log"
 #define FTP_SERVER "belmont.eecs.northwestern.edu"
@@ -207,9 +207,9 @@ void Config::choose_ping_threshold( AudioDev & audio, frequency freq ){
 }
 
 void Config::choose_phone_home(){
-  cout << "Would you like to allow usage statistics to be sent back to Northwestern" << endl
+  cout<<endl<<"Would you like to allow usage statistics to be sent back to Northwestern" << endl
        << "University for the purpose of evaluating this software's performance and" << endl
-       << "improving future versions of the software? [yes/no]:" <<endl;
+       << "improving future versions of the software? [yes/no]: ";
   string input;
   while( cin >> input ){
     if( input == "yes" || input == "YES" || input == "Yes" ){
@@ -219,17 +219,28 @@ void Config::choose_phone_home(){
       this->allow_phone_home = false;
       return;
     }
-    cout << "[yes/no]? ";
+    cout << "Send back statistics? [yes/no]: ";
   }
 }
   
 void Config::warn_audio_level( AudioDev & audio ){
   cout << endl<<"In order for this software to function correctly, you must set your"<< endl 
        << "audio volume level to a normal listening level and unplug any" <<endl
-       << "headphones so that the speakers are used."<<endl<<endl
-       << "Please adjust your volume settings now and press <ENTER> to continue."<<endl;
-  cin.ignore(256, '\n');
+       << "headphones so that the speakers are used."<<endl<<endl;
+  cout << "Please adjust your volume settings now and press <ENTER> to continue."<<endl;
+  cin.ignore();
   cin.get();
+  string input;
+  do{
+    test_echo( audio );
+    cout<<endl<<"If you just read a recording play back, then your audio is working properly." << endl;
+    cout<<"If this is true, type 'yes' to continue.  Otherwise, re-adjust your volume"<<endl
+	<<"settings and type 'no' to try again."<<endl
+	<<"It is also possible that you chose the wrong audio device numbers."<<endl
+	<<"in this case you may close this application and start over."<<endl
+	<<endl<<"Continue? [yes/no]: ";
+    cin >> input;
+  }while( !( input == "yes" || input == "YES" || input == "Yes" ) );
 }
 
 bool SysInterface::phone_home(){
@@ -470,6 +481,28 @@ bool log_freq_response( AudioDev & audio ){
   return SysInterface::log( log_msg.str() );
 }
 
+bool log_model(){
+  cout << endl << "Please type a one-line description of your computer model." << endl
+       << "Be as precise as reasonably possible."<<endl
+       << "For example: 'Dell Inspiron 8600 laptop'" <<endl<<endl
+       << "your description: ";
+  string description;
+  cin.ignore();
+  getline( cin, description );
+  return SysInterface::log( "model " + description );
+}
+
+void test_echo( AudioDev & audio ){
+  // This next block is a debugging audio test
+  duration_t test_length = 3;
+  cout<<"recording audio..."<<endl;
+  AudioBuf buf = audio.blocking_record( test_length );
+  cout<<"playing back the recording..."<<endl;
+  PaStream* s = audio.nonblocking_play( buf ); 
+  SysInterface::sleep( test_length ); // give the audio some time to play
+  AudioDev::check_error( Pa_CloseStream( s ) ); // close stream to free dev
+}
+
 void power_management( AudioDev & audio, Config & conf ){
   // buffer duration is one second, but actually it just needs to be a multiple
   // of the ping_period.
@@ -578,30 +611,20 @@ int main( int argc, char* argv[] ){
   // the user for first-time setup.  load() returns true if new config created
   if( conf.load( my_audio, SysInterface::config_dir()+CONFIG_FILENAME ) ){
     log_freq_response( my_audio );
+    log_model();
     // send initial configuration home
     if( conf.allow_phone_home ) SysInterface::phone_home();
   }
 
-
+  // choose operating mode
   if( echo ){
-    // This next block is a debugging audio test
-    duration_t test_length = 3;
-    cout<<"First, we are going to record and playback to test the audio HW."<<endl;
-    cout<<"recording audio..."<<endl;
-    AudioBuf my_buf = my_audio.blocking_record( test_length );
-    cout<<"playing back the recording..."<<endl;
-    PaStream* s = my_audio.nonblocking_play( my_buf ); 
-    SysInterface::sleep( test_length ); // give the audio some time to play
-    AudioDev::check_error( Pa_CloseStream( s ) ); // close stream to free dev
+    test_echo( my_audio );
     return 0;
   }
-  
   if( response ){
     test_freq_response( my_audio );
     return 0;
   }
-
-  // choose operating mode
   if( do_poll ){
     if( poll_freq != 0 ) conf.ping_freq = poll_freq;
     poll( my_audio, conf );

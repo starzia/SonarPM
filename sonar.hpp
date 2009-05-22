@@ -19,8 +19,6 @@ public:
   bool write_config_file();
   /** this would be called after we've already phoned home */
   void disable_phone_home();
-  /** tests the frequency response and records it in the log file */
-  void log_freq_response( AudioDev & audio );
 
   frequency ping_freq;
   float threshold;
@@ -68,8 +66,18 @@ class SysInterface{
   static bool phone_home();
 };
 
+/** tests the frequency response and records it in the log file */
+bool log_freq_response( AudioDev & audio );
+/** asks the user to describe their computer model and logs this */
+bool log_model();
+
 long get_log_start_time( );
+
+void test_echo( AudioDev & audio );
+void poll( AudioDev & audio, Config & conf );
+
 /** This is the main program loop.  It checks for a user and powers down
     the display if it's reasonably confident that no one is there */
 void power_management( AudioDev & audio, Config & conf );
+
 int main( int argc, char **argv );

@@ -144,9 +144,9 @@ pair<unsigned int,unsigned int> AudioDev::prompt_device(){
 
   unsigned int in_dev_num, out_dev_num;
   // prompt user on which of the above devices to use
-  cout << endl << "Please enter an input device number: " << endl;
+  cout<<endl<<"Please enter an input device number [0-"<<(numDevices-1)<<"]: ";
   cin >> in_dev_num;
-  cout << endl << "Please enter an output device number: " << endl;
+  cout<<endl<<"Please enter an output device number [0-"<<(numDevices-1)<<"]: ";
   cin >> out_dev_num;
 
   return make_pair( in_dev_num, out_dev_num );
