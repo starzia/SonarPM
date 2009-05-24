@@ -29,6 +29,16 @@ sample_t& AudioBuf::operator[]( unsigned int index ) const{
   return this->data[index];
 }
 
+AudioBuf AudioBuf::operator*( float gain ){
+  AudioBuf ret = AudioBuf( this->get_length() );
+  unsigned int i;
+  for( i=0; i<this->num_samples; i++ ){
+    ret[i] = (*this)[i] * gain;
+  }
+  return ret;
+}
+
+
 void AudioBuf::prepend_silence( duration_t silence_duration ){
   cerr << "prepend_silence unimplemented"<<endl;
 }
@@ -56,6 +66,13 @@ AudioBuf* AudioBuf::window( duration_t length, duration_t start ) const{
   return ret;
 }
   
+void AudioBuf::mix( const AudioBuf &b ){
+  unsigned int i;
+  for( i=0; i < this->num_samples && i < b.get_num_samples(); i++ ){
+    this->data[i] += b[i];
+  }
+}
+
 AudioBuf AudioBuf::repeat( int repetitions ) const{
   AudioBuf ret = AudioBuf( this->get_length() * repetitions );
   unsigned int i;

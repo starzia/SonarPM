@@ -11,6 +11,9 @@
 
 #define WINDOW_SIZE (0.1) // sliding window size
 #define BARTLETT_WINDOWS (10) // num windows in bartlett's method
+#define SCALING_FACTOR (1.02) // freq bin scaling factor for freq response
+#define LOWEST_FREQ (15000) // lowest freq for spectral analysis
+#define HIGHEST_FREQ (30000) // highest freq for spectral analysis
 
 using namespace std;
 
@@ -32,8 +35,7 @@ AudioBuf tone( duration_t duration, frequency freq, duration_t delay,
 }
 
 AudioBuf gaussian_white_noise( duration_t duration ){
-  // create empty buffer
-  AudioBuf buf = AudioBuf( duration );
+  AudioBuf buf = AudioBuf( duration );   // create empty buffer
   unsigned int i, end_i = buf.get_num_samples();
 
   /* inner loop taken from http://www.musicdsp.org/showone.php?id=113 */
@@ -45,15 +47,30 @@ AudioBuf gaussian_white_noise( duration_t duration ){
   return buf;
 }
 
+AudioBuf ultrasonic_noise( duration_t duration ){
+  AudioBuf buf = tone( duration, 0 );   // create empty buffer;
+  unsigned int num_tones = (log(HIGHEST_FREQ)-log(LOWEST_FREQ)) 
+                            / log(SCALING_FACTOR);
+  frequency f;
+  for( f = LOWEST_FREQ; f < HIGHEST_FREQ; f *= SCALING_FACTOR ){
+    buf.mix( tone( duration, f ) * (1.0/num_tones) );
+  }
+  return buf;
+}
+
+
 AudioBuf high_pass( const AudioBuf & buf, frequency half_power_freq ){
   AudioBuf filtered = AudioBuf( buf.get_length() );
   double rc = 1.0 / (2*M_PI*half_power_freq);
   double dt = 1.0 / SAMPLE_RATE;
   double alpha = rc / (rc + dt);
+  cout << "rc="<<rc<<" dt="<<dt<<" alpha="<<alpha<<endl;
+  
   unsigned int i;
   filtered[0] = buf[0];
-  for( i=1; i<filtered.get_num_samples(); i++ )
+  for( i=1; i<filtered.get_num_samples(); i++ ){
     filtered[i] = alpha * (filtered[i-1] + buf[i] - buf[i-1]);
+  }
   return filtered;
 }
 
@@ -87,7 +104,7 @@ ostream& operator<<(ostream& os, const Statistics& s){
   os<< "stat {mean:" <<s.mean<< "\tvar:" <<s.variance<< "\tdelta:" <<s.delta<< '}';
   return os;
 }
-ostream& operator<<(ostream& os, Statistics& s){
+ostream& operator<< (ostream& os, Statistics& s){
   os<< "stat {mean:" <<s.mean<< "\tvar:" <<s.variance<< "\tdelta:" <<s.delta<< '}';
   return os;
 }
@@ -202,7 +219,7 @@ precision bartlett( const AudioBuf & arr, precision norm_freq ){
 
 Statistics measure_stats( const AudioBuf & buf, frequency freq ){
   vector<float> energies;
-
+  
   unsigned int start, N = (unsigned int)ceil(WINDOW_SIZE*SAMPLE_RATE);
   // Calculate echo intensities: use a sliding non-overlapping window
   // TODO: parallelize window computations using SIMD instructions.
@@ -210,7 +227,7 @@ Statistics measure_stats( const AudioBuf & buf, frequency freq ){
     energies.push_back( bartlett(buf,start,start+N,
 				 (float)freq/SAMPLE_RATE,BARTLETT_WINDOWS) );
   }
-
+  
   // calculate statistics
   Statistics ret;
   ret.mean = mean( energies );
@@ -219,32 +236,53 @@ Statistics measure_stats( const AudioBuf & buf, frequency freq ){
   return ret;
 }
 
-freq_response test_freq_response( AudioDev & audio ){
-  cout << "Please wait while the system is calibrated..."<<endl;
-  const duration_t test_period = 5;
-  frequency lowest_freq = 20000;
+ostream& operator<<(ostream& os, const freq_response& f){
+  os << "freq_response{" <<endl;
+  unsigned int i;
+  for( i=0; i<f.size(); i++ ){
+    os << f[i].first <<"Hz  \t"<< f[i].second <<endl;
+  }
+  os << '}' <<endl;
+  return os;
+}
 
+freq_response operator/(freq_response& a, freq_response& b){
+  freq_response ret;
+  unsigned int i;
+  for( i=0; i<a.size(); i++ ){
+    float quotient = a[i].second / b[i].second;
+    ret.push_back( make_pair( a[i].first, quotient) );
+  }
+  return ret;
+}
+
+freq_response test_freq_response( AudioDev & audio ){
+  const duration_t test_period = 10;
+  cout << "Please wait while the system is calibrated."<<endl
+       << "This will take approximately "<<test_period*2<<" seconds."<<endl
+       << "During this time you may hear some noise."<<endl;
+  
   // record silence (as a reference point)
   AudioBuf silence = tone( test_period, 0 );
   AudioBuf silence_rec = audio.recordback( silence );
   // record white noise
-  AudioBuf noise = gaussian_white_noise(test_period);
-  AudioBuf filtered_noise = high_pass( noise, lowest_freq );
-  AudioBuf noise_rec = audio.recordback( filtered_noise );
-
+  AudioBuf noise = ultrasonic_noise(test_period);
+  AudioBuf noise_rec = audio.recordback( noise );
+  
   // now record ratio of stimulated to silent energy for a range of frequencies
-  float scaling_factor = 1.02; // freq bin scaling factor
-  vector< pair<frequency,float> > response;
-  frequency freq, highest_freq = SAMPLE_RATE/2; //Nyquist
-  cout << "Frequency response:"<<endl;
-  for( freq = lowest_freq; 
-       freq <= highest_freq;
-       freq *= scaling_factor ){
-    float gain = measure_stats(noise_rec,freq).mean / 
-                                          measure_stats(silence_rec,freq).mean;
-    cout << freq <<"Hz  \t"<<gain<<endl;
-    response.push_back( make_pair( freq, gain ) );
+  freq_response noise_response = spectrum( noise_rec );
+  freq_response silence_response = spectrum( silence_rec );
+  freq_response gain = noise_response / silence_response;
+  cout << gain <<endl;
+  return gain;
+}
+
+freq_response spectrum( AudioBuf & buf ){
+  freq_response response;
+  frequency freq;
+  for( freq = LOWEST_FREQ; freq <= HIGHEST_FREQ; freq *= SCALING_FACTOR ){
+    float energy = measure_stats(buf,freq).mean;
+    response.push_back( make_pair( freq, energy ) );
   }
   return response;
 }
-

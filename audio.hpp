@@ -30,6 +30,8 @@ public:
 
   /** returns an audio sample */
   sample_t& operator[]( unsigned int index ) const;
+  /** apply a gain */
+  AudioBuf operator*( float gain );
   void prepend_silence( duration_t silence_duration );
   duration_t get_length() const;
   unsigned int get_num_samples() const;
@@ -38,6 +40,9 @@ public:
   /** return a trimmed audio buffer starting at start seconds with a given
       length */
   AudioBuf* window( duration_t length, duration_t start=0 ) const;
+  /** mixes the passed AudioBuf with this (pairwise adds samples).
+   If b is longer than this, then excess is ignored.*/
+  void mix( const AudioBuf& b );
   /** return a given number of repetitions of this audio buffer */
   AudioBuf repeat( int repetitions=2 ) const;
   bool write_to_file( std::string filename ) const;
@@ -45,6 +50,10 @@ private:
   unsigned int num_samples;
   sample_t* data;
 };
+
+/** concatenate two AudioBufs */
+AudioBuf* operator+( const AudioBuf& a, const AudioBuf& b );
+
 
 /** this class stores all data relevant to an Audio callback function */
 class AudioRequest{

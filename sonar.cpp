@@ -147,7 +147,7 @@ bool Config::write_config_file(){
     return false;
   }else{
     cerr<< "Saved config file "<<this->filename<<" with threshold: "
-	<< this->threshold <<endl;
+	<< this->threshold <<endl<<endl;
     ostringstream msg;
     msg << "threshold " << this->threshold;
     SysInterface::log( msg.str() );
@@ -202,25 +202,27 @@ void Config::choose_ping_threshold( AudioDev & audio, frequency freq ){
   AudioBuf blip = tone( RECORDING_PERIOD, freq );
   AudioBuf rec = audio.recordback( blip );
   Statistics blip_s = measure_stats( rec, freq );
-  cout << "chose preliminary threshold of "<<blip_s.delta<<endl;
+  cout << "chose preliminary threshold of "<<blip_s.delta<<endl<<endl;
   this->threshold = blip_s.delta;
 }
 
 void Config::choose_phone_home(){
   cout<<endl<<"Would you like to allow usage statistics to be sent back to Northwestern" << endl
-       << "University for the purpose of evaluating this software's performance and" << endl
-       << "improving future versions of the software? [yes/no]: ";
+      << "University computer systems researchers for the purpose of evaluating this"<<endl
+      <<"software's performance and improving future versions of the software?"<<endl
+      <<"[yes/no]: ";
   string input;
   while( cin >> input ){
     if( input == "yes" || input == "YES" || input == "Yes" ){
       this->allow_phone_home = true;
-      return;
+      break;
     }else if( input == "no" || input == "NO" || input == "No" ){
       this->allow_phone_home = false;
-      return;
+      break;
     }
     cout << "Send back statistics? [yes/no]: ";
   }
+  cout << endl;
 }
   
 void Config::warn_audio_level( AudioDev & audio ){
@@ -241,6 +243,7 @@ void Config::warn_audio_level( AudioDev & audio ){
 	<<endl<<"Continue? [yes/no]: ";
     cin >> input;
   }while( !( input == "yes" || input == "YES" || input == "Yes" ) );
+  cout << endl;
 }
 
 bool SysInterface::phone_home(){
@@ -277,10 +280,8 @@ bool SysInterface::sleep_monitor(){
 #elif defined PLATFORM_WINDOWS
   // send monitor off message
   PostMessage( HWND_TOPMOST, WM_SYSCOMMAND, SC_MONITORPOWER, 1 ); 
-  ///SendMessage( GetDesktopWindow(), WM_SYSCOMMAND, SC_MONITORPOWER, 1 ); 
   //                               -1 for "on", 1 for "low power", 2 for "off".
   //SendMessage( h, WM_SYSCOMMAND, SC_SCREENSAVE, NULL ); // activate scrnsaver
-  cout << "monitor in standby mode."<<endl;
   SysInterface::sleep( 0.5 ); // give system time to process message
   return true;
 #elif 0 // the following is Windows LCD brightness control code
@@ -473,8 +474,12 @@ long get_log_start_time( ){
 bool log_freq_response( AudioDev & audio ){
   freq_response f = test_freq_response( audio );
   ostringstream log_msg;
-  unsigned int i;
+  log_msg << "sample_rate " << SAMPLE_RATE;
+  SysInterface::log( log_msg.str() );
+
+  log_msg.str("");  //reset stringstream
   log_msg << "response ";
+  unsigned int i;
   for( i=0; i<f.size(); i++ ){
     log_msg << f[i].first << ':' << f[i].second << ' ';
   }

@@ -9,6 +9,8 @@ AudioBuf tone( duration_t duration=0.5, frequency freq=440, duration_t delay=0,
 
 /** duration is in seconds. */
 AudioBuf gaussian_white_noise( duration_t duration=1 );
+/** ultrasonic noise is created by adding ultrasonic sine tones */
+AudioBuf ultrasonic_noise( duration_t duration );
 
 /** first order high-pass filter 
 @return a new audiobuf */
@@ -46,7 +48,12 @@ Statistics measure_stats( const AudioBuf & buf, frequency freq );
     the logfile. */
 
 typedef std::vector< std::pair<frequency,float> > freq_response;
+std::ostream& operator<<(std::ostream& os, const freq_response& f);
+freq_response operator/(freq_response& a, freq_response& b);
 
 /** tests the frequency response of the audio hardware and returns the most 
     reponsive ultrasonic frequency */
 freq_response test_freq_response( AudioDev & audio );
+
+/** @return the spectrum of the passed buffer */
+freq_response spectrum( AudioBuf & buf );
