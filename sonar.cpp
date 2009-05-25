@@ -14,6 +14,8 @@
 #include <fstream> // for logfile writing
 #include <limits> // for numeric_limit
 
+#define PROFILING // this enables audio HW profiling mode
+
 #define RECORDING_PERIOD (2.0) 
 #define CONFIG_FILENAME ".sonarPM.cfg"
 #define LOG_FILENAME ".sonarPM.log"
@@ -73,20 +75,10 @@ bool Config::load( AudioDev & audio, string filename ){
     // if file open unsuccessful, then run calibration
     cerr<< "Unable to open config file "<<filename<<endl;
     cerr<< "A new configuration file will now be created."<<endl;
-    this->choose_phone_home();
+    this->new_config( audio );
 
-    pair<unsigned int,unsigned int> devices = audio.prompt_device();
-    this->rec_dev = devices.first;
-    this->play_dev = devices.second;
-    // set audio object to use the desired devices
-    audio.choose_device( this->rec_dev, this->play_dev );
-    this->warn_audio_level( audio );
-    //this->choose_ping_freq( audio );
-    this->ping_freq = DEFAULT_PING_FREQ;
-    this->choose_ping_threshold( audio, this->ping_freq );
     // write configuration to file
-    this->write_config_file();
-    return true;
+    return this->write_config_file();
   }else{
     // if file open successful, then get the config key values from it.
     try{
@@ -117,6 +109,20 @@ bool Config::load( AudioDev & audio, string filename ){
     }
     return false;
   }
+}
+
+void Config::new_config( AudioDev & audio ){
+    this->choose_phone_home();
+
+    pair<unsigned int,unsigned int> devices = audio.prompt_device();
+    this->rec_dev = devices.first;
+    this->play_dev = devices.second;
+    // set audio object to use the desired devices
+    audio.choose_device( this->rec_dev, this->play_dev );
+    this->warn_audio_level( audio );
+    //this->choose_ping_freq( audio );
+    this->ping_freq = DEFAULT_PING_FREQ;
+    this->choose_ping_threshold( audio, this->ping_freq );
 }
 
 bool Config::write_config_file(){
@@ -235,7 +241,7 @@ void Config::warn_audio_level( AudioDev & audio ){
   string input;
   do{
     test_echo( audio );
-    cout<<endl<<"If you just read a recording play back, then your audio is working properly." << endl;
+    cout<<endl<<"If you just heard a recording play back, then your audio is working properly." << endl;
     cout<<"If this is true, type 'yes' to continue.  Otherwise, re-adjust your volume"<<endl
 	<<"settings and type 'no' to try again."<<endl
 	<<"It is also possible that you chose the wrong audio device numbers."<<endl
@@ -612,6 +618,20 @@ int main( int argc, char* argv[] ){
 
   AudioDev my_audio = AudioDev();
   Config conf;
+
+#ifdef PROFILING
+  // if profiling, don't use config files.
+  conf.new_config( my_audio );
+  log_freq_response( my_audio );
+  log_model();
+  // send initial configuration home
+  if( conf.allow_phone_home ) SysInterface::phone_home();
+  cout << endl << "Thank you for your participation!"<<endl;
+  cin.ignore();
+  cin.get();
+  return 0; // for HW profiling, stop here.
+#endif
+
   // Try to Load config file.  If config file does not exist, this will prompt
   // the user for first-time setup.  load() returns true if new config created
   if( conf.load( my_audio, SysInterface::config_dir()+CONFIG_FILENAME ) ){

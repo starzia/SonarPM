@@ -12,10 +12,12 @@ public:
   /** empty constructor */
   Config();
   /** load() first tries to read the configuration from the passed 
-      filename.  If unsuccessful, then call the calibration functions and
+      filename.  If unsuccessful, then call new_config() and
       write a new config file to use next time.
   @return true iff a new configuration was created (config file didn't exist)*/
   bool load( AudioDev & audio, std::string filename );
+  /** run the setup and calibration prompts */
+  void new_config( AudioDev & audio );
   bool write_config_file();
   /** this would be called after we've already phoned home */
   void disable_phone_home();
