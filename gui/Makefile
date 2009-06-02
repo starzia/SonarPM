@@ -1,6 +1,12 @@
+FLAGS = `wx-config --cxxflags` -Wno-write-strings
 
-App: App.cpp App.hpp Frame.hpp TaskBarIcon.hpp PlotPane.hpp kuser.xpm
-	g++ `wx-config --libs` `wx-config --cxxflags` -Wno-write-strings App.cpp -o $@
+OBJS = App.o Frame.o TaskBarIcon.o PlotPane.o SonarThread.o
+
+App: $(OBJS)
+	g++ `wx-config --libs` $(FLAGS) $(OBJS) -o $@
+
+%.o : %.cpp %.hpp
+	$(CXX) $(FLAGS) -c $< -o $@
 
 clean:
-	rm -f App *~
+	rm -f App $(OBJS) *~
