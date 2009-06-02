@@ -3,6 +3,9 @@
 #include "../dsp.hpp"
 #include "../audio.hpp"
 #include <iostream>
+
+#include <stdlib.h> //for rand
+
 using namespace std;
 
 SonarThread::SonarThread( Frame* mf ) : 
@@ -12,6 +15,10 @@ void* SonarThread::Entry(){
   AudioDev my_audio = AudioDev();
   Config conf;
   conf.load( my_audio, SysInterface::config_dir()+CONFIG_FILENAME );
+  
+  /*while( 1 ){
+    this->mainFrame->addPoint( rand() );
+    }*/
 
   // POLL
   AudioBuf ping = tone( 1, conf.ping_freq, 0,0 ); // no fade since we loop it 

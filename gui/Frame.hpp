@@ -20,9 +20,6 @@ public:
   ///wxTextCtrl *theText;
   DECLARE_EVENT_TABLE()
 private:
-  // redraw window
-  void draw();
-
   TaskBarIcon* tbIcon;
   PlotPane* sonar_history;
   wxThread*  sThread;

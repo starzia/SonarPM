@@ -12,21 +12,13 @@ void PlotPane::paintEvent(wxPaintEvent & evt){
   render(dc);
 }
 void PlotPane::paintNow(){
-  wxPaintDC dc(this);
+  wxClientDC dc(this);
   render(dc);
 }
 
 void PlotPane::render(wxDC&  dc)
 {
-  /*
-  // draw some text
-  dc.DrawText(wxT("Testing"), 40, 60); 
-    
-  // draw a circle
-  dc.SetBrush(*wxGREEN_BRUSH); // green filling
-  dc.SetPen( wxPen( wxColor(255,0,0), 5 ) ); // 5-pixels-thick red outline
-  dc.DrawCircle( wxPoint(200,100), 25 ); // radius 25
-  */    
+  dc.SetBackground( *wxWHITE_BRUSH );
   dc.Clear();
   wxCoord w, h;
   dc.GetSize(&w, &h);
