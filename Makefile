@@ -6,22 +6,22 @@ OBJS = audio.o dsp.o sonar.o
 WINOBJS = audio.O dsp.O sonar.O sonar_tui.O
 
 sonar_tui: ${OBJS} sonar_tui.o
-	${CXX} $(FLAGS) -DPLATFORM_LINUX -lXss -lportaudio -lm ${OBJS} sonar_tui.o -o $@
+	${CXX} $(FLAGS) -DPLATFORM_LINUX -lXss -lportaudio -lm $^ -o $@
 ## Mac version:
 #${CXX} $(FLAGS) -DPLATFORM_MAC -lportaudio -lm sonar.cpp -o sonar
 
 sonar_gui: ${OBJS} gui/gui.a
-	${CXX} $(FLAGS) -DPLATFORM_LINUX `wx-config --libs` -lXss -lportaudio -lm ${OBJS} gui/gui.a -o sonar_gui
+	${CXX} $(FLAGS) -DPLATFORM_LINUX `wx-config --libs` -lXss -lportaudio -lm $^ -o $@
 
-sonar_static: ${OBJS}
-	${CXX} -static $(FLAGS) -DPLATFORM_LINUX -lXss -lportaudio -lm ${OBJS} -o $@
+#sonar_static: ${OBJS}
+#	${CXX} -static $(FLAGS) -DPLATFORM_LINUX -lXss -lportaudio -lm ${OBJS} -o $@
 
 sonar.exe: ${WINOBJS}
 	$(CXX) $(FLAGS) -DPLATFORM_WINDOWS -lm ${WINOBJS} libportaudio.a \
            -lwinmm -lwininet -o $@
 
-test: sonar
-	./sonar --debug --poll
+#test: sonar
+#	./sonar --debug --poll
 
 gui/gui.a: FORCE_LOOK
 	cd gui; $(MAKE) $(MFLAGS) gui.a

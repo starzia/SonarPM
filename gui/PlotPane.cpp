@@ -36,14 +36,14 @@ void PlotPane::render(wxDC&  dc)
   int N = history.size();
   unsigned int i;
   float min=1e32, max=-1e32;
-  for( i=1; i < N; i++ ){
+  for( i=0; i < N; i++ ){
     if( history[i] < min ) min = history[i];
     if( history[i] > max ) max = history[i];
   }
-  float x_stride =  w/(N-1), y_stride = h/(max-min);
+  float x_stride =  w/(N-1), y_stride = ((float)h)/(max-min);
   for( i=1; i < N; i++ ){
-	     dc.DrawLine( w - (i-1)*x_stride, h - y_stride*history[i-1], 
-			  w - (i)*x_stride, h - y_stride*history[i] );
+    dc.DrawLine( w - (i-1)*x_stride, h - y_stride*(history[i-1]-min), 
+		 w - (i)*x_stride, h - y_stride*(history[i]-min) );
   }
 
   /*

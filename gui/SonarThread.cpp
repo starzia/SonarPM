@@ -21,7 +21,7 @@ void* SonarThread::Entry(){
     AudioBuf rec = my_audio.blocking_record( RECORDING_PERIOD );
     Statistics st = measure_stats( rec, conf.ping_freq );
     this->mainFrame->addPoint( st.delta );
-    cout << s << endl;
+    cout << st << endl;
   }
   return 0;
 }

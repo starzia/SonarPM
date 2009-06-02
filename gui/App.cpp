@@ -6,7 +6,7 @@ IMPLEMENT_APP(App)
 
 // This is executed upon startup, like 'main()' in non-wxWidgets programs.
 bool App::OnInit(){
-  this->frame = new Frame( _T("Hello World title"),200,200);
+  this->frame = new Frame( _T("Hello World title"),600,600);
   frame->Show(true);
   SetTopWindow(frame);
 
