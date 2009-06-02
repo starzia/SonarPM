@@ -13,9 +13,11 @@ public:
   ~Frame();
   void OnIconize( wxIconizeEvent& event );
   void OnSize( wxSizeEvent& event );
+
+  // update plot with a new point
+  void addPoint( float p );
   // list controls here
   ///wxTextCtrl *theText;
-
   DECLARE_EVENT_TABLE()
 private:
   // redraw window

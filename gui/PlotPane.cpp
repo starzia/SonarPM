@@ -68,5 +68,6 @@ void PlotPane::setHistoryLength( unsigned int l ){
 void PlotPane::addPoint( float p ){
   this->history.push_front(p);
   this->history.pop_back();
+  this->paintNow();
 }
 

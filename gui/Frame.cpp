@@ -43,7 +43,12 @@ void Frame::OnSize( wxSizeEvent& event ){
 }
 
 void Frame::draw(){
-  this->Refresh(); //sonar_history->paintNow();
+  this->Refresh();
+  this->sonar_history->paintNow();
+}
+
+void Frame::addPoint( float p ){
+  this->sonar_history->addPoint( p );
 }
 
 BEGIN_EVENT_TABLE( Frame, wxFrame )
