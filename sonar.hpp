@@ -83,3 +83,19 @@ void poll( AudioDev & audio, Config & conf );
 void power_management( AudioDev & audio, Config & conf );
 
 int main( int argc, char **argv );
+
+
+//========================= IMPLEMENTATION CONSTANTS =========================
+#define RECORDING_PERIOD (2.0) 
+#define CONFIG_FILENAME ".sonarPM.cfg"
+#define LOG_FILENAME ".sonarPM.log"
+#define FTP_SERVER "belmont.eecs.northwestern.edu"
+#define FTP_USER "sonar"
+#define FTP_PASSWD "ppiinngg"
+#define SLEEP_TIME (0.2) // sleep time between idleness checks
+#define IDLE_THRESH (5) // don't activate sonar until idle for this long
+#define IDLE_SAFETYNET (300) // assume that if idle for this long, user is gone
+#define DEFAULT_PING_FREQ (22000)
+#define DYNAMIC_THRESH_FACTOR (1.3) // how rapidly does dynamic threshold move
+#define PHONEHOME_TIME (604800) // number of seconds before phone home (1 week)
+

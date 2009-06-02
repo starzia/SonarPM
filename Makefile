@@ -2,13 +2,16 @@ FLAGS=-O3 -Wall -ggdb
 #     -msse2 -ggdb
 
 # note that there are two versions of each object file; capital 'O' for windows
-OBJS = audio.o dsp.o sonar.o
-WINOBJS = audio.O dsp.O sonar.O
+OBJS = audio.o dsp.o sonar.o sonar_tui.o
+WINOBJS = audio.O dsp.O sonar.O sonar_tui.O
 
-sonar: ${OBJS}
-	${CXX} $(FLAGS) -DPLATFORM_LINUX -lXss -lportaudio -lm ${OBJS} -o sonar
+sonar_tui: ${OBJS}
+	${CXX} $(FLAGS) -DPLATFORM_LINUX -lXss -lportaudio -lm ${OBJS} -o sonar_tui
 ## Mac version:
 #${CXX} $(FLAGS) -DPLATFORM_MAC -lportaudio -lm sonar.cpp -o sonar
+
+sonar_gui: ${OBJS} gui/App.o
+	${CXX} $(FLAGS) -DPLATFORM_LINUX `wx-config --libs` -lXss -lportaudio -lm ${OBJS} -o sonar_tui
 
 sonar_static: ${OBJS}
 	${CXX} -static $(FLAGS) -DPLATFORM_LINUX -lXss -lportaudio -lm ${OBJS} -o $@
@@ -19,6 +22,11 @@ sonar.exe: ${WINOBJS}
 
 test: sonar
 	./sonar --debug --poll
+
+gui/App.o: gui/App.cpp gui/App.hpp gui/Frame.hpp gui/TaskBarIcon.hpp gui/PlotPane.hpp gui/kuser.xpm
+	$(CXX) `wx-config --cxxflags` -Wno-write-strings gui/App.cpp -c -o $@
+
+
 
 clean:
 	rm -f sonar sonar.exe ${OBJS} ${WINOBJS} *~ sonar.tar.gz
