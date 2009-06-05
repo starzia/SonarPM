@@ -1,6 +1,7 @@
 #pragma once
 #include <wx/wx.h>
 #include <wx/thread.h>
+///#include <wx/event.h> // for wxThreadEvent
 #include "TaskBarIcon.hpp"
 #include "PlotPane.hpp"
 //#include "SonarThread.hpp"
@@ -14,12 +15,14 @@ public:
   void OnIconize( wxIconizeEvent& event );
   void OnSize( wxSizeEvent& event );
 
-  // update plot with a new point
-  void addPoint( float p );
+  void onPlotEvent(wxCommandEvent& event);
   // list controls here
   ///wxTextCtrl *theText;
   DECLARE_EVENT_TABLE()
 private:
+  // update plot with a new point
+  void addPoint( float p );
+
   TaskBarIcon* tbIcon;
   PlotPane* sonar_history;
   wxThread*  sThread;

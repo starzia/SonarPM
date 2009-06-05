@@ -10,6 +10,7 @@ BEGIN_EVENT_TABLE( Frame, wxFrame )
 ///EVT_BUTTON  (BUTTON1,   Frame::OnButton1)
 EVT_SIZE( Frame::OnSize )
 EVT_ICONIZE( Frame::OnIconize )
+EVT_COMMAND( wxID_ANY, PLOT_EVENT, Frame::onPlotEvent)
 END_EVENT_TABLE()
 
 Frame::Frame( const wxString & title, int width, int height ) : 
@@ -42,11 +43,10 @@ Frame::Frame( const wxString & title, int width, int height ) :
 	      wxEXPAND | // horizontally stretchable
 	      wxALL, // border all around
 	      10 ); // border width of 10
-  // start sonar processing thread
   this->SetSizer(sizer);
   sizer->SetSizeHints(this); // set sze hints to honour min size
 
-
+  // start sonar processing thread
   this->sThread = new SonarThread(this);
   if( this->sThread->Create() == wxTHREAD_NO_ERROR )
     this->sThread->Run();
@@ -75,6 +75,11 @@ void Frame::addPoint( float p ){
   s.Printf( wxT("Last reading: %f"), p );
   this->SetStatusText(s);
   */
-  //this->Refresh();
-  //this->Update();
+  this->Refresh();
+  this->Update();
 }
+
+void Frame::onPlotEvent(wxCommandEvent& event){
+  addPoint( 0.2 );
+}
+
