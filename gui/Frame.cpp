@@ -19,11 +19,11 @@ END_EVENT_TABLE()
 Frame::Frame( const wxString & title, int width, int height ) : 
   wxFrame( (wxFrame*)NULL,-1,title,wxDefaultPosition,wxSize(width,height),
 	   wxFRAME_NO_TASKBAR | wxSYSTEM_MENU | wxCAPTION 
-	   | wxCLOSE_BOX | wxCLIP_CHILDREN | wxMINIMIZE_BOX |wxRESIZE_BORDER 
+	   | wxCLOSE_BOX | wxCLIP_CHILDREN | wxMINIMIZE_BOX //|wxRESIZE_BORDER 
 	   | wxFULL_REPAINT_ON_RESIZE )
 {
   // create sizer for layout
-  wxBoxSizer* sizer = new wxStaticBoxSizer( wxVERTICAL,this,_T("echo delta") );
+  wxBoxSizer* sizer = new wxBoxSizer( wxVERTICAL );
 
   // add controls
   this->CreateStatusBar();
@@ -39,9 +39,7 @@ Frame::Frame( const wxString & title, int width, int height ) :
 
   sizer->Add( this->sonar_history,
 	      1, // vertically stretchable
-	      wxEXPAND | // horizontally stretchable
-	      wxALL, // border all around
-	      10 ); // border width of 10
+	      wxEXPAND ); // horizontally stretchable
   this->SetSizer(sizer);
   sizer->SetSizeHints(this); // set sze hints to honour min size
 
