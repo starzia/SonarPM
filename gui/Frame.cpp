@@ -64,18 +64,21 @@ void Frame::OnSize( wxSizeEvent& event ){
   //this->Update();
 }
 
-void Frame::addPoint( float p ){
-  this->sonar_history->addPoint( p );
-
-  wxString s;
-  s.Printf( wxT("Last reading: %f"), p );
-  this->SetStatusText(s);
-
+void Frame::onPlotEvent(PlotEvent& event){
+  if( event.getType() == PLOT_EVENT_POINT ){
+    this->sonar_history->addPoint( event.getVal() );
+    
+    wxString s;
+    s.Printf( wxT("Last reading: %f"), event.getVal() );
+    this->SetStatusText(s);
+    
+  }else if( event.getType() == PLOT_EVENT_THRESHOLD ){
+    this->sonar_history->setThreshold( event.getVal() );
+    wxString s;
+    s.Printf( wxT("Threshold updated to: %f"), event.getVal() );
+    this->SetStatusText(s);
+  }
   this->Refresh();
   this->Update();
-}
-
-void Frame::onPlotEvent(PlotEvent& event){
-  addPoint( event.getVal() );
 }
 
