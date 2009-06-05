@@ -31,6 +31,7 @@ FORCE_LOOK:
 
 clean:
 	rm -f sonar_tui sonar_gui sonar.exe ${OBJS} ${WINOBJS} *~ sonar.tar.gz
+	cd gui; $(MAKE) clean
 
 %.o : %.cpp
 	$(CXX) $(FLAGS) -DPLATFORM_LINUX -c $< -o $@

@@ -2,7 +2,10 @@
 #include "SonarThread.hpp"
 #include <wx/sizer.h>
 #include <sstream>
+#include <wx/event.h>
+#include "PlotEvent.hpp"
 using namespace std;
+
 
 BEGIN_EVENT_TABLE( Frame, wxFrame )
 ///EVT_MENU    (wxID_EXIT, Frame::OnExit)
@@ -10,7 +13,7 @@ BEGIN_EVENT_TABLE( Frame, wxFrame )
 ///EVT_BUTTON  (BUTTON1,   Frame::OnButton1)
 EVT_SIZE( Frame::OnSize )
 EVT_ICONIZE( Frame::OnIconize )
-EVT_COMMAND( wxID_ANY, PLOT_EVENT, Frame::onPlotEvent)
+EVT_PLOT( wxID_ANY, Frame::onPlotEvent)
 END_EVENT_TABLE()
 
 Frame::Frame( const wxString & title, int width, int height ) : 
@@ -32,11 +35,7 @@ Frame::Frame( const wxString & title, int width, int height ) :
   // add sonar Plot
   this->sonar_history = new PlotPane( this, wxDefaultPosition, 
 				      this->GetClientSize() );
-  this->sonar_history->setHistoryLength( 10 );
-  this->sonar_history->addPoint( 1.2 ); 
-  this->sonar_history->addPoint( 1.2 ); 
-  this->sonar_history->addPoint( 1.8 );
-  this->sonar_history->addPoint( 0.2 );
+  this->sonar_history->setHistoryLength( 30 );
 
   sizer->Add( this->sonar_history,
 	      1, // vertically stretchable
@@ -68,18 +67,17 @@ void Frame::OnSize( wxSizeEvent& event ){
 }
 
 void Frame::addPoint( float p ){
-  
   this->sonar_history->addPoint( p );
-  /*
+
   wxString s;
   s.Printf( wxT("Last reading: %f"), p );
   this->SetStatusText(s);
-  */
+
   this->Refresh();
   this->Update();
 }
 
-void Frame::onPlotEvent(wxCommandEvent& event){
-  addPoint( 0.2 );
+void Frame::onPlotEvent(PlotEvent& event){
+  addPoint( event.getVal() );
 }
 

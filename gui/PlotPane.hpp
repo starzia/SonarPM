@@ -2,7 +2,6 @@
 #include <wx/wx.h>
 #include <deque>
 
-//==================== FORWARD DECLARATIONS ==================================
 class PlotPane : public wxPanel{
 public:
   PlotPane(wxFrame* parent, wxPoint pos, wxSize size);
@@ -19,4 +18,3 @@ private:
   void render( wxDC& dc );
   std::deque<float> history;
 };
-

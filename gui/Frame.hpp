@@ -4,7 +4,7 @@
 ///#include <wx/event.h> // for wxThreadEvent
 #include "TaskBarIcon.hpp"
 #include "PlotPane.hpp"
-//#include "SonarThread.hpp"
+#include "PlotEvent.hpp"
 
 
 class Frame : public wxFrame
@@ -15,7 +15,7 @@ public:
   void OnIconize( wxIconizeEvent& event );
   void OnSize( wxSizeEvent& event );
 
-  void onPlotEvent(wxCommandEvent& event);
+  void onPlotEvent(PlotEvent& event);
   // list controls here
   ///wxTextCtrl *theText;
   DECLARE_EVENT_TABLE()

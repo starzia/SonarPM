@@ -32,6 +32,7 @@ void PlotPane::render(wxDC&  dc)
     if( history[i] < min ) min = history[i];
     if( history[i] > max ) max = history[i];
   }
+  min = 0; // force min to be zero.
   float x_stride =  w/(N-1), y_stride = ((float)h)/(max-min);
   for( i=1; i < N; i++ ){
     dc.DrawLine( w - (i-1)*x_stride, h - y_stride*(history[i-1]-min), 
@@ -62,4 +63,3 @@ void PlotPane::addPoint( float p ){
   this->history.pop_back();
   this->paintNow();
 }
-
