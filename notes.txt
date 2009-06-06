@@ -27,4 +27,15 @@ mingw32 notes:
      sudo ln -s libpthreadGC2.a libpthread.a
   - wget http://portaudio.com/archives/pa_stable_v19_20071207.tar.gz
   - cd portaudio; mingw32-env; cp ../Makefile.portaudio-mingw32 Makefile; make
+- must install wxWidgets for win32 first:
+    cd /usr/local/src
+    sudo wget http://prdownloads.sourceforge.net/wxwindows/wxMSW-2.8.10.zip
+    sudo unzip wxMSW-2.8.10.zip
+    sudo chown -R steve:steve wxMSW-2.8.10
+    mkdir mingw32-static
+    cd mingw32-static
+    mingw32-env
+    ../configure --build=i586-mingw32msvc --host=i586-mingw32msvc --disable-shared --prefix=/usr/local/wx-2.8.10-mingw32
+    make
+    sudo make install
 - to build sonar: run "mingw32-env; make"
