@@ -13,18 +13,23 @@ BINS = sonar_tui sonar_gui sonar_tui.exe sonar_gui.exe
 ############################# LINKING ####################################
 
 sonar_tui: ${OBJS} sonar_tui.o
-	${CXX} $(FLAGS) -DPLATFORM_LINUX -lXss -lportaudio -lm $^ -o $@
-## Mac version:
+	$(CXX) -o $@ $^ -lXss -lportaudio -lm
+## Mac version?
 #${CXX} $(FLAGS) -DPLATFORM_MAC -lportaudio -lm sonar.cpp -o sonar
 
 sonar_gui: ${OBJS} gui/gui.a
-	${CXX} $(FLAGS) -DPLATFORM_LINUX $(shell $(WX_CONFIG_LINUX) --libs) -lXss -lportaudio -lm $^ -o $@
+	$(CXX) -o $@ $^ \
+          $(shell $(WX_CONFIG_LINUX) --libs) -lXss -lportaudio -lm
 
 sonar_tui.exe: ${W32_OBJS} sonar_tui.O
-	$(CXX) $(FLAGS) -DPLATFORM_WINDOWS -lm $^ libportaudio.a -lwinmm -lwininet -o $@
+	$(CXX) -o $@ $^ -lm libportaudio.a -lwinmm -lwininet
 
+# for some reason, gui.A cannot be used directly, so I list its contents and
+# use those filenames instead.  This is a bit of a hack.
 sonar_gui.exe: ${W32_OBJS} gui/gui.A
-	$(CXX) $(FLAGS) -DPLATFORM_WINDOWS $(shell $(WX_CONFIG_W32) --libs) -lm $^ libportaudio.a -lwinmm -lwininet -o $@
+	$(CXX) -o $@ $^ \
+          $(addprefix gui/, $(shell $(AR) -t gui/gui.A)) \
+          libportaudio.a -lm -lwinmm -lwininet $(shell $(WX_CONFIG_W32) --libs)
 
 ############################## COMPILING #################################
 
