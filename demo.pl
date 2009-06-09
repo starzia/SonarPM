@@ -1,9 +1,9 @@
 #!/usr/bin/perl -w
-$HIGHEST=0.02;
+$HIGHEST=0.01;
 $LOWEST=0.002;
 $LCD_STEPS=8;
 $MAXX=200;
-$WINDOW_SIZE=10;
+$WINDOW_SIZE=5;
 
 use FileHandle;
 
@@ -41,9 +41,34 @@ while (<S>) {
 	backlight( $level );
 
 	print F $reading, "\n";
+	print G sprintf( "set terminal wxt 20\n" );
 	print G sprintf( "set log y\n" );
+	print G sprintf( "unset xtics\n" );
+	print G sprintf( "unset ytics\n" );
+	print G sprintf( "set xlabel 'time' font 'Helvetica,20'\n" );
+	print G sprintf( "set ylabel 'echo delta' font 'Helvetica,20'\n" );
+	print G sprintf( "set title 'Setting backlight level based on sliding window average sonar reading' font 'Helvetica,30'\n" );
+
+	# set to fixed sliding x window
 	print G sprintf( "set xrange [%d:%d]\n", $count-$MAXX,$count );
-	print G sprintf( "plot 'data.txt' w linespoints lw 4 title 'echo delta', 'data2.txt' w l lw 10 title 'backlight setting (window average)', (%f) w l lw 3 title 'backlight highest', (%f) w l lw 3 title 'backlight lowest'\n", $HIGHEST, $LOWEST );
+
+	print G sprintf( "plot " );
+	
+	# plot color gradient for backlight levels
+	for( $i=$LCD_STEPS-1; $i>0; $i-- ){	    
+	    $label='';
+	    if( $i==1 ){ $label = 'backlight levels'; } 
+	    $brightness_line = $LOWEST * (($HIGHEST/$LOWEST)**($i/$LCD_STEPS));
+	    print G sprintf( "(%f) w filledcurves x1 fs solid %f ".
+			     "lt rgb 'black' lw 0 title '%s',", 
+			     $brightness_line, 0.5-0.5*$i/$LCD_STEPS, $label);
+	}
+	# plot two lines for current and average sonar reading
+	print G sprintf( "'data.txt' w l lw 4 lt rgb 'blue' ".
+			 "title '500 millisecond window', ".
+			 "'data2.txt' w l lw 10 lt rgb 'red' ".
+			 "title 'sliding window average, n=%d'\n",
+			 $WINDOW_SIZE );
 	$count++;
     }
 }
