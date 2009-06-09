@@ -27,9 +27,9 @@ Frame::Frame( const wxString & title, int width, int height ) :
   this->SetStatusText(_T("Hello World"));
   this->panel = new wxPanel( this, wxID_ANY, wxDefaultPosition,
                              this->GetClientSize());
-  this->buttonPause = new wxButton( panel, BUTTON_PAUSE, _T("pause"),
+  this->buttonPause = new wxButton( panel, BUTTON_PAUSE, _T("start"),
 				    wxPoint(700,700), wxDefaultSize );
-  const wxString choices[2] = {_T("power management"),_T("polling")};
+  const wxString choices[2] = {_T("polling"),_T("power management")};
   this->choiceMode = new wxChoice( panel, CHOICE_MODE, wxPoint(0,700),
 				   wxDefaultSize, 2, choices );
 
@@ -60,7 +60,8 @@ Frame::Frame( const wxString & title, int width, int height ) :
   this->SetSizer(sizer1);
   sizer1->SetSizeHints(this);
 
-  this->startSonar();
+  this->sThread=NULL; // prevent initially dangling pointer
+  ///this->startSonar();
 }
 
 Frame::~Frame(){
@@ -68,16 +69,33 @@ Frame::~Frame(){
   this->tbIcon->RemoveIcon();
 }
 
-void Frame::startSonar(){
-  // start sonar processing thread
-  this->sThread = new SonarThread(this);
-  if( this->sThread->Create() == wxTHREAD_NO_ERROR )
-    this->sThread->Run();
+void Frame::nullifyThread(){
+  wxCriticalSectionLocker lock( this->threadLock );
+  this->sThread = NULL;
+}
+
+void Frame::startSonar( ){
+  // The following lock prevents multiple new threads from starting.
+  // It is released automatically by its destructor.
+  wxCriticalSectionLocker locker( this->threadLock );
+  if( !this->sThread ){ //start only if stopped
+    // start sonar processing thread
+    this->sThread = new SonarThread( this );
+    if( this->sThread->Create( ) == wxTHREAD_NO_ERROR ){
+      this->sThread->Run( );
+      this->buttonPause->SetLabel( _T( "pause" ) );
+    }
+  }
 }
 
 void Frame::stopSonar(){
   // stop sonar processing thread
-  this->sThread->Delete();
+  wxCriticalSectionLocker locker( this->threadLock );
+  if( this->sThread ){ // stop only if started
+    if( this->sThread->Delete() == wxTHREAD_NO_ERROR ){
+      this->buttonPause->SetLabel( _T( "continue" ) );
+    }
+  }
 }
 
 void Frame::OnIconize( wxIconizeEvent& event ){
@@ -111,9 +129,7 @@ void Frame::onPlotEvent(PlotEvent& event){
 void Frame::onPause(wxCommandEvent& event){
   if( this->buttonPause->GetLabel() == _T("pause") ){
     this->stopSonar();
-    this->buttonPause->SetLabel( _T( "continue" ) );
-  }else{
+  }else{ // "continue" or "start"
     this->startSonar();
-    this->buttonPause->SetLabel( _T( "pause" ) );
   }
 }

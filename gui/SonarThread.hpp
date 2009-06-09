@@ -9,6 +9,7 @@
 class SonarThread : public wxThread{
 public:
   SonarThread( Frame* mainFrame );
+  ~SonarThread();
   // starts some work
   void* Entry();
 private:

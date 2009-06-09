@@ -16,6 +16,7 @@ public:
 
   void onPlotEvent(PlotEvent& event);
   void onPause( wxCommandEvent& event );
+  void nullifyThread();
 
   DECLARE_EVENT_TABLE()
 private:
@@ -32,6 +33,7 @@ private:
   TaskBarIcon* tbIcon;
   PlotPane* sonarHistory;
   wxThread*  sThread;
+  wxCriticalSection threadLock; // to protect access to thread pointer
 };
 
 
