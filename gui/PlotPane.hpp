@@ -4,7 +4,7 @@
 
 class PlotPane : public wxPanel{
 public:
-  PlotPane(wxFrame* parent, wxPoint pos, wxSize size);
+  PlotPane(wxWindow* parent, wxPoint pos, wxSize size);
   void paintEvent(wxPaintEvent & evt);
   void paintNow();
   // set x axis length of plot

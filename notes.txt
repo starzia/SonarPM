@@ -39,3 +39,8 @@ mingw32 notes:
     make
     sudo make install
 - to build sonar: run "mingw32-env; make"
+
+brightness notes:
+- in linux can control backlight via HAL as follows:
+dbus-send --system --print-reply --dest=org.freedesktop.Hal /org/freedesktop/Hal/devices/dell_lcd_panel org.freedesktop.Hal.Device.LaptopPanel.SetBrightness int32:7 
+ - replace 7 with value in [0-7], find HAL device name with 'lshal' command

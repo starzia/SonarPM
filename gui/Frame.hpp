@@ -6,7 +6,6 @@
 #include "PlotPane.hpp"
 #include "PlotEvent.hpp"
 
-
 class Frame : public wxFrame
 {
 public:
@@ -16,15 +15,28 @@ public:
   void OnSize( wxSizeEvent& event );
 
   void onPlotEvent(PlotEvent& event);
-  // list controls here
-  ///wxTextCtrl *theText;
+  void onPause( wxCommandEvent& event );
+
   DECLARE_EVENT_TABLE()
 private:
   // update plot with a new point
   void addPoint( float p );
+  void startSonar();
+  void stopSonar();
+
+  // controls
+  wxPanel *panel; // container for all controls
+  wxButton* buttonPause;
+  wxChoice* choiceMode;
 
   TaskBarIcon* tbIcon;
-  PlotPane* sonar_history;
+  PlotPane* sonarHistory;
   wxThread*  sThread;
 };
+
+
+//=============================== CONSTANTS ============================
+const int  BUTTON_PAUSE = wxID_HIGHEST + 1;
+const int  CHOICE_MODE = wxID_HIGHEST + 2;
+
 

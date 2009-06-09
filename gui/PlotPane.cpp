@@ -4,7 +4,7 @@ BEGIN_EVENT_TABLE( PlotPane, wxPanel )
 EVT_PAINT( PlotPane::paintEvent )
 END_EVENT_TABLE()
 
-PlotPane::PlotPane( wxFrame* parent, wxPoint pos, wxSize size ) : 
+PlotPane::PlotPane( wxWindow* parent, wxPoint pos, wxSize size ) :
 wxPanel(parent, wxID_ANY, pos, size ) {
   this->threshold=0;
 }
