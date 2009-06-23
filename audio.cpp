@@ -114,18 +114,18 @@ AudioDev::~AudioDev(){
 }
 
 void AudioDev::choose_device( unsigned int in_dev_num, 
-			      unsigned int out_dev_num ){
+                              unsigned int out_dev_num ){
   // now create the device definition
   this->in_params.channelCount = 1;
   this->in_params.device = in_dev_num;
   this->in_params.sampleFormat = paFloat32;
-  this->in_params.suggestedLatency = Pa_GetDeviceInfo(in_dev_num)->defaultLowInputLatency ;
+  this->in_params.suggestedLatency = Pa_GetDeviceInfo(in_dev_num)->defaultHighInputLatency ;
   this->in_params.hostApiSpecificStreamInfo = NULL; //See you specific host's API docs for info on using this field
 
   this->out_params.channelCount = 2;
   this->out_params.device = out_dev_num;
   this->out_params.sampleFormat = paFloat32;
-  this->out_params.suggestedLatency = Pa_GetDeviceInfo(out_dev_num)->defaultLowOutputLatency ;
+  this->out_params.suggestedLatency = Pa_GetDeviceInfo(out_dev_num)->defaultHighOutputLatency;
   this->out_params.hostApiSpecificStreamInfo = NULL; //See you specific host's API docs for info on using this field
 
   // set global SAMPLE_RATE
@@ -187,8 +187,10 @@ int AudioDev::player_callback( const void *inputBuffer, void *outputBuffer,
     if( i < req->audio.get_num_samples() ){
       *out++ = req->audio[i];  /* left */
     }else{
-      *out++ = 0; // play silence if we've reqched end of buffer
+      *out++ = 0; // play silence if we've reached end of buffer
     }
+    *out++=0;
+
     *out++ = 0;  /* right */
   }
   req->progress_index = i; // update progress index
@@ -268,6 +270,26 @@ PaStream* AudioDev::nonblocking_play_loop( const AudioBuf & buf ){
   AudioRequest *play_request = new AudioRequest( buf );
   /* Open an audio I/O stream. */
   check_error( Pa_OpenStream( 
+	 &stream,
+	 NULL,          /* no input channels */
+	 &(this->out_params),
+	 SAMPLE_RATE,
+	 FRAMES_PER_BUFFER,   /* frames per buffer */
+	 paNoFlag,
+	 AudioDev::oscillator_callback, /* this is your callback function */
+	 play_request ) ); /*This is a pointer that will be passed to
+			     your callback*/
+  // start playback
+  check_error( Pa_StartStream( stream ) );
+  // caller is responsible for freeing stream
+  return stream;
+}
+
+PaStream* AudioDev::blocking_play_loop( const AudioBuf & buf ){
+  PaStream *stream;
+  AudioRequest *play_request = new AudioRequest( buf );
+  /* Open an audio I/O stream. */
+  check_error( Pa_OpenStream(
 	 &stream,
 	 NULL,          /* no input channels */
 	 &(this->out_params),

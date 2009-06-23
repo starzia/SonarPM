@@ -191,7 +191,7 @@ precision bartlett( const indexable & arr, unsigned int start_index,
 
   // for each window
   for( i=0; i<num_windows; i++ ){
-    if( i > num_windows-4 ){
+    if( true || i > num_windows-4 ){ // TODO: decide which is more efficient
       // if less than four windows left, do one at a time.
       // be careful not to go beyond end_index
       unsigned int j = (end_index<(i+1)*window_size)? 

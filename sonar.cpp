@@ -565,14 +565,14 @@ void power_management( AudioDev & audio, Config & conf ){
 /** poll is a simplified version of the power management loop wherein we just
     constantly take readings */
 void poll( AudioDev & audio, Config & conf ){
-  AudioBuf ping = tone( 1, conf.ping_freq, 0,0 ); // no fade since we loop it 
+  AudioBuf ping = tone( 1, conf.ping_freq, 0,0 ); // no fade since we loop it
   cout << "Begin pinging loop at frequency of " <<conf.ping_freq<<"Hz"<<endl;
-  PaStream* s = audio.nonblocking_play_loop( ping );
+  PaStream* strm = audio.nonblocking_play_loop( ping );
   while( 1 ){
     AudioBuf rec = audio.blocking_record( RECORDING_PERIOD );
     Statistics s = measure_stats( rec, conf.ping_freq );
     cout << s << endl;
   }
-  AudioDev::check_error( Pa_CloseStream( s ) ); // close stream to free up dev
+  AudioDev::check_error( Pa_CloseStream( strm ) ); // close stream to free up dev
 }
 

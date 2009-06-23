@@ -1,7 +1,8 @@
 export WX_CONFIG_LINUX=/usr/bin/wx-config
 export WX_CONFIG_W32=/usr/local/wx-2.8.10-mingw32/bin/wx-config
 
-FLAGS=-O3 -Wall -ggdb 
+FLAGS=-O3 -Wall -msse2
+#-ggdb -pg
 #     -msse2 -ggdb
 
 # note that there are two versions of each object file; capital 'O' for windows
@@ -13,7 +14,7 @@ BINS = sonar_tui sonar_gui sonar_tui.exe sonar_gui.exe
 ############################# LINKING ####################################
 
 sonar_tui: ${OBJS} sonar_tui.o
-	$(CXX) -o $@ $^ -lXss -lportaudio -lm
+	$(CXX) -o $@ ${FLAGS} $^ -lXss -lportaudio -lm
 ## Mac version?
 #${CXX} $(FLAGS) -DPLATFORM_MAC -lportaudio -lm sonar.cpp -o sonar
 
