@@ -28,9 +28,9 @@ Frame::Frame( const wxString & title, int width, int height ) :
   this->panel = new wxPanel( this, wxID_ANY, wxDefaultPosition,
                              this->GetClientSize());
   this->buttonPause = new wxButton( panel, BUTTON_PAUSE, _T("start"),
-				    wxPoint(700,700), wxDefaultSize );
+				    wxDefaultPosition, wxDefaultSize );
   const wxString choices[2] = {_T("polling"),_T("power management")};
-  this->choiceMode = new wxChoice( panel, CHOICE_MODE, wxPoint(0,700),
+  this->choiceMode = new wxChoice( panel, CHOICE_MODE, wxDefaultPosition,
 				   wxDefaultSize, 2, choices );
 
   // add taskbar icon
@@ -62,6 +62,13 @@ Frame::Frame( const wxString & title, int width, int height ) :
 
   this->sThread=NULL; // prevent initially dangling pointer
   ///this->startSonar();
+
+  // pop up config window
+  wxFrame* confFrame = new ConfigFrame( _T("Configuration"),500,500);
+  confFrame->Show(true);
+  //SetTopWindow(confFrame);
+
+
 }
 
 Frame::~Frame(){

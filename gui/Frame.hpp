@@ -5,6 +5,7 @@
 #include "TaskBarIcon.hpp"
 #include "PlotPane.hpp"
 #include "PlotEvent.hpp"
+#include "ConfigFrame.hpp"
 
 class Frame : public wxFrame
 {
