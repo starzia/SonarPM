@@ -21,7 +21,7 @@ ConfigFrame::ConfigFrame( const wxString & title, int width, int height ) :
                              this->GetClientSize());
   this->buttonSave = new wxButton( this->panel, BUTTON_SAVE, _T("save"),
 				   wxDefaultPosition, wxDefaultSize );
-  this->buttonCancel = new wxButton( this->panel, BUTTON_SAVE, _T("cancel"),
+  this->buttonCancel = new wxButton( this->panel, BUTTON_CANCEL, _T("cancel"),
 				   wxDefaultPosition, wxDefaultSize );
 
   const wxString choices[2] = {_T("0"),_T("1")};
@@ -62,4 +62,6 @@ ConfigFrame::~ConfigFrame(){}
 
 void ConfigFrame::onSave( wxCommandEvent& event ){}
 
-void ConfigFrame::onCancel( wxCommandEvent& event ){}
+void ConfigFrame::onCancel( wxCommandEvent& event ){
+    this->Close();
+}

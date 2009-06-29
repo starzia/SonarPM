@@ -1,6 +1,7 @@
 #pragma once
 #include <wx/wx.h>
 #include "Frame.hpp"
+#include "ConfigFrame.hpp"
 
 class App : public wxApp{
  public:
@@ -8,6 +9,7 @@ class App : public wxApp{
   virtual int OnExit();
 private:
   Frame* frame;
+  ConfigFrame* confFrame;
 };
  
 DECLARE_APP(App)

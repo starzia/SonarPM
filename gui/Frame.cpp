@@ -62,13 +62,6 @@ Frame::Frame( const wxString & title, int width, int height ) :
 
   this->sThread=NULL; // prevent initially dangling pointer
   ///this->startSonar();
-
-  // pop up config window
-  wxFrame* confFrame = new ConfigFrame( _T("Configuration"),500,500);
-  confFrame->Show(true);
-  //SetTopWindow(confFrame);
-
-
 }
 
 Frame::~Frame(){

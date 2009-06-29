@@ -11,7 +11,12 @@ bool App::OnInit(){
 
   this->frame = new Frame( _T("Hello World title"),600,600);
   frame->Show(true);
-  SetTopWindow(frame);
+  //SetTopWindow( this->frame );
+
+  // pop up config window
+  this->confFrame = new ConfigFrame( _T("Configuration"),500,500);
+  this->confFrame->Show(true);
+  SetTopWindow( this->confFrame );
 
   return true;
 }
