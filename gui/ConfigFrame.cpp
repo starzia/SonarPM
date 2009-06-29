@@ -2,6 +2,7 @@
 #include <wx/sizer.h>
 
 #include "ConfigFrame.hpp"
+#include "../audio.hpp"
 
 using namespace std;
 
@@ -60,7 +61,9 @@ ConfigFrame::ConfigFrame( const wxString & title, int width, int height ) :
 ConfigFrame::~ConfigFrame(){}
 
 
-void ConfigFrame::onSave( wxCommandEvent& event ){}
+void ConfigFrame::onSave( wxCommandEvent& event ){
+
+}
 
 void ConfigFrame::onCancel( wxCommandEvent& event ){
     this->Close();

@@ -142,21 +142,36 @@ void AudioDev::choose_device( unsigned int in_dev_num,
   cerr<<"ERROR: no supported sample rate found!"<<endl;
 }
 
-pair<unsigned int,unsigned int> AudioDev::prompt_device(){
+vector<string> AudioDev::list_devices(){
+  vector<string> ret;
+  
   // get the total number of devices
   int numDevices = Pa_GetDeviceCount();
   if( numDevices < 0 ){
     printf( "ERROR: Pa_CountDevices returned 0x%x\n", numDevices );
+    exit();
   }
 
   // get data on each of the devices
-  cout << "These are the available audio devices:" << endl;
   const PaDeviceInfo *deviceInfo;
   int i;
   for( i=0; i<numDevices; i++ ){
     deviceInfo = Pa_GetDeviceInfo( i );
-    cout << i << ": ";
-    cout << deviceInfo->name << endl;
+    ret.push_back( deviceInfo->name );
+  }
+  return ret;
+}
+
+pair<unsigned int,unsigned int> AudioDev::prompt_device(){
+  vector<string> devices = this->list_devices();
+  // get the total number of devices
+  int numDevices = devices.size();
+
+  // get data on each of the devices
+  cout << "These are the available audio devices:" << endl;
+  int i;
+  for( i=0; i<numDevices; i++ ){
+    cout << i << ": " << devices[i] <<endl;
   }
 
   unsigned int in_dev_num, out_dev_num;

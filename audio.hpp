@@ -85,6 +85,9 @@ public:
   std::pair<unsigned int,unsigned int> prompt_device();
   /** or if we already know which devices to use we can specify */
   void choose_device( unsigned int in_dev_num, unsigned int out_dev_num );
+  /** returns a list with all of the available audio device names,
+      ordered by their corresponding device id */
+  std::vector<std::string> list_devices();
 
   /* This routine will be called by the PortAudio engine when audio is needed.
   ** It may called at interrupt level on some machines so don't do anything
