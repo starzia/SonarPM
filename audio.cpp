@@ -148,8 +148,7 @@ vector<string> AudioDev::list_devices(){
   // get the total number of devices
   int numDevices = Pa_GetDeviceCount();
   if( numDevices < 0 ){
-    printf( "ERROR: Pa_CountDevices returned 0x%x\n", numDevices );
-    exit();
+    cerr<< "ERROR: Pa_CountDevices returned "<<numDevices<<endl;
   }
 
   // get data on each of the devices

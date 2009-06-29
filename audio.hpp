@@ -1,6 +1,7 @@
 #ifndef AUDIO_H
 #define AUDIO_H
 #include <string>
+#include <vector>
 
 #ifdef PLATFORM_WINDOWS
 #include "/usr/include/portaudio.h"
