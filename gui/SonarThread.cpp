@@ -13,7 +13,7 @@ SonarThread::SonarThread( Frame* mf ) :
 
 SonarThread::~SonarThread(){
   // don't leave dangling pointer behind
-  //mainFrame->nullifyThread();
+  ///mainFrame->nullifyThread();
 }
 
 void* SonarThread::Entry(){
@@ -30,21 +30,23 @@ void* SonarThread::Entry(){
 void SonarThread::poll( AudioDev & audio, Config & conf ){
   AudioBuf ping = tone( 1, conf.ping_freq, 0,0 ); // no fade since we loop it 
   cout << "Begin pinging loop at frequency of " <<conf.ping_freq<<"Hz"<<endl;
-  PaStream* s = audio.nonblocking_play_loop( ping );
+  PaStream* strm = audio.nonblocking_play_loop( ping );
 
-  while( 1 ){
+  // test to see whether we should die
+  while( !this->TestDestroy() ){
     AudioBuf rec = audio.blocking_record( RECORDING_PERIOD );
     Statistics st = measure_stats( rec, conf.ping_freq );
     cout << st << endl;
 
-    // test to see whether we should die
-    if( this->TestDestroy() ) return;
-
     // update gui
     PlotEvent evt = PlotEvent( PLOT_EVENT_POINT );
     evt.setVal( st.delta );
-    mainFrame->GetEventHandler()->AddPendingEvent( evt );
+    mainFrame->GetEventHandler()->AddPendingEvent( evt ); 
   }
+
+  // clean up portaudio so that we can use it again later.
+  audio.check_error( Pa_AbortStream( strm ) ); // StopStream would empty buffer first
+  audio.check_error( Pa_Terminate() );
 }
 
 

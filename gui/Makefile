@@ -1,4 +1,4 @@
-FLAGS = -Wno-write-strings
+FLAGS = -Wno-write-strings -ggdb
 
 OBJS = App.o Frame.o TaskBarIcon.o PlotPane.o SonarThread.o PlotEvent.o \
  ConfigFrame.o

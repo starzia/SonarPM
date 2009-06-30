@@ -1,7 +1,7 @@
 export WX_CONFIG_LINUX=/usr/bin/wx-config
 export WX_CONFIG_W32=/usr/local/wx-2.8.10-mingw32/bin/wx-config
 
-FLAGS=-O3 -Wall -msse2
+FLAGS=-O3 -Wall -msse2 -ggdb
 #-ggdb -pg
 #     -msse2 -ggdb
 
