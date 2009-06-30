@@ -25,11 +25,20 @@ ConfigFrame::ConfigFrame( const wxString & title, int width, int height ) :
   this->buttonCancel = new wxButton( this->panel, BUTTON_CANCEL, _T("cancel"),
 				   wxDefaultPosition, wxDefaultSize );
 
-  const wxString choices[2] = {_T("0"),_T("1")};
+  // build a wxString array with names of audio devices
+  AudioDev audio;
+  vector<string> devices = audio.list_devices();
+  wxString* dev_arr = new wxString[ devices.size() ];
+  int i; for( i=0; i<devices.size(); i++ ){
+      dev_arr[i] = wxString(devices[i].c_str(),wxConvUTF8);
+  }
+
+  //const wxString choices[2] = {_T("0"),_T("1")};
   this->playDev = new wxChoice( this->panel, CHOICE_PLAYDEV, wxDefaultPosition,
-				wxDefaultSize, 2, choices );
+				wxDefaultSize, devices.size(), dev_arr );
   this->recDev = new wxChoice( this->panel, CHOICE_RECDEV, wxDefaultPosition,
-				wxDefaultSize, 2, choices );
+				wxDefaultSize, devices.size(), dev_arr );
+  delete [] dev_arr;
   this->modelName;
   this->phoneHome = new wxCheckBox( this->panel, PHONEHOME_ENABLE,
                     _T("enable phone home"), wxDefaultPosition );
