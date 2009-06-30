@@ -2,7 +2,7 @@
 #include <wx/sizer.h>
 
 #include "ConfigFrame.hpp"
-#include "../audio.hpp"
+#include "../audio.hpp" // for listing audio devices
 
 using namespace std;
 
@@ -44,6 +44,13 @@ ConfigFrame::ConfigFrame( const wxString & title, int width, int height ) :
                     _T("enable phone home"), wxDefaultPosition );
   this->phoneHome->SetValue(true);
 
+  // load previous configuration from file, if available
+  if( this->conf.load( SysInterface::config_dir()+CONFIG_FILENAME ) ){
+    this->recDev->SetSelection( this->conf.rec_dev );
+    this->playDev->SetSelection( this->conf.play_dev );
+    this->phoneHome->SetValue( this->conf.allow_phone_home );
+  }
+
   // create sizers for layout
   wxBoxSizer* sizer3 = new wxBoxSizer( wxHORIZONTAL );
   sizer3->Add( this->buttonSave, 1, wxALL | wxEXPAND, 5 );
@@ -71,7 +78,15 @@ ConfigFrame::~ConfigFrame(){}
 
 
 void ConfigFrame::onSave( wxCommandEvent& event ){
+  // change configuration based on widget settings
+  this->conf.rec_dev = this->recDev->GetSelection();
+  this->conf.play_dev = this->playDev->GetSelection();
+  this->conf.allow_phone_home = this->phoneHome->IsChecked();
 
+  // save changes to file
+  this->conf.write_config_file();
+
+  this->Close();
 }
 
 void ConfigFrame::onCancel( wxCommandEvent& event ){

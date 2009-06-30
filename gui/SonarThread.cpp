@@ -17,9 +17,11 @@ SonarThread::~SonarThread(){
 }
 
 void* SonarThread::Entry(){
-  AudioDev my_audio = AudioDev();
   Config conf;
-  conf.load( my_audio, SysInterface::config_dir()+CONFIG_FILENAME );
+  if( !conf.load( SysInterface::config_dir()+CONFIG_FILENAME ) ){
+   cerr << "fatel error: could not load config file" <<endl;   
+  }
+  AudioDev my_audio = AudioDev( conf.rec_dev, conf.play_dev );
   
   this->poll( my_audio, conf );
   //this->power_management( my_audio, conf );

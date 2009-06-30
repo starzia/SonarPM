@@ -1,4 +1,5 @@
 #include "App.hpp"
+#include "../sonar.hpp"
 
 //====================== IMPLEMENTATIONS ====================================
 // generate the main() entry point

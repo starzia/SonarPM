@@ -51,7 +51,7 @@ using namespace std;
 Config::Config(){}
 
 /** call calibration functions to create a new configuration */
-bool Config::load( AudioDev & audio, string filename ){
+bool Config::load( string filename ){
   this->filename = filename;
   // try to load from a data file
   CSimpleIniA ini(false,false,false);
@@ -59,11 +59,7 @@ bool Config::load( AudioDev & audio, string filename ){
   if (rc < 0){
     // if file open unsuccessful, then run calibration
     cerr<< "Unable to open config file "<<filename<<endl;
-    cerr<< "A new configuration file will now be created."<<endl;
-    this->new_config( audio );
-
-    // write configuration to file
-    return this->write_config_file();
+    return false;
   }else{
     // if file open successful, then get the config key values from it.
     try{
@@ -85,14 +81,12 @@ bool Config::load( AudioDev & audio, string filename ){
       ss >> this->threshold;
       cerr<< "Loaded config file "<<filename<<" with threshold: " 
 	  << this->threshold <<endl;
-      // set audio object to use the desired devices
-      audio.choose_device( this->rec_dev, this->play_dev );
     }catch( const exception& e ){
       cerr <<"Error loading data from Config file "<<filename<<endl
 	   <<"Please check the file for errors and correct or delete it"<<endl;
       exit(-1);
     }
-    return false;
+    return true;
   }
 }
 

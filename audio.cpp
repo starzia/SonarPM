@@ -104,13 +104,17 @@ bool AudioRequest::done(){
 }
 
 AudioDev::AudioDev(){
-  // Initialize PortAudio
-  check_error( Pa_Initialize() );
+  check_error( Pa_Initialize() ); // Initialize PortAudio
 }
 
+AudioDev::AudioDev( unsigned int in_dev_num, unsigned int out_dev_num ){
+  check_error( Pa_Initialize() ); // Initialize PortAudio
+  this->choose_device( in_dev_num, out_dev_num );
+}
+
+
 AudioDev::~AudioDev(){
-  // close PortAudio
-  check_error( Pa_Terminate() );
+  check_error( Pa_Terminate() ); // close PortAudio
 }
 
 void AudioDev::choose_device( unsigned int in_dev_num, 

@@ -1,5 +1,6 @@
 #pragma once
 #include <wx/wx.h>
+#include "../sonar.hpp" // for config file
 
 class ConfigFrame : public wxFrame
 {
@@ -11,6 +12,8 @@ public:
 
   DECLARE_EVENT_TABLE()
 private:
+  Config conf;
+
   wxPanel *panel; // container for all controls
 
   // controls

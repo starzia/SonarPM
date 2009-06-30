@@ -50,11 +50,20 @@ int main( int argc, char* argv[] ){
 
   // Try to Load config file.  If config file does not exist, this will prompt
   // the user for first-time setup.  load() returns true if new config created
-  if( conf.load( my_audio, SysInterface::config_dir()+CONFIG_FILENAME ) ){
+  if( !conf.load( SysInterface::config_dir()+CONFIG_FILENAME ) ){
+    cerr<< "A new configuration file will now be created."<<endl;
+    // prompt use for configuration
+    conf.new_config( my_audio );
+
+    // write configuration to file
+    return conf.write_config_file();
+
     log_freq_response( my_audio );
     log_model();
     // send initial configuration home
     if( conf.allow_phone_home ) SysInterface::phone_home();
+  }else{
+    my_audio.choose_device( conf.rec_dev, conf.play_dev );
   }
 
   // choose operating mode
