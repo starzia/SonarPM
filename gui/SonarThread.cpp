@@ -23,10 +23,24 @@ void* SonarThread::Entry(){
   }
   AudioDev my_audio = AudioDev( conf.rec_dev, conf.play_dev );
   
-  this->poll( my_audio, conf );
-  //this->power_management( my_audio, conf );
+  ///this->poll( my_audio, conf );
+  this->power_management( my_audio, conf );
   return 0;
   // thread is now terminated.
+}
+
+void SonarThread::updateGUIThreshold( float thresh ){
+  // update gui
+  PlotEvent evt = PlotEvent( PLOT_EVENT_THRESHOLD );
+  evt.setVal( thresh );
+  this->mainFrame->GetEventHandler()->AddPendingEvent( evt );
+}
+
+void SonarThread::updateGUIDelta( float echo_delta ){
+  // update gui
+  PlotEvent evt = PlotEvent( PLOT_EVENT_POINT );
+  evt.setVal( echo_delta );
+  this->mainFrame->GetEventHandler()->AddPendingEvent( evt );
 }
 
 void SonarThread::poll( AudioDev & audio, Config & conf ){
@@ -40,10 +54,7 @@ void SonarThread::poll( AudioDev & audio, Config & conf ){
     Statistics st = measure_stats( rec, conf.ping_freq );
     cout << st << endl;
 
-    // update gui
-    PlotEvent evt = PlotEvent( PLOT_EVENT_POINT );
-    evt.setVal( st.delta );
-    mainFrame->GetEventHandler()->AddPendingEvent( evt ); 
+    updateGUIDelta( st.delta );
   }
 
   // clean up portaudio so that we can use it again later.
@@ -56,10 +67,7 @@ void SonarThread::power_management( AudioDev & audio, Config & conf ){
   // buffer duration is one second, but actually it just needs to be a multiple
   // of the ping_period.
 
-  // update gui
-  PlotEvent evt = PlotEvent( PLOT_EVENT_THRESHOLD );
-  evt.setVal( conf.threshold );
-  mainFrame->GetEventHandler()->AddPendingEvent( evt );
+  updateGUIThreshold( conf.threshold );
 
   SysInterface::register_term_handler();
   AudioBuf ping = tone( 1, conf.ping_freq, 0,0 ); // no fade since we loop it
@@ -70,7 +78,9 @@ void SonarThread::power_management( AudioDev & audio, Config & conf ){
   AudioDev::check_error( Pa_StopStream( strm ) ); // stop ping
   SysInterface::log( "begin" );
   long start_time = get_log_start_time();
-  while( 1 ){
+
+  // test to see whether we should die
+  while( !this->TestDestroy() ){
     SysInterface::wait_until_idle();
     AudioDev::check_error( Pa_StartStream( strm ) ); // resume ping
 
@@ -82,11 +92,7 @@ void SonarThread::power_management( AudioDev & audio, Config & conf ){
       SysInterface::log("false attention");
       conf.threshold *= DYNAMIC_THRESH_FACTOR;
       conf.write_config_file(); // config save changes
-
-      // update gui
-      PlotEvent evt = PlotEvent( PLOT_EVENT_THRESHOLD );
-      evt.setVal( conf.threshold );
-      mainFrame->GetEventHandler()->AddPendingEvent( evt );
+      updateGUIThreshold( conf.threshold );
     }
 
     // record and process
@@ -95,11 +101,7 @@ void SonarThread::power_management( AudioDev & audio, Config & conf ){
     Statistics s = measure_stats( rec, conf.ping_freq );
     cout << s << endl;
     SysInterface::log( s );
-
-    // update gui
-    PlotEvent evt = PlotEvent( PLOT_EVENT_POINT );
-    evt.setVal( s.delta );
-    mainFrame->GetEventHandler()->AddPendingEvent( evt );
+    updateGUIDelta( s.delta );
 
     // if sonar reading below thresh. and user is still idle ...
     if( s.delta < conf.threshold 
@@ -116,11 +118,7 @@ void SonarThread::power_management( AudioDev & audio, Config & conf ){
 	SysInterface::log("false sleep");
 	conf.threshold /= DYNAMIC_THRESH_FACTOR;
 	conf.write_config_file(); // config save changes
-
-	// update gui
-	PlotEvent evt = PlotEvent( PLOT_EVENT_THRESHOLD );
-	evt.setVal( conf.threshold );
-	mainFrame->GetEventHandler()->AddPendingEvent( evt );
+        updateGUIThreshold ( conf.threshold );
       }
     }
     //-- PHONE HOME, if enough time has passed
@@ -133,6 +131,9 @@ void SonarThread::power_management( AudioDev & audio, Config & conf ){
     }
       
   }
+  // clean up portaudio so that we can use it again later.
+  audio.check_error( Pa_AbortStream( strm ) ); // StopStream would empty buffer first
+  audio.check_error( Pa_Terminate() );
 }
 
 

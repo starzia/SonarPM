@@ -15,6 +15,10 @@ public:
 private:
   void poll( AudioDev & audio, Config & conf );
   void power_management( AudioDev & audio, Config & conf );
+  // GUI helpers
+  void updateGUIThreshold( float thresh );
+  void updateGUIDelta( float echo_delta );
+
   Frame* mainFrame;
 };
 
