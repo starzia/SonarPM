@@ -11,7 +11,6 @@ class App : public wxApp{
   
 private:
   Frame* frame;
-  ConfigFrame* confFrame;
 };
  
 DECLARE_APP(App)

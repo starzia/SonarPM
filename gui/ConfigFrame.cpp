@@ -6,17 +6,20 @@
 
 using namespace std;
 
-BEGIN_EVENT_TABLE( ConfigFrame, wxFrame )
+BEGIN_EVENT_TABLE( ConfigFrame, wxDialog )
 EVT_BUTTON( BUTTON_SAVE, ConfigFrame::onSave )
 EVT_BUTTON( BUTTON_CANCEL, ConfigFrame::onCancel )
 END_EVENT_TABLE()
 
-ConfigFrame::ConfigFrame( const wxString & title, int width, int height ) :
-  wxFrame( (wxFrame*)NULL,-1,title,wxDefaultPosition,wxSize(width,height),
-	   wxFRAME_NO_TASKBAR | wxSYSTEM_MENU | wxCAPTION
+ConfigFrame::ConfigFrame( Frame* p, const wxString & title,
+                          int width, int height ) :
+  wxDialog( p,-1,title,wxDefaultPosition,wxSize(width,height),
+        wxDEFAULT_DIALOG_STYLE )
+/*        wxFRAME_NO_TASKBAR | wxSYSTEM_MENU | wxCAPTION
 	   | wxCLOSE_BOX | wxCLIP_CHILDREN | wxMINIMIZE_BOX //| wxRESIZE_BORDER
-	   | wxFULL_REPAINT_ON_RESIZE )
+	   | wxFULL_REPAINT_ON_RESIZE ) */
 {
+  this->parent = p;
   // add controls
   this->panel = new wxPanel( this, wxID_ANY, wxDefaultPosition,
                              this->GetClientSize());
@@ -87,8 +90,10 @@ void ConfigFrame::onSave( wxCommandEvent& event ){
   this->conf.write_config_file();
 
   this->Close();
+  this->parent->startSonar();
 }
 
 void ConfigFrame::onCancel( wxCommandEvent& event ){
     this->Close();
+    this->parent->startSonar();
 }

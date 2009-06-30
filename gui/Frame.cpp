@@ -4,6 +4,7 @@
 #include <sstream>
 #include <wx/event.h>
 #include "PlotEvent.hpp"
+#include "ConfigFrame.hpp"
 using namespace std;
 
 
@@ -51,7 +52,8 @@ Frame::Frame( const wxString & title, int width, int height ) :
   sizer2->Add( this->sonarHistory,
 	      1, /* vertically stretchable */
 	      wxEXPAND ); /* horizontally stretchable */
-  sizer2->Add( sizer3, 0, wxALL, 10 ); // 10pt border
+  /// these controls are broken now anyway:
+  ///sizer2->Add( sizer3, 0, wxALL, 10 ); // 10pt border
   panel->SetSizer(sizer2);
   sizer2->SetSizeHints(panel); // set sze hints to honour min size
 
@@ -62,6 +64,11 @@ Frame::Frame( const wxString & title, int width, int height ) :
 
   this->sThread=NULL; // prevent initially dangling pointer
   ///this->startSonar();
+
+  // pop up config window
+  ConfigFrame* conf = new ConfigFrame( this,_T("Configuration"),500,500);
+  conf->Show(true);
+  ///SetTopWindow( this->confFrame );
 }
 
 Frame::~Frame(){

@@ -14,11 +14,6 @@ bool App::OnInit(){
   frame->Show(true);
   //SetTopWindow( this->frame );
 
-  // pop up config window
-  this->confFrame = new ConfigFrame( _T("Configuration"),500,500);
-  this->confFrame->Show(true);
-  SetTopWindow( this->confFrame );
-
   return true;
 }
 

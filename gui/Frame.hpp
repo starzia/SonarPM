@@ -18,12 +18,13 @@ public:
   void onPause( wxCommandEvent& event );
   void nullifyThread();
 
+  void startSonar();
+  void stopSonar();
+
   DECLARE_EVENT_TABLE()
 private:
   // update plot with a new point
   void addPoint( float p );
-  void startSonar();
-  void stopSonar();
 
   // controls
   wxPanel *panel; // container for all controls

@@ -1,11 +1,12 @@
 #pragma once
 #include <wx/wx.h>
 #include "../sonar.hpp" // for config file
+#include "Frame.hpp"
 
-class ConfigFrame : public wxFrame
+class ConfigFrame : public wxDialog
 {
 public:
-  ConfigFrame( const wxString & title, int width, int height );
+  ConfigFrame( Frame* parent, const wxString & title, int width, int height );
   ~ConfigFrame();
   void onSave( wxCommandEvent& event );
   void onCancel( wxCommandEvent& event );
@@ -13,6 +14,7 @@ public:
   DECLARE_EVENT_TABLE()
 private:
   Config conf;
+  Frame* parent;
 
   wxPanel *panel; // container for all controls
 
