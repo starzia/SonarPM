@@ -2,6 +2,7 @@
 #include <wx/sizer.h>
 
 #include "ConfigFrame.hpp"
+#include "SonarThread.hpp" // for echo test thread
 #include "../audio.hpp" // for listing audio devices
 
 using namespace std;
@@ -9,12 +10,13 @@ using namespace std;
 BEGIN_EVENT_TABLE( ConfigFrame, wxDialog )
 EVT_BUTTON( BUTTON_SAVE, ConfigFrame::onSave )
 EVT_BUTTON( BUTTON_CANCEL, ConfigFrame::onCancel )
+EVT_BUTTON( BUTTON_ECHOTEST, ConfigFrame::onEchoTest )
 END_EVENT_TABLE()
 
 ConfigFrame::ConfigFrame( Frame* p, const wxString & title,
                           int width, int height ) :
   wxDialog( p,-1,title,wxDefaultPosition,wxSize(width,height),
-        wxDEFAULT_DIALOG_STYLE )
+            wxDEFAULT_DIALOG_STYLE )
 /*        wxFRAME_NO_TASKBAR | wxSYSTEM_MENU | wxCAPTION
 	   | wxCLOSE_BOX | wxCLIP_CHILDREN | wxMINIMIZE_BOX //| wxRESIZE_BORDER
 	   | wxFULL_REPAINT_ON_RESIZE ) */
@@ -27,6 +29,8 @@ ConfigFrame::ConfigFrame( Frame* p, const wxString & title,
 				   wxDefaultPosition, wxDefaultSize );
   this->buttonCancel = new wxButton( this->panel, BUTTON_CANCEL, _T("cancel"),
 				   wxDefaultPosition, wxDefaultSize );
+  this->buttonEchoTest = new wxButton( this->panel, BUTTON_ECHOTEST, 
+                  _T("echo test"), wxDefaultPosition, wxDefaultSize );
 
   // build a wxString array with names of audio devices
   AudioDev audio;
@@ -56,6 +60,7 @@ ConfigFrame::ConfigFrame( Frame* p, const wxString & title,
 
   // create sizers for layout
   wxBoxSizer* sizer3 = new wxBoxSizer( wxHORIZONTAL );
+  sizer3->Add( this->buttonEchoTest, 1, wxALL | wxEXPAND, 5 );
   sizer3->Add( this->buttonSave, 1, wxALL | wxEXPAND, 5 );
   sizer3->Add( this->buttonCancel, 1, wxALL | wxEXPAND, 5 );
   
@@ -96,4 +101,18 @@ void ConfigFrame::onSave( wxCommandEvent& event ){
 void ConfigFrame::onCancel( wxCommandEvent& event ){
     this->Close();
     this->parent->startSonar();
+}
+
+void ConfigFrame::onEchoTest( wxCommandEvent& event ){
+  // pop up status window window
+  wxDialog* status = new wxDialog( this,-1,_T("Running echo test..."),
+                                   wxDefaultPosition,wxDefaultSize,
+                                   wxDEFAULT_DIALOG_STYLE );
+  status->Show(true);
+  // start echo test thread, linked to status window
+  EchoThread* thread = new EchoThread( status,
+                                      this->conf.rec_dev, this->conf.play_dev );
+  if( thread->Create( ) == wxTHREAD_NO_ERROR ){
+    thread->Run( );
+  }
 }

@@ -10,6 +10,7 @@ public:
   ~ConfigFrame();
   void onSave( wxCommandEvent& event );
   void onCancel( wxCommandEvent& event );
+  void onEchoTest( wxCommandEvent& event );
 
   DECLARE_EVENT_TABLE()
 private:
@@ -25,6 +26,7 @@ private:
   wxChoice *recDev;
   wxButton *buttonSave;
   wxButton *buttonCancel;
+  wxButton *buttonEchoTest;
 };
 
 //=============================== CONSTANTS ============================
@@ -33,6 +35,7 @@ const int  BUTTON_CANCEL = wxID_HIGHEST + 102;
 const int  PHONEHOME_ENABLE = wxID_HIGHEST + 103;
 const int  CHOICE_PLAYDEV = wxID_HIGHEST + 104;
 const int  CHOICE_RECDEV = wxID_HIGHEST + 105;
+const int  BUTTON_ECHOTEST = wxID_HIGHEST + 106;
 
 // TODO: add advanced controls
 const int  TEXT_MODEL = wxID_HIGHEST + 111;

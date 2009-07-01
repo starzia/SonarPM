@@ -137,4 +137,34 @@ void SonarThread::power_management( AudioDev & audio, Config & conf ){
 }
 
 
+//=========================================================================
+EchoThread::EchoThread( wxWindow* st, unsigned int r_dev, unsigned int p_dev )
+  : wxThread(wxTHREAD_DETACHED), 
+    statusFrame( st ), play_dev(p_dev), rec_dev(r_dev){}
+
+EchoThread::~EchoThread(){}
+
+void* EchoThread::Entry(){
+  AudioDev audio = AudioDev( this->rec_dev, this->play_dev );
+
+  duration_t test_length = 3;
+  cout<<"recording audio..."<<endl;
+  AudioBuf buf = audio.blocking_record( test_length );
+  cout<<"playing back the recording..."<<endl;
+
+  // notify status window that recording is done
+  wxCommandEvent evt = wxCommandEvent( recordingDoneCommandEvent );
+  this->statusFrame->GetEventHandler()->AddPendingEvent( evt );
+
+  PaStream* s = audio.nonblocking_play( buf ); //TODO: use blocking play
+  SysInterface::sleep( test_length ); // give the audio some time to play
+  AudioDev::check_error( Pa_CloseStream( s ) ); // close stream to free dev
+
+  // notify status window that playback is done
+  wxCloseEvent evt2 = wxCloseEvent();//wxCommandEvent( playbackDoneCommandEvent );
+  this->statusFrame->GetEventHandler()->AddPendingEvent( evt2 );
+
+  return 0;
+}
+
 

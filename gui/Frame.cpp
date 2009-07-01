@@ -70,7 +70,6 @@ Frame::Frame( const wxString & title, int width, int height ) :
   // pop up config window
   ConfigFrame* conf = new ConfigFrame( this,_T("Configuration"),500,500);
   conf->Show(true);
-  ///SetTopWindow( this->confFrame );
 }
 
 Frame::~Frame(){
