@@ -116,7 +116,7 @@ public:
   PaStream* nonblocking_play( const AudioBuf & buf );
   /** the looping version of play repeats the audio buffer indefinitely */
   PaStream* nonblocking_play_loop( const AudioBuf & buf );
-  PaStream* blocking_play_loop( const AudioBuf & buf );
+  void blocking_play( const AudioBuf & buf );
   AudioBuf blocking_record( duration_t duration );
   /** Record the echo of buf */
   AudioBuf recordback( const AudioBuf & buf );

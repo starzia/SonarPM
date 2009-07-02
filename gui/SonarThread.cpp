@@ -145,7 +145,16 @@ EchoThread::EchoThread( wxWindow* st, unsigned int r_dev, unsigned int p_dev )
 EchoThread::~EchoThread(){}
 
 void* EchoThread::Entry(){
-  AudioDev audio = AudioDev( this->rec_dev, this->play_dev );
+  cout << "return code is " << Pa_Initialize() <<endl;
+  if( 1 ){
+    Pa_Terminate();
+  }else{
+   cerr << "error in pa_init()" <<endl;
+  }
+    ///AudioDev audio = AudioDev();// this->rec_dev, this->play_dev );
+  //SysInterface::sleep( 5 ); // give the audio some time to play
+
+    /*  AudioDev audio = AudioDev( this->rec_dev, this->play_dev );
 
   duration_t test_length = 3;
   cout<<"recording audio..."<<endl;
@@ -159,11 +168,9 @@ void* EchoThread::Entry(){
   PaStream* s = audio.nonblocking_play( buf ); //TODO: use blocking play
   SysInterface::sleep( test_length ); // give the audio some time to play
   AudioDev::check_error( Pa_CloseStream( s ) ); // close stream to free dev
-
+*/
   // notify status window that playback is done
-  wxCloseEvent evt2 = wxCloseEvent();//wxCommandEvent( playbackDoneCommandEvent );
-  this->statusFrame->GetEventHandler()->AddPendingEvent( evt2 );
-
+  //this->statusFrame->Close();
   return 0;
 }
 

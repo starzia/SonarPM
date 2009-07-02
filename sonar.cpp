@@ -21,6 +21,7 @@
 //#define PLATFORM_MAC
 
 #include <ctime>
+#include <cmath> // floor
 #if defined PLATFORM_LINUX
 /* The following headers are provided by these packages on a Redhat system:
  * libX11-devel, libXext-devel, libScrnSaver-devel
@@ -348,6 +349,16 @@ duration_t SysInterface::idle_seconds(){
 void SysInterface::sleep( duration_t duration ){
   /* use portaudio's convenient portable sleep function */
   Pa_Sleep( (int)(duration*1000) );
+  return;
+          
+// the following is alternative code
+#ifdef PLATFORM_WINDOWS
+#else
+  struct timespec sleep_time, remaining_time;
+  sleep_time.tv_sec =   (int)(floor(duration)*1000000000);
+  sleep_time.tv_nsec = (long)((duration-floor(duration))*1000000000);
+  nanosleep( &sleep_time, &remaining_time );
+#endif
 }
 
 void SysInterface::wait_until_active(){
@@ -488,9 +499,7 @@ void test_echo( AudioDev & audio ){
   cout<<"recording audio..."<<endl;
   AudioBuf buf = audio.blocking_record( test_length );
   cout<<"playing back the recording..."<<endl;
-  PaStream* s = audio.nonblocking_play( buf ); 
-  SysInterface::sleep( test_length ); // give the audio some time to play
-  AudioDev::check_error( Pa_CloseStream( s ) ); // close stream to free dev
+  audio.blocking_play( buf );
 }
 
 void power_management( AudioDev & audio, Config & conf ){

@@ -207,9 +207,7 @@ int AudioDev::player_callback( const void *inputBuffer, void *outputBuffer,
     }else{
       *out++ = 0; // play silence if we've reached end of buffer
     }
-    *out++=0;
-
-    *out++ = 0;  /* right */
+    *out++ = 0;  // right channel is silent
   }
   req->progress_index = i; // update progress index
   // we would return 1 when playback is complete (ie when we want the stream
@@ -303,7 +301,7 @@ PaStream* AudioDev::nonblocking_play_loop( const AudioBuf & buf ){
   return stream;
 }
 
-PaStream* AudioDev::blocking_play_loop( const AudioBuf & buf ){
+void AudioDev::blocking_play( const AudioBuf & buf ){
   PaStream *stream;
   AudioRequest *play_request = new AudioRequest( buf );
   /* Open an audio I/O stream. */
@@ -314,13 +312,14 @@ PaStream* AudioDev::blocking_play_loop( const AudioBuf & buf ){
 	 SAMPLE_RATE,
 	 FRAMES_PER_BUFFER,   /* frames per buffer */
 	 paNoFlag,
-	 AudioDev::oscillator_callback, /* this is your callback function */
+	 AudioDev::player_callback, /* this is your callback function */
 	 play_request ) ); /*This is a pointer that will be passed to
 			     your callback*/
   // start playback
   check_error( Pa_StartStream( stream ) );
-  // caller is responsible for freeing stream
-  return stream;
+  while( Pa_IsStreamActive( stream ) ) Pa_Sleep( 100 );
+  //check_error( Pa_StopStream( stream ) );
+  check_error( Pa_CloseStream( stream ) );
 }
 
 AudioBuf AudioDev::blocking_record( duration_t duration ){
@@ -340,8 +339,9 @@ AudioBuf AudioDev::blocking_record( duration_t duration ){
   // start recording
   check_error( Pa_StartStream( stream ) );
   // wait until done, sleeping 100ms at a time
-  while( !rec_request->done() ) Pa_Sleep( 100 );
-  check_error( Pa_CloseStream( stream ) ); // free up stream resource
+  while( Pa_IsStreamActive( stream ) ) Pa_Sleep( 100 );
+  //check_error( Pa_StopStream( stream ) );
+  check_error( Pa_CloseStream( stream ) );
   return rec_request->audio;
 }
 
@@ -353,12 +353,13 @@ AudioBuf AudioDev::recordback( const AudioBuf & buf ){
   PaStream* s = nonblocking_play( buf );
   // record echo
   AudioBuf ret = blocking_record( buf.get_length() );
-  AudioDev::check_error( Pa_CloseStream( s ) ); // close stream to free up dev
+  check_error( Pa_CloseStream( s ) ); // close stream to free up dev
   return ret;
 }
 
 void AudioDev::check_error( PaError err ){
-  if( err != paNoError )
+  if( err != paNoError ){
     cerr << "PortAudio error: " << Pa_GetErrorText( err ) << endl;
+  }
 }
 
