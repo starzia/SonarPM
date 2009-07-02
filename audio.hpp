@@ -124,6 +124,11 @@ public:
   PaStreamParameters out_params, in_params;
   /** prints PortAudio error message, if any */
   static void check_error( PaError err );
+
+  /** must be called ONCE by the program to set up portaudio */
+  static void init();
+  /** must be called after ALL portaudio usage is complete */
+  static void terminate();
 };
 
 #endif //ndef AUDIO_H

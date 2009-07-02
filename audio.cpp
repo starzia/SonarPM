@@ -103,19 +103,22 @@ bool AudioRequest::done(){
   return this->progress_index > this->audio.get_num_samples();
 }
 
-AudioDev::AudioDev(){
+void AudioDev::init(){
   check_error( Pa_Initialize() ); // Initialize PortAudio
 }
 
+void AudioDev::terminate(){
+  check_error( Pa_Terminate() ); // Close PortAudio, this is important!
+}
+
+AudioDev::AudioDev(){}
+
 AudioDev::AudioDev( unsigned int in_dev_num, unsigned int out_dev_num ){
-  check_error( Pa_Initialize() ); // Initialize PortAudio
   this->choose_device( in_dev_num, out_dev_num );
 }
 
 
-AudioDev::~AudioDev(){
-  check_error( Pa_Terminate() ); // close PortAudio
-}
+AudioDev::~AudioDev(){}
 
 void AudioDev::choose_device( unsigned int in_dev_num, 
                               unsigned int out_dev_num ){

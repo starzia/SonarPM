@@ -9,9 +9,12 @@
 class SonarThread : public wxThread{
 public:
   SonarThread( Frame* mainFrame );
-  ~SonarThread();
+
   // starts some work
   void* Entry();
+  /** called when the thread exits - whether it terminates normally or is
+    * stopped with Delete() (but not when it is Kill()ed!) */
+  void OnExit();
 private:
   void poll( AudioDev & audio, Config & conf );
   void power_management( AudioDev & audio, Config & conf );

@@ -10,6 +10,9 @@ bool App::OnInit(){
   // use standard command line handling:
   if ( !wxApp::OnInit() ) return false;
 
+  // initialize portaudio
+  Pa_Initialize();
+
   this->frame = new Frame( _T("Hello World title"),600,600);
   frame->Show(true);
   //SetTopWindow( this->frame );
@@ -18,5 +21,7 @@ bool App::OnInit(){
 }
 
 int App::OnExit(){
+  // close portaudio
+  Pa_Terminate();
   return 0;
 }

@@ -32,6 +32,7 @@ int main( int argc, char* argv[] ){
     }
   }
 
+  AudioDev::init(); //start portaudio
   AudioDev my_audio = AudioDev();
   Config conf;
 

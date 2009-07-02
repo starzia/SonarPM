@@ -6,6 +6,7 @@
  */
 #include "sonar.hpp"
 #include "dsp.hpp"
+#include "audio.hpp"
 #include "SimpleIni.h" // for config files
 #include <iostream>
 #include <sstream>
@@ -429,6 +430,7 @@ BOOL windows_term_handler( DWORD fdwCtrlType ) {
   case CTRL_LOGOFF_EVENT: 
   case CTRL_SHUTDOWN_EVENT: 
     SysInterface::log( "quit" );
+    AudioDev::terminate();
     exit( 0 );
     return true;   
   // Pass other signals to the next handler.  (by returning false)
@@ -439,6 +441,7 @@ BOOL windows_term_handler( DWORD fdwCtrlType ) {
 #else
 void posix_term_handler( int signum ){
   SysInterface::log( "quit" );
+  AudioDev::terminate();
   exit( 0 );
 }
 #endif

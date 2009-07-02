@@ -11,11 +11,6 @@ using namespace std;
 SonarThread::SonarThread( Frame* mf ) : 
   wxThread(wxTHREAD_DETACHED), mainFrame( mf ){}
 
-SonarThread::~SonarThread(){
-  // don't leave dangling pointer behind
-  ///mainFrame->nullifyThread();
-}
-
 void* SonarThread::Entry(){
   Config conf;
   if( !conf.load( SysInterface::config_dir()+CONFIG_FILENAME ) ){
@@ -27,6 +22,9 @@ void* SonarThread::Entry(){
   this->power_management( my_audio, conf );
   return 0;
   // thread is now terminated.
+}
+
+void SonarThread::OnExit(){
 }
 
 void SonarThread::updateGUIThreshold( float thresh ){
@@ -59,7 +57,6 @@ void SonarThread::poll( AudioDev & audio, Config & conf ){
 
   // clean up portaudio so that we can use it again later.
   audio.check_error( Pa_AbortStream( strm ) ); // StopStream would empty buffer first
-  audio.check_error( Pa_Terminate() );
 }
 
 
@@ -133,7 +130,6 @@ void SonarThread::power_management( AudioDev & audio, Config & conf ){
   }
   // clean up portaudio so that we can use it again later.
   audio.check_error( Pa_AbortStream( strm ) ); // StopStream would empty buffer first
-  audio.check_error( Pa_Terminate() );
 }
 
 
@@ -145,16 +141,12 @@ EchoThread::EchoThread( wxWindow* st, unsigned int r_dev, unsigned int p_dev )
 EchoThread::~EchoThread(){}
 
 void* EchoThread::Entry(){
-  cout << "return code is " << Pa_Initialize() <<endl;
-  if( 1 ){
-    Pa_Terminate();
-  }else{
-   cerr << "error in pa_init()" <<endl;
-  }
-    ///AudioDev audio = AudioDev();// this->rec_dev, this->play_dev );
+  //AudioDev::check_error( Pa_Initialize() );
+
+  ///AudioDev audio = AudioDev();// this->rec_dev, this->play_dev );
   //SysInterface::sleep( 5 ); // give the audio some time to play
 
-    /*  AudioDev audio = AudioDev( this->rec_dev, this->play_dev );
+  AudioDev audio = AudioDev( this->rec_dev, this->play_dev );
 
   duration_t test_length = 3;
   cout<<"recording audio..."<<endl;
@@ -165,12 +157,12 @@ void* EchoThread::Entry(){
   wxCommandEvent evt = wxCommandEvent( recordingDoneCommandEvent );
   this->statusFrame->GetEventHandler()->AddPendingEvent( evt );
 
-  PaStream* s = audio.nonblocking_play( buf ); //TODO: use blocking play
-  SysInterface::sleep( test_length ); // give the audio some time to play
-  AudioDev::check_error( Pa_CloseStream( s ) ); // close stream to free dev
-*/
+  audio.blocking_play( buf );
+
+  //AudioDev::check_error( Pa_Terminate() );
+
   // notify status window that playback is done
-  //this->statusFrame->Close();
+  this->statusFrame->Close();
   return 0;
 }
 

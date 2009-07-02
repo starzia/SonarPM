@@ -112,7 +112,6 @@ void ConfigFrame::onEchoTest( wxCommandEvent& event ){
   // start echo test thread, linked to status window
   EchoThread* thread = new EchoThread( status,
                                       this->conf.rec_dev, this->conf.play_dev );
-  if( thread->Create( ) == wxTHREAD_NO_ERROR ){
+  if( thread->Create() == wxTHREAD_NO_ERROR )
     thread->Run( );
-  }
 }
