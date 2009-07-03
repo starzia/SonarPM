@@ -92,7 +92,7 @@ void Frame::startSonar( ){
     this->sThread = new SonarThread( this );
     if( this->sThread->Create( ) == wxTHREAD_NO_ERROR ){
       this->sThread->Run( );
-      this->buttonPause->SetLabel( _T( "pause" ) );
+      ///this->buttonPause->SetLabel( _T( "pause" ) );
     }
   }
 }
@@ -102,7 +102,7 @@ void Frame::stopSonar(){
   wxCriticalSectionLocker locker( this->threadLock );
   if( this->sThread ){ // stop only if started
     if( this->sThread->Delete() == wxTHREAD_NO_ERROR ){
-      this->buttonPause->SetLabel( _T( "continue" ) );
+      ///this->buttonPause->SetLabel( _T( "continue" ) );
     }
   }
 }
