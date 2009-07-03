@@ -28,12 +28,13 @@ Frame::Frame( const wxString & title, int width, int height ) :
   this->SetStatusText(_T("Hello World"));
   this->panel = new wxPanel( this, wxID_ANY, wxDefaultPosition,
                              this->GetClientSize());
+/*
   this->buttonPause = new wxButton( panel, BUTTON_PAUSE, _T("start"),
 				    wxDefaultPosition, wxDefaultSize );
   const wxString choices[2] = {_T("polling"),_T("power management")};
   this->choiceMode = new wxChoice( panel, CHOICE_MODE, wxDefaultPosition,
 				   wxDefaultSize, 2, choices );
-
+*/
   // add taskbar icon
   this->tbIcon = new TaskBarIcon( this );
 

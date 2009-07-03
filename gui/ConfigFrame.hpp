@@ -27,6 +27,7 @@ private:
   wxButton *buttonSave;
   wxButton *buttonCancel;
   wxButton *buttonEchoTest;
+  wxButton *buttonFreqResponse;
 };
 
 //=============================== CONSTANTS ============================
@@ -36,6 +37,7 @@ const int  PHONEHOME_ENABLE = wxID_HIGHEST + 103;
 const int  CHOICE_PLAYDEV = wxID_HIGHEST + 104;
 const int  CHOICE_RECDEV = wxID_HIGHEST + 105;
 const int  BUTTON_ECHOTEST = wxID_HIGHEST + 106;
+const int  BUTTON_FREQRESPONSE = wxID_HIGHEST + 107;
 
 // TODO: add advanced controls
 const int  TEXT_MODEL = wxID_HIGHEST + 111;

@@ -134,17 +134,16 @@ void SonarThread::power_management( AudioDev & audio, Config & conf ){
 
 
 //=========================================================================
-EchoThread::EchoThread( wxWindow* st, unsigned int r_dev, unsigned int p_dev )
+EchoThread::EchoThread( wxDialog* recDiag, wxDialog* playDiag,
+                        unsigned int r_dev, unsigned int p_dev )
   : wxThread(wxTHREAD_DETACHED), 
-    statusFrame( st ), play_dev(p_dev), rec_dev(r_dev){}
+    recDialog(recDiag), playDialog(playDiag), play_dev(p_dev), rec_dev(r_dev){}
 
 EchoThread::~EchoThread(){}
 
 void* EchoThread::Entry(){
-  //AudioDev::check_error( Pa_Initialize() );
-
-  ///AudioDev audio = AudioDev();// this->rec_dev, this->play_dev );
-  //SysInterface::sleep( 5 ); // give the audio some time to play
+  this->playDialog->Show(false);
+  this->recDialog->Show(true);
 
   AudioDev audio = AudioDev( this->rec_dev, this->play_dev );
 
@@ -153,16 +152,15 @@ void* EchoThread::Entry(){
   AudioBuf buf = audio.blocking_record( test_length );
   cout<<"playing back the recording..."<<endl;
 
-  // notify status window that recording is done
-  wxCommandEvent evt = wxCommandEvent( recordingDoneCommandEvent );
-  this->statusFrame->GetEventHandler()->AddPendingEvent( evt );
+  // update status dialogs
+  ///wxCommandEvent evt = wxCommandEvent( recordingDoneCommandEvent );
+  this->recDialog->Close(); //->AddPendingEvent( evt );
+  this->playDialog->Show(true);
 
   audio.blocking_play( buf );
 
-  //AudioDev::check_error( Pa_Terminate() );
-
   // notify status window that playback is done
-  this->statusFrame->Close();
+  this->playDialog->Close();
   return 0;
 }
 

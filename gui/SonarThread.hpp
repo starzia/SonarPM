@@ -28,14 +28,17 @@ private:
 /** performs a test of the audio system while updating a status window */
 class EchoThread : public wxThread{
 public:
-  EchoThread( wxWindow* statusFrame, unsigned int rec_dev, unsigned int play_dev );
+  EchoThread( wxDialog* recDialog, wxDialog* playDialog,
+              unsigned int rec_dev, unsigned int play_dev );
   ~EchoThread();
   void* Entry();
 private:
-  wxWindow* statusFrame;
+  // status notification dialogs for playback and recording
+  wxDialog *recDialog, *playDialog;
   unsigned int rec_dev, play_dev;
 };
 
+/*
 // event types for updating status window
 const wxEventType recordingDoneCommandEvent = wxNewEventType();
-const wxEventType playbackDoneCommandEvent = wxNewEventType();
+ */

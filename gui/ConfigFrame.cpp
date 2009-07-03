@@ -11,6 +11,7 @@ BEGIN_EVENT_TABLE( ConfigFrame, wxDialog )
 EVT_BUTTON( BUTTON_SAVE, ConfigFrame::onSave )
 EVT_BUTTON( BUTTON_CANCEL, ConfigFrame::onCancel )
 EVT_BUTTON( BUTTON_ECHOTEST, ConfigFrame::onEchoTest )
+//EVT_BUTTON( recordingDoneCommandEvent, ConfigFrame::onRecordingDone )
 END_EVENT_TABLE()
 
 ConfigFrame::ConfigFrame( Frame* p, const wxString & title,
@@ -31,6 +32,9 @@ ConfigFrame::ConfigFrame( Frame* p, const wxString & title,
 				   wxDefaultPosition, wxDefaultSize );
   this->buttonEchoTest = new wxButton( this->panel, BUTTON_ECHOTEST, 
                   _T("echo test"), wxDefaultPosition, wxDefaultSize );
+  this->buttonFreqResponse = new wxButton( this->panel, BUTTON_FREQRESPONSE,
+                  _T("frequency response"), wxDefaultPosition, wxDefaultSize );
+
 
   // build a wxString array with names of audio devices
   AudioDev audio;
@@ -59,8 +63,11 @@ ConfigFrame::ConfigFrame( Frame* p, const wxString & title,
   }
 
   // create sizers for layout
+  wxBoxSizer* sizer4 = new wxBoxSizer( wxHORIZONTAL );
+  sizer4->Add( this->buttonEchoTest, 1, wxALL | wxEXPAND, 5 );
+  sizer4->Add( this->buttonFreqResponse, 1, wxALL | wxEXPAND, 5 );
+
   wxBoxSizer* sizer3 = new wxBoxSizer( wxHORIZONTAL );
-  sizer3->Add( this->buttonEchoTest, 1, wxALL | wxEXPAND, 5 );
   sizer3->Add( this->buttonSave, 1, wxALL | wxEXPAND, 5 );
   sizer3->Add( this->buttonCancel, 1, wxALL | wxEXPAND, 5 );
   
@@ -72,6 +79,12 @@ ConfigFrame::ConfigFrame( Frame* p, const wxString & title,
   sizer2->Add( new wxStaticText( panel, wxID_ANY,
                _T("recording audio device:") ) );
   sizer2->Add( this->recDev, 1, wxALL | wxEXPAND, 5 );
+
+  sizer2->Add( new wxStaticText( panel, wxID_ANY,
+                                 _T("\nAudio testing features:")));
+  sizer2->Add( sizer4, 1, wxALL | wxEXPAND );
+  sizer2->Add( new wxStaticText( panel, wxID_ANY,
+                              _T("\nTo continue choose one of the following:")));
   sizer2->Add( sizer3, 1, wxALL | wxEXPAND );
     panel->SetSizer( sizer2 );
   sizer2->SetSizeHints( this->panel ); // set size hints to honour min size
@@ -105,12 +118,15 @@ void ConfigFrame::onCancel( wxCommandEvent& event ){
 
 void ConfigFrame::onEchoTest( wxCommandEvent& event ){
   // pop up status window window
-  wxDialog* status = new wxDialog( this,-1,_T("Running echo test..."),
+  wxDialog *playback = new wxDialog( this,-1,_T("Playing back recording..."),
                                    wxDefaultPosition,wxDefaultSize,
-                                   wxDEFAULT_DIALOG_STYLE );
-  status->Show(true);
+                                   wxSTAY_ON_TOP | wxCAPTION );
+  wxDialog *recording = new wxDialog( this,-1,_T("Recording from microphone..."),
+                                   wxDefaultPosition,wxDefaultSize,
+                                   wxSTAY_ON_TOP | wxCAPTION );
+
   // start echo test thread, linked to status window
-  EchoThread* thread = new EchoThread( status,
+  EchoThread* thread = new EchoThread( recording, playback,
                                       this->conf.rec_dev, this->conf.play_dev );
   if( thread->Create() == wxTHREAD_NO_ERROR )
     thread->Run( );
