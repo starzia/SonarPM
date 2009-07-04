@@ -108,12 +108,12 @@ void ConfigFrame::onSave( wxCommandEvent& event ){
   this->conf.write_config_file();
 
   this->Close();
-  this->parent->startSonar();
+  ///this->parent->startSonar();
 }
 
 void ConfigFrame::onCancel( wxCommandEvent& event ){
-    this->Close();
-    this->parent->startSonar();
+  this->Close();
+  ///this->parent->startSonar();
 }
 
 void ConfigFrame::onEchoTest( wxCommandEvent& event ){

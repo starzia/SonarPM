@@ -8,23 +8,29 @@
 
 using namespace std;
 
-SonarThread::SonarThread( Frame* mf ) : 
-  wxThread(wxTHREAD_DETACHED), mainFrame( mf ){}
+SonarThread::SonarThread( Frame* mf, bool pm ) :
+  wxThread(wxTHREAD_DETACHED), mainFrame( mf ), doPowerManagement(pm){}
 
 void* SonarThread::Entry(){
   Config conf;
+  cerr << "SonarThread entered" <<endl;
   if( !conf.load( SysInterface::config_dir()+CONFIG_FILENAME ) ){
    cerr << "fatel error: could not load config file" <<endl;   
   }
   AudioDev my_audio = AudioDev( conf.rec_dev, conf.play_dev );
   
-  ///this->poll( my_audio, conf );
-  this->power_management( my_audio, conf );
+  if( this->doPowerManagement ){
+    this->power_management( my_audio, conf );
+  }else{
+    this->poll( my_audio, conf );
+  }
   return 0;
   // thread is now terminated.
 }
 
 void SonarThread::OnExit(){
+  this->mainFrame->nullifyThread(); // clear parent's pointer to this thread
+  cerr << "SonarThread exited" <<endl;
 }
 
 void SonarThread::updateGUIThreshold( float thresh ){
@@ -56,7 +62,8 @@ void SonarThread::poll( AudioDev & audio, Config & conf ){
   }
 
   // clean up portaudio so that we can use it again later.
-  audio.check_error( Pa_AbortStream( strm ) ); // StopStream would empty buffer first
+  audio.check_error( Pa_StopStream( strm ) );
+  audio.check_error( Pa_CloseStream( strm ) );
 }
 
 
@@ -126,10 +133,9 @@ void SonarThread::power_management( AudioDev & audio, Config & conf ){
 	conf.disable_phone_home();
       }
     }
-      
   }
   // clean up portaudio so that we can use it again later.
-  audio.check_error( Pa_AbortStream( strm ) ); // StopStream would empty buffer first
+  audio.check_error( Pa_CloseStream( strm ) );
 }
 
 

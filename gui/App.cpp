@@ -13,7 +13,7 @@ bool App::OnInit(){
   // initialize portaudio
   Pa_Initialize();
 
-  this->frame = new Frame( _T("Hello World title"),600,600);
+  this->frame = new Frame( _T("Hello World title"),400,400);
   frame->Show(true);
   //SetTopWindow( this->frame );
 

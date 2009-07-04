@@ -8,7 +8,7 @@
 
 class SonarThread : public wxThread{
 public:
-  SonarThread( Frame* mainFrame );
+  SonarThread( Frame* mainFrame, bool doPowerManagement );
 
   // starts some work
   void* Entry();
@@ -23,6 +23,7 @@ private:
   void updateGUIDelta( float echo_delta );
 
   Frame* mainFrame;
+  bool doPowerManagement; // if true do power management, else just poll.
 };
 
 /** performs a test of the audio system while updating a status window */

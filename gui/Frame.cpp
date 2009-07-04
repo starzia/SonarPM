@@ -28,13 +28,12 @@ Frame::Frame( const wxString & title, int width, int height ) :
   this->SetStatusText(_T("Hello World"));
   this->panel = new wxPanel( this, wxID_ANY, wxDefaultPosition,
                              this->GetClientSize());
-/*
   this->buttonPause = new wxButton( panel, BUTTON_PAUSE, _T("start"),
 				    wxDefaultPosition, wxDefaultSize );
-  const wxString choices[2] = {_T("polling"),_T("power management")};
+  const wxString choices[2] = {_T("power management"), _T("continuous test")};
   this->choiceMode = new wxChoice( panel, CHOICE_MODE, wxDefaultPosition,
 				   wxDefaultSize, 2, choices );
-*/
+
   // add taskbar icon
   this->tbIcon = new TaskBarIcon( this );
 
@@ -44,19 +43,17 @@ Frame::Frame( const wxString & title, int width, int height ) :
   this->sonarHistory->setHistoryLength( 30 );
   
   // create sizers for layout
-/*
+
   wxBoxSizer* sizer3 = new wxBoxSizer( wxVERTICAL );
   sizer3->Add( new wxStaticText( panel, wxID_ANY, _T("operating mode:")));
   sizer3->Add( this->choiceMode, 1, wxALL | wxEXPAND, 5 );
   sizer3->Add( this->buttonPause, 1, wxALL | wxEXPAND, 5 );
-*/
+
   wxBoxSizer* sizer2 = new wxBoxSizer( wxHORIZONTAL );
   sizer2->Add( this->sonarHistory,
 	      1, /* vertically stretchable */
 	      wxEXPAND ); /* horizontally stretchable */
-/*
   sizer2->Add( sizer3, 0, wxALL, 10 ); // 10pt border
- */
   panel->SetSizer(sizer2);
   sizer2->SetSizeHints(panel); // set sze hints to honour min size
 
@@ -89,10 +86,11 @@ void Frame::startSonar( ){
   wxCriticalSectionLocker locker( this->threadLock );
   if( !this->sThread ){ //start only if stopped
     // start sonar processing thread
-    this->sThread = new SonarThread( this );
+    bool doPowerManagement = ( this->choiceMode->GetCurrentSelection() == 0 );
+    this->sThread = new SonarThread( this, doPowerManagement );
     if( this->sThread->Create( ) == wxTHREAD_NO_ERROR ){
       this->sThread->Run( );
-      ///this->buttonPause->SetLabel( _T( "pause" ) );
+      this->buttonPause->SetLabel( _T( "pause" ) );
     }
   }
 }
@@ -102,7 +100,7 @@ void Frame::stopSonar(){
   wxCriticalSectionLocker locker( this->threadLock );
   if( this->sThread ){ // stop only if started
     if( this->sThread->Delete() == wxTHREAD_NO_ERROR ){
-      ///this->buttonPause->SetLabel( _T( "continue" ) );
+      this->buttonPause->SetLabel( _T( "continue" ) );
     }
   }
 }
