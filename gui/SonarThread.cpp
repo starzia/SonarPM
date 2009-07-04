@@ -55,6 +55,7 @@ void SonarThread::poll( AudioDev & audio, Config & conf ){
   // test to see whether we should die
   while( !this->TestDestroy() ){
     AudioBuf rec = audio.blocking_record( RECORDING_PERIOD );
+    if( this->TestDestroy() ) break;
     Statistics st = measure_stats( rec, conf.ping_freq );
     cout << st << endl;
 
@@ -85,7 +86,7 @@ void SonarThread::power_management( AudioDev & audio, Config & conf ){
 
   // test to see whether we should die
   while( !this->TestDestroy() ){
-    SysInterface::wait_until_idle();
+    if( !this->waitUntilIdle() ) break; // break if interrupted
     AudioDev::check_error( Pa_StartStream( strm ) ); // resume ping
 
     //-- THRESHOLD RAISING
@@ -113,7 +114,8 @@ void SonarThread::power_management( AudioDev & audio, Config & conf ){
       // sleep monitor
       SysInterface::sleep_monitor();
       long sleep_timestamp = SysInterface::current_time();
-      SysInterface::wait_until_active(); // OS will have turned on monitor
+      if( !this->waitUntilActive() ) break; // break if interrupted
+      // at this point, OS will have turned on monitor
       
       //-- THRESHOLD LOWERING
       // waking up too soon means that we've just irritated the user
@@ -134,8 +136,31 @@ void SonarThread::power_management( AudioDev & audio, Config & conf ){
       }
     }
   }
+  SysInterface::log( "interrupted" );
   // clean up portaudio so that we can use it again later.
   audio.check_error( Pa_CloseStream( strm ) );
+}
+
+bool SonarThread::waitUntilIdle(){
+  while( SysInterface::idle_seconds() < IDLE_THRESH ){
+    SysInterface::sleep( SLEEP_TIME ); //don't poll idle_seconds() constantly
+    if( this->TestDestroy() ) return false; //test to see if thread was destroyed
+  }
+  SysInterface::log( "idle" );
+  return true;
+}
+
+bool SonarThread::waitUntilActive(){
+  duration_t prev_idle_time = SysInterface::idle_seconds();
+  duration_t current_idle_time = SysInterface::idle_seconds();
+  while( current_idle_time >= prev_idle_time ){
+    SysInterface::sleep( SLEEP_TIME );
+    prev_idle_time = current_idle_time;
+    current_idle_time = SysInterface::idle_seconds();
+    if( this->TestDestroy() ) return false; //test to see if thread was destroyed
+  }
+  SysInterface::log( "active" );
+  return true;
 }
 
 

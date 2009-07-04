@@ -24,6 +24,12 @@ private:
 
   Frame* mainFrame;
   bool doPowerManagement; // if true do power management, else just poll.
+
+ /** these two functions are similar to those in the SysInterface class, but
+  * additionally run TestDestroy() periodically to respond to cancellation
+  * @return false iff interrupted by thread cancellation event */
+  bool waitUntilIdle();
+  bool waitUntilActive();
 };
 
 /** performs a test of the audio system while updating a status window */
