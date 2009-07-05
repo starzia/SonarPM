@@ -1,9 +1,9 @@
 FLAGS = -Wno-write-strings -ggdb
 
 OBJS = App.o Frame.o TaskBarIcon.o PlotPane.o SonarThread.o PlotEvent.o \
- ConfigFrame.o
+ ConfigFrame.o CloseConfirmFrame.o
 W32_OBJS = App.O Frame.O TaskBarIcon.O PlotPane.O SonarThread.O PlotEvent.O \
- ConfigFrame.O
+ ConfigFrame.O CloseConfirmFrame.O
 
 App: $(OBJS)
 	$(shell $(WX_CONFIG_LINUX) --cxx --cppflags --libs) $(FLAGS) $(OBJS) -o $@

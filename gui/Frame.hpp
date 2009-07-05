@@ -11,8 +11,9 @@ class Frame : public wxFrame
 public:
   Frame( const wxString & title, int width, int height );
   ~Frame();
-  void OnIconize( wxIconizeEvent& event );
-  void OnSize( wxSizeEvent& event );
+  void onIconize( wxIconizeEvent& event );
+  void onSize( wxSizeEvent& event );
+  void onClose( wxCloseEvent& event );
 
   void onPlotEvent(PlotEvent& event);
   void onPause( wxCommandEvent& event );

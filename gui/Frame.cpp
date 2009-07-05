@@ -5,16 +5,18 @@
 #include <wx/event.h>
 #include "PlotEvent.hpp"
 #include "ConfigFrame.hpp"
+#include "CloseConfirmFrame.hpp"
 using namespace std;
 
 
 BEGIN_EVENT_TABLE( Frame, wxFrame )
 ///EVT_MENU    (wxID_EXIT, Frame::OnExit)
 ///EVT_MENU    (DO_TEST,   Frame::DoTest)
-EVT_SIZE( Frame::OnSize )
-EVT_ICONIZE( Frame::OnIconize )
+EVT_SIZE( Frame::onSize )
+EVT_ICONIZE( Frame::onIconize )
 EVT_PLOT( wxID_ANY, Frame::onPlotEvent )
 EVT_BUTTON( BUTTON_PAUSE, Frame::onPause )
+EVT_CLOSE( Frame::onClose )
 END_EVENT_TABLE()
 
 Frame::Frame( const wxString & title, int width, int height ) : 
@@ -105,12 +107,24 @@ void Frame::stopSonar(){
   }
 }
 
-void Frame::OnIconize( wxIconizeEvent& event ){
+void Frame::onClose( wxCloseEvent& event ){
+  // system-generated close events can not be intercepted (vetoed)
+  if( event.CanVeto() ){
+    event.Veto();
+    // prompt user to either close or minimize
+    CloseConfirmFrame* confirm = new CloseConfirmFrame(this);
+    confirm->Show(true);
+  }else{
+    this->Destroy(); // close window
+  }
+}
+
+void Frame::onIconize( wxIconizeEvent& event ){
   // is this necessary?
   this->Show(!event.Iconized());
 }
 
-void Frame::OnSize( wxSizeEvent& event ){
+void Frame::onSize( wxSizeEvent& event ){
   //this->Refresh();
   //this->Update();
 }
