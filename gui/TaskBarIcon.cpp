@@ -9,7 +9,7 @@ EVT_TASKBAR_LEFT_DCLICK  (TaskBarIcon::OnLeftButtonDClick)
 END_EVENT_TABLE()
 
 TaskBarIcon::TaskBarIcon( wxFrame* f ) : theFrame(f){
-  this->SetIcon( wxICON(kuser), _T("ToolTip") );
+  this->SetIcon( wxICON(kuser), _T("Sonar") );
 }
 
 void TaskBarIcon::OnMenuRestore(wxCommandEvent& ){
@@ -34,8 +34,8 @@ void TaskBarIcon::OnMenuSetNewIcon(wxCommandEvent&){
 wxMenu *TaskBarIcon::CreatePopupMenu(){
   wxMenu *menu = new wxMenu;
 
-  menu->Append(PU_RESTORE, wxT("&Restore TBTest"));
-  menu->Append(PU_NEW_ICON,wxT("&Set New Icon"));
+  menu->Append(PU_RESTORE, wxT("&Sonar status window"));
+  ///menu->Append(PU_NEW_ICON,wxT("&Set New Icon"));
   menu->Append(PU_EXIT,    wxT("E&xit"));
 
   return menu;
