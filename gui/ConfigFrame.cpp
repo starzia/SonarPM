@@ -117,15 +117,14 @@ void ConfigFrame::onCancel( wxCommandEvent& event ){
 
 void ConfigFrame::onEchoTest( wxCommandEvent& event ){
   // pop up status window window
-  wxDialog *playback = new wxDialog( this,-1,_T("Playing back recording..."),
+  wxDialog *echoDiag = new wxDialog( this,-1,
+          _T("Recording from mic, then playing back"),
                                    wxDefaultPosition,wxDefaultSize,
                                    wxSTAY_ON_TOP | wxCAPTION );
-  wxDialog *recording = new wxDialog( this,-1,_T("Recording from microphone..."),
-                                   wxDefaultPosition,wxDefaultSize,
-                                   wxSTAY_ON_TOP | wxCAPTION );
+  echoDiag->Show(true);
 
   // start echo test thread, linked to status window
-  EchoThread* thread = new EchoThread( recording, playback,
+  EchoThread* thread = new EchoThread( echoDiag,
                                       this->conf.rec_dev, this->conf.play_dev );
   if( thread->Create() == wxTHREAD_NO_ERROR )
     thread->Run( );

@@ -35,13 +35,13 @@ private:
 /** performs a test of the audio system while updating a status window */
 class EchoThread : public wxThread{
 public:
-  EchoThread( wxDialog* recDialog, wxDialog* playDialog,
+  EchoThread( wxDialog* echoDialog,
               unsigned int rec_dev, unsigned int play_dev );
   ~EchoThread();
   void* Entry();
 private:
   // status notification dialogs for playback and recording
-  wxDialog *recDialog, *playDialog;
+  wxDialog *echoDialog;
   unsigned int rec_dev, play_dev;
 };
 

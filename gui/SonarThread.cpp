@@ -167,17 +167,14 @@ bool SonarThread::waitUntilActive(){
 
 
 //=========================================================================
-EchoThread::EchoThread( wxDialog* recDiag, wxDialog* playDiag,
+EchoThread::EchoThread( wxDialog* diag,
                         unsigned int r_dev, unsigned int p_dev )
   : wxThread(wxTHREAD_DETACHED), 
-    recDialog(recDiag), playDialog(playDiag), play_dev(p_dev), rec_dev(r_dev){}
+    echoDialog(diag), play_dev(p_dev), rec_dev(r_dev){}
 
 EchoThread::~EchoThread(){}
 
 void* EchoThread::Entry(){
-  this->playDialog->Show(false);
-  this->recDialog->Show(true);
-
   AudioDev audio = AudioDev( this->rec_dev, this->play_dev );
 
   duration_t test_length = 3;
@@ -185,15 +182,9 @@ void* EchoThread::Entry(){
   AudioBuf buf = audio.blocking_record( test_length );
   cout<<"playing back the recording..."<<endl;
 
-  // update status dialogs
-  ///wxCommandEvent evt = wxCommandEvent( recordingDoneCommandEvent );
-  this->recDialog->Close(); //->AddPendingEvent( evt );
-  this->playDialog->Show(true);
-
   audio.blocking_play( buf );
-
-  // notify status window that playback is done
-  this->playDialog->Close();
+  // close status window when playback is done
+  this->echoDialog->Close();
   return 0;
 }
 
