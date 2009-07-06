@@ -31,6 +31,9 @@ void* SonarThread::Entry(){
 void SonarThread::OnExit(){
   this->mainFrame->nullifyThread(); // clear parent's pointer to this thread
   cerr << "SonarThread exited" <<endl;
+  if( this->doPowerManagement ){
+      SysInterface::log( "quit" );
+  }
 }
 
 void SonarThread::updateGUIThreshold( float thresh ){
@@ -74,7 +77,6 @@ void SonarThread::power_management( AudioDev & audio, Config & conf ){
 
   updateGUIThreshold( conf.threshold );
 
-  SysInterface::register_term_handler();
   AudioBuf ping = tone( 1, conf.ping_freq, 0,0 ); // no fade since we loop it
   cout << "Begin power management loop at frequency of " 
        <<conf.ping_freq<<"Hz"<<endl;

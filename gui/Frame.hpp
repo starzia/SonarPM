@@ -22,6 +22,7 @@ public:
   void startSonar();
   void stopSonar();
 
+  wxThread*  sThread; // need access from App
   DECLARE_EVENT_TABLE()
 private:
   // update plot with a new point
@@ -34,7 +35,6 @@ private:
 
   TaskBarIcon* tbIcon;
   PlotPane* sonarHistory;
-  wxThread*  sThread;
   wxCriticalSection threadLock; // to protect access to thread pointer
 };
 

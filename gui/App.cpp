@@ -17,10 +17,19 @@ bool App::OnInit(){
   frame->Show(true);
   //SetTopWindow( this->frame );
 
+  // TODO: note that term_handler will print a "quit" msg in the log even if 
+  // sonar power management had not been started.
+  SysInterface::register_term_handler();
+
   return true;
 }
 
 int App::OnExit(){
+  // if sonar thread did not close properly, then ensure that log has quit msg
+  if( this->frame )
+    if( this->frame->sThread )
+      SysInterface::log( "quit" );
+
   // close portaudio
   Pa_Terminate();
   return 0;

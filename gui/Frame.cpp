@@ -75,6 +75,8 @@ Frame::Frame( const wxString & title, int width, int height ) :
 Frame::~Frame(){
   // clean up taskbar
   this->tbIcon->RemoveIcon();
+  // stop sonar thread
+  this->stopSonar();
 }
 
 void Frame::nullifyThread(){
