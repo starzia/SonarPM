@@ -348,7 +348,7 @@ duration_t SysInterface::idle_seconds(){
 }
 
 void SysInterface::sleep( duration_t duration ){
-  /* use portaudio's convenient portable sleep function */
+  // use portaudio's convenient portable sleep function
   Pa_Sleep( (int)(duration*1000) );
   return;
           

@@ -2,7 +2,10 @@
 #include <iostream>
 #include <cmath>
 
-#define FRAMES_PER_BUFFER (32768) // PortAudio buf size.  The examples use 256.
+/* NOTE: I raised to a huge value (32768) to reduce clicking in output,
+ * but this  caused CPU utilization to soar, so I reduced size again.
+ **/
+#define FRAMES_PER_BUFFER (256) // PortAudio buf size.  The examples use 256.
 int SAMPLE_RATE;
 
 using namespace std;
@@ -203,9 +206,9 @@ int AudioDev::player_callback( const void *inputBuffer, void *outputBuffer,
   sample_t *out = (sample_t*)outputBuffer;
   (void) inputBuffer; /* Prevent unused variable warning. */
 
-  unsigned int i;
+  unsigned int i, total_samples = req->audio.get_num_samples();
   for( i=req->progress_index; i < req->progress_index + framesPerBuffer; i++ ){
-    if( i < req->audio.get_num_samples() ){
+    if( i < total_samples ){
       *out++ = req->audio[i];  /* left */
     }else{
       *out++ = 0; // play silence if we've reached end of buffer
@@ -274,7 +277,8 @@ PaStream* AudioDev::nonblocking_play( const AudioBuf & buf ){
 	 &(this->out_params),
 	 SAMPLE_RATE,
 	 FRAMES_PER_BUFFER,
-	 paNoFlag,
+         paClipOff,      // we won't output out of range samples so don't bother
+                         // otherwise set to paNoFlag,
 	 AudioDev::player_callback, /* this is your callback function */
 	 play_request ) ); /*This is a pointer that will be passed to
 			     your callback*/
@@ -294,7 +298,8 @@ PaStream* AudioDev::nonblocking_play_loop( const AudioBuf & buf ){
 	 &(this->out_params),
 	 SAMPLE_RATE,
 	 FRAMES_PER_BUFFER,   /* frames per buffer */
-	 paNoFlag,
+	 paClipOff,      // we won't output out of range samples so don't bother
+                         // otherwise set to paNoFlag,
 	 AudioDev::oscillator_callback, /* this is your callback function */
 	 play_request ) ); /*This is a pointer that will be passed to
 			     your callback*/
@@ -314,7 +319,8 @@ void AudioDev::blocking_play( const AudioBuf & buf ){
 	 &(this->out_params),
 	 SAMPLE_RATE,
 	 FRAMES_PER_BUFFER,   /* frames per buffer */
-	 paNoFlag,
+	 paClipOff,      // we won't output out of range samples so don't bother
+                         // otherwise set to paNoFlag,
 	 AudioDev::player_callback, /* this is your callback function */
 	 play_request ) ); /*This is a pointer that will be passed to
 			     your callback*/
