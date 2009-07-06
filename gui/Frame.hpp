@@ -14,6 +14,7 @@ public:
   void onIconize( wxIconizeEvent& event );
   void onSize( wxSizeEvent& event );
   void onClose( wxCloseEvent& event );
+  void onModeSwitch( wxCommandEvent& event );
 
   void onPlotEvent(PlotEvent& event);
   void onPause( wxCommandEvent& event );

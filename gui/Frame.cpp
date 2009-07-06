@@ -16,6 +16,7 @@ EVT_SIZE( Frame::onSize )
 EVT_ICONIZE( Frame::onIconize )
 EVT_PLOT( wxID_ANY, Frame::onPlotEvent )
 EVT_BUTTON( BUTTON_PAUSE, Frame::onPause )
+EVT_CHOICE( CHOICE_MODE, Frame::onModeSwitch )
 EVT_CLOSE( Frame::onClose )
 END_EVENT_TABLE()
 
@@ -155,4 +156,9 @@ void Frame::onPause(wxCommandEvent& event){
   }else{ // "continue" or "start"
     this->startSonar();
   }
+}
+
+void Frame::onModeSwitch( wxCommandEvent& event ){
+  // if sonar is running, stop it so that new operating mode can be used.
+  this->stopSonar();
 }

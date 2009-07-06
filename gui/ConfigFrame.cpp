@@ -11,7 +11,6 @@ BEGIN_EVENT_TABLE( ConfigFrame, wxDialog )
 EVT_BUTTON( BUTTON_SAVE, ConfigFrame::onSave )
 EVT_BUTTON( BUTTON_CANCEL, ConfigFrame::onCancel )
 EVT_BUTTON( BUTTON_ECHOTEST, ConfigFrame::onEchoTest )
-//EVT_BUTTON( recordingDoneCommandEvent, ConfigFrame::onRecordingDone )
 END_EVENT_TABLE()
 
 ConfigFrame::ConfigFrame( Frame* p, const wxString & title,
