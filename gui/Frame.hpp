@@ -15,6 +15,7 @@ public:
   void onSize( wxSizeEvent& event );
   void onClose( wxCloseEvent& event );
   void onModeSwitch( wxCommandEvent& event );
+  void onConfig( wxCommandEvent& event );
 
   void onPlotEvent(PlotEvent& event);
   void onPause( wxCommandEvent& event );
@@ -33,6 +34,7 @@ private:
   wxPanel *panel; // container for all controls
   wxButton* buttonPause;
   wxChoice* choiceMode;
+  wxButton* buttonConfig;
 
   TaskBarIcon* tbIcon;
   PlotPane* sonarHistory;
@@ -43,5 +45,5 @@ private:
 //=============================== CONSTANTS ============================
 const int  BUTTON_PAUSE = wxID_HIGHEST + 1;
 const int  CHOICE_MODE = wxID_HIGHEST + 2;
-
+const int  BUTTON_CONFIG = wxID_HIGHEST + 3;
 

@@ -47,10 +47,10 @@ CloseConfirmFrame::~CloseConfirmFrame(){}
 
 void CloseConfirmFrame::onMinimize( wxCommandEvent& event ){
   this->parent->Show(false);
-  this->Close();
+  this->EndModal(1);
 }
 
 void CloseConfirmFrame::onExit( wxCommandEvent& event ){
   this->parent->Destroy();
-  this->Close();
+  this->EndModal(1);
 }

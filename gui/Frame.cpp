@@ -16,6 +16,7 @@ EVT_SIZE( Frame::onSize )
 EVT_ICONIZE( Frame::onIconize )
 EVT_PLOT( wxID_ANY, Frame::onPlotEvent )
 EVT_BUTTON( BUTTON_PAUSE, Frame::onPause )
+EVT_BUTTON( BUTTON_CONFIG, Frame::onConfig )
 EVT_CHOICE( CHOICE_MODE, Frame::onModeSwitch )
 EVT_CLOSE( Frame::onClose )
 END_EVENT_TABLE()
@@ -36,7 +37,10 @@ Frame::Frame( const wxString & title, int width, int height ) :
   const wxString choices[2] = {_T("power management"), _T("continuous test")};
   this->choiceMode = new wxChoice( panel, CHOICE_MODE, wxDefaultPosition,
 				   wxDefaultSize, 2, choices );
-
+  this->choiceMode->SetSelection( 0 ); // power management by default
+  this->buttonConfig = new wxButton( panel, BUTTON_CONFIG, _T("configure"),
+				     wxDefaultPosition, wxDefaultSize );
+  
   // add taskbar icon
   this->tbIcon = new TaskBarIcon( this );
 
@@ -51,6 +55,8 @@ Frame::Frame( const wxString & title, int width, int height ) :
   sizer3->Add( new wxStaticText( panel, wxID_ANY, _T("operating mode:")));
   sizer3->Add( this->choiceMode, 1, wxALL | wxEXPAND, 5 );
   sizer3->Add( this->buttonPause, 1, wxALL | wxEXPAND, 5 );
+  sizer3->Add( this->buttonConfig, 1, wxALL | wxEXPAND, 5 );
+
 
   wxBoxSizer* sizer2 = new wxBoxSizer( wxHORIZONTAL );
   sizer2->Add( this->sonarHistory,
@@ -67,10 +73,6 @@ Frame::Frame( const wxString & title, int width, int height ) :
 
   this->sThread=NULL; // prevent initially dangling pointer
   ///this->startSonar();
-
-  // pop up config window
-  ConfigFrame* conf = new ConfigFrame( this,_T("Configuration"),500,500);
-  conf->Show(true);
 }
 
 Frame::~Frame(){
@@ -116,7 +118,7 @@ void Frame::onClose( wxCloseEvent& event ){
     event.Veto();
     // prompt user to either close or minimize
     CloseConfirmFrame* confirm = new CloseConfirmFrame(this);
-    confirm->Show(true);
+    confirm->ShowModal();
   }else{
     this->Destroy(); // close window
   }
@@ -156,6 +158,12 @@ void Frame::onPause(wxCommandEvent& event){
   }else{ // "continue" or "start"
     this->startSonar();
   }
+}
+
+void Frame::onConfig(wxCommandEvent& event){
+  // pop up config window
+  ConfigFrame* conf = new ConfigFrame( this,_T("Configuration"),500,500);
+  conf->ShowModal();
 }
 
 void Frame::onModeSwitch( wxCommandEvent& event ){
