@@ -106,12 +106,12 @@ void ConfigFrame::onSave( wxCommandEvent& event ){
   // save changes to file
   this->conf.write_config_file();
 
-  this->EndModal(1); // if this was a regular (non-Modal) frame then ::Close()
-  ///this->parent->startSonar();
+  // if this was a regular (non-Modal) frame then ::Close()
+  this->EndModal(BUTTON_SAVE);
 }
 
 void ConfigFrame::onCancel( wxCommandEvent& event ){
-  this->EndModal(0);
+  this->EndModal(BUTTON_CANCEL);
   ///this->parent->startSonar();
 }
 

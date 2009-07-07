@@ -29,7 +29,7 @@ Frame::Frame( const wxString & title, int width, int height ) :
 {
   // add controls
   this->CreateStatusBar();
-  this->SetStatusText(_T("Hello World"));
+  this->SetStatusText(_T("Sonar is stopped"));
   this->panel = new wxPanel( this, wxID_ANY, wxDefaultPosition,
                              this->GetClientSize());
   this->buttonPause = new wxButton( panel, BUTTON_PAUSE, _T("start"),
@@ -103,6 +103,7 @@ void Frame::stopSonar(){
   if( this->sThread ){ // stop only if started
     if( this->sThread->Delete() == wxTHREAD_NO_ERROR ){
       this->buttonPause->SetLabel( _T( "continue" ) );
+      this->SetStatusText(_T("Sonar is stopped"));
     }
   }
 }
@@ -170,7 +171,13 @@ void Frame::onPause(wxCommandEvent& event){
 void Frame::onConfig(wxCommandEvent& event){
   // pop up config window
   ConfigFrame* conf = new ConfigFrame( this,_T("Configuration"),500,500);
-  conf->ShowModal();
+  int choice = conf->ShowModal();
+  
+  // if user saved new configuration, then restart sonar
+  if( choice == BUTTON_SAVE ){
+    this->stopSonar();
+    this->startSonar();
+  }
 }
 
 void Frame::onModeSwitch( wxCommandEvent& event ){
