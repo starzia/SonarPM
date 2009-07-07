@@ -75,12 +75,7 @@ Frame::Frame( const wxString & title, int width, int height ) :
   ///this->startSonar();
 }
 
-Frame::~Frame(){
-  // clean up taskbar
-  this->tbIcon->RemoveIcon();
-  // stop sonar thread
-  this->stopSonar();
-}
+Frame::~Frame(){}
 
 void Frame::nullifyThread(){
   wxCriticalSectionLocker lock( this->threadLock );
@@ -118,8 +113,20 @@ void Frame::onClose( wxCloseEvent& event ){
     event.Veto();
     // prompt user to either close or minimize
     CloseConfirmFrame* confirm = new CloseConfirmFrame(this);
-    confirm->ShowModal();
+    // Modal dialog has a return value, in this case, returns 1 if 'exit'
+    int choice = confirm->ShowModal();
+    if( choice == BUTTON_EXIT ){
+      this->Close(true); // recur, disallowing veto
+    }else if( choice == BUTTON_MINIMIZE ){
+      // minimize
+      this->Show(false);
+    } // else cancel
   }else{
+    /*======= CLEANUP CODE =======*/
+    // clean up taskbar
+    this->tbIcon->RemoveIcon();
+    // stop sonar thread
+    this->stopSonar();
     this->Destroy(); // close window
   }
 }

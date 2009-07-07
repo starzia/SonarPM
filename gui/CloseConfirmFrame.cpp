@@ -46,11 +46,9 @@ CloseConfirmFrame::CloseConfirmFrame( Frame* p ) :
 CloseConfirmFrame::~CloseConfirmFrame(){}
 
 void CloseConfirmFrame::onMinimize( wxCommandEvent& event ){
-  this->parent->Show(false);
-  this->EndModal(1);
+  this->EndModal(BUTTON_MINIMIZE);
 }
 
 void CloseConfirmFrame::onExit( wxCommandEvent& event ){
-  this->parent->Destroy();
-  this->EndModal(1);
+  this->EndModal(BUTTON_EXIT);
 }
