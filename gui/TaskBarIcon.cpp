@@ -9,7 +9,7 @@ EVT_TASKBAR_LEFT_DCLICK  (TaskBarIcon::OnLeftButtonDClick)
 END_EVENT_TABLE()
 
 TaskBarIcon::TaskBarIcon( wxFrame* f ) : theFrame(f){
-  this->SetIcon( wxICON(kuser), _T("Sonar") );
+  this->SetIcon( kuser_xpm, _T("Sonar") );
 }
 
 void TaskBarIcon::OnMenuRestore(wxCommandEvent& ){

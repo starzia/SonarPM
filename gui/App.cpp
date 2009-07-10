@@ -15,7 +15,7 @@ bool App::OnInit(){
 
   this->frame = new Frame( _T("Sonar status"),400,400);
   frame->Show(true);
-  //SetTopWindow( this->frame );
+  SetTopWindow( this->frame );
 
   // TODO: note that term_handler will print a "quit" msg in the log even if 
   // sonar power management had not been started.
