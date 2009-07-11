@@ -75,7 +75,11 @@ Frame::Frame( const wxString & title, int width, int height ) :
   ///this->startSonar();
 }
 
-Frame::~Frame(){}
+Frame::~Frame(){
+  // TODO: this is a hack.  app should exit automatically when toplevelwindow is
+  // closed.  However, in windows it was not.
+  wxTheApp->ExitMainLoop();
+}
 
 void Frame::nullifyThread(){
   wxCriticalSectionLocker lock( this->threadLock );

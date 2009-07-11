@@ -1,6 +1,8 @@
 #include "App.hpp"
 #include "../sonar.hpp"
 
+using namespace std;
+
 //====================== IMPLEMENTATIONS ====================================
 // generate the main() entry point
 IMPLEMENT_APP(App)
@@ -14,7 +16,7 @@ bool App::OnInit(){
   Pa_Initialize();
 
   this->frame = new Frame( _T("Sonar status"),400,400);
-  frame->Show(true);
+  this->frame->Show(true);
   SetTopWindow( this->frame );
 
   // TODO: note that term_handler will print a "quit" msg in the log even if 
