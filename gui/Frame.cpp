@@ -72,7 +72,11 @@ Frame::Frame( const wxString & title, int width, int height ) :
   sizer1->SetSizeHints(this);
 
   this->sThread=NULL; // prevent initially dangling pointer
-  ///this->startSonar();
+
+  // start sonar by queuing up an event
+  wxCommandEvent evt = wxCommandEvent( wxEVT_COMMAND_BUTTON_CLICKED,
+                                       BUTTON_PAUSE );
+  this->GetEventHandler()->AddPendingEvent( evt );
 }
 
 Frame::~Frame(){
@@ -89,15 +93,28 @@ void Frame::nullifyThread(){
 void Frame::startSonar( ){
   // The following lock prevents multiple new threads from starting.
   // It is released automatically by its destructor.
-  wxCriticalSectionLocker locker( this->threadLock );
-  if( !this->sThread ){ //start only if stopped
+  { wxCriticalSectionLocker locker( this->threadLock );
+    if( this->sThread ) return; // cancel if already started
+  }
+
+  // if configuration file does not exist, then prompt for cofiguration
+  Config conf;
+  while( !conf.load( SysInterface::config_dir()+CONFIG_FILENAME ) ){
+    ConfigFrame* conf = new ConfigFrame( this,_T("First-time configuration") );
+    int choice = conf->ShowModal();
+  }
+
+  { wxCriticalSectionLocker locker( this->threadLock );
+    if( this->sThread ) return; // cancel if already started
+
     // start sonar processing thread
     bool doPowerManagement = ( this->choiceMode->GetCurrentSelection() == 0 );
     this->sThread = new SonarThread( this, doPowerManagement );
-    if( this->sThread->Create( ) == wxTHREAD_NO_ERROR ){
-      this->sThread->Run( );
-      this->buttonPause->SetLabel( _T( "pause" ) );
-    }
+  }
+
+  if( this->sThread->Create( ) == wxTHREAD_NO_ERROR ){
+    this->sThread->Run( );
+    this->buttonPause->SetLabel( _T( "pause" ) );
   }
 }
 
@@ -174,7 +191,7 @@ void Frame::onPause(wxCommandEvent& event){
 
 void Frame::onConfig(wxCommandEvent& event){
   // pop up config window
-  ConfigFrame* conf = new ConfigFrame( this,_T("Configuration"),500,500);
+  ConfigFrame* conf = new ConfigFrame( this,_T("Configuration") );
   int choice = conf->ShowModal();
   
   // if user saved new configuration, then restart sonar

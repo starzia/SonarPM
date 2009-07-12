@@ -16,7 +16,7 @@ bool App::OnInit(){
   Pa_Initialize();
 
   this->frame = new Frame( _T("Sonar status"),400,400);
-  this->frame->Show(true);
+  this->frame->Show(false); // start minimized
   SetTopWindow( this->frame );
 
   // TODO: note that term_handler will print a "quit" msg in the log even if 

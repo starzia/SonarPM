@@ -6,7 +6,7 @@
 class ConfigFrame : public wxDialog
 {
 public:
-  ConfigFrame( Frame* parent, const wxString & title, int width, int height );
+  ConfigFrame( Frame* parent, const wxString & title );
   ~ConfigFrame();
   void onSave( wxCommandEvent& event );
   void onCancel( wxCommandEvent& event );

@@ -13,9 +13,8 @@ EVT_BUTTON( BUTTON_CANCEL, ConfigFrame::onCancel )
 EVT_BUTTON( BUTTON_ECHOTEST, ConfigFrame::onEchoTest )
 END_EVENT_TABLE()
 
-ConfigFrame::ConfigFrame( Frame* p, const wxString & title,
-                          int width, int height ) :
-  wxDialog( p,-1,title,wxDefaultPosition,wxSize(width,height),
+ConfigFrame::ConfigFrame( Frame* p, const wxString & title ) :
+  wxDialog( p,-1,title,wxDefaultPosition,wxSize(500,500),
             wxDEFAULT_DIALOG_STYLE )
 /*        wxFRAME_NO_TASKBAR | wxSYSTEM_MENU | wxCAPTION
 	   | wxCLOSE_BOX | wxCLIP_CHILDREN | wxMINIMIZE_BOX //| wxRESIZE_BORDER
@@ -31,9 +30,10 @@ ConfigFrame::ConfigFrame( Frame* p, const wxString & title,
 				   wxDefaultPosition, wxDefaultSize );
   this->buttonEchoTest = new wxButton( this->panel, BUTTON_ECHOTEST, 
                   _T("echo test"), wxDefaultPosition, wxDefaultSize );
+  this->buttonEchoTest->Disable(); // initially disabled
   this->buttonFreqResponse = new wxButton( this->panel, BUTTON_FREQRESPONSE,
                   _T("frequency response"), wxDefaultPosition, wxDefaultSize );
-
+  this->buttonFreqResponse->Disable(); // initially disabled
 
   // build a wxString array with names of audio devices
   AudioDev audio;
@@ -59,6 +59,9 @@ ConfigFrame::ConfigFrame( Frame* p, const wxString & title,
     this->recDev->SetSelection( this->conf.rec_dev );
     this->playDev->SetSelection( this->conf.play_dev );
     this->phoneHome->SetValue( this->conf.allow_phone_home );
+
+    // enable test button(s)
+    this->buttonEchoTest->Enable(true);
   }
 
   // create sizers for layout
@@ -103,11 +106,16 @@ void ConfigFrame::onSave( wxCommandEvent& event ){
   this->conf.play_dev = this->playDev->GetSelection();
   this->conf.allow_phone_home = this->phoneHome->IsChecked();
 
-  // save changes to file
-  this->conf.write_config_file();
+  // check to see that nothing was left blank
+  if( this->conf.rec_dev == wxNOT_FOUND || this->conf.play_dev == wxNOT_FOUND ){
+    this->EndModal(BUTTON_CANCEL); // emulate a cancel button click
+  }else{
+    // save changes to file
+    this->conf.write_config_file();
 
-  // if this was a regular (non-Modal) frame then ::Close()
-  this->EndModal(BUTTON_SAVE);
+    // if this was a regular (non-Modal) frame then ::Close()
+    this->EndModal(BUTTON_SAVE);
+  }
 }
 
 void ConfigFrame::onCancel( wxCommandEvent& event ){
@@ -121,7 +129,7 @@ void ConfigFrame::onEchoTest( wxCommandEvent& event ){
           _T("Recording from mic, then playing back"),
                                    wxDefaultPosition,wxDefaultSize,
                                    wxSTAY_ON_TOP | wxCAPTION );
-  echoDiag->Show(true);
+  echoDiag->ShowModal(); //(true);
 
   // start echo test thread, linked to status window
   EchoThread* thread = new EchoThread( echoDiag,

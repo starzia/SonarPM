@@ -15,7 +15,8 @@ void* SonarThread::Entry(){
   Config conf;
   cerr << "SonarThread entered" <<endl;
   if( !conf.load( SysInterface::config_dir()+CONFIG_FILENAME ) ){
-   cerr << "fatel error: could not load config file" <<endl;   
+   cerr << "fatal error: could not load config file" <<endl;
+   return 0;
   }
   AudioDev my_audio = AudioDev( conf.rec_dev, conf.play_dev );
   
