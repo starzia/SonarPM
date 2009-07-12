@@ -78,6 +78,11 @@ void SonarThread::power_management( AudioDev & audio, Config & conf ){
 
   updateGUIThreshold( conf.threshold );
 
+  //-- INITIAL THRESHOLD SETTING
+  if( conf.threshold <= 0 ){ // initially threshold will be set to zero
+    conf.choose_ping_threshold( audio, conf.ping_freq ); // set threshold.
+  }
+
   AudioBuf ping = tone( 1, conf.ping_freq, 0,0 ); // no fade since we loop it
   cout << "Begin power management loop at frequency of " 
        <<conf.ping_freq<<"Hz"<<endl;

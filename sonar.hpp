@@ -29,6 +29,8 @@ public:
   unsigned int rec_dev;
   unsigned int play_dev;
 
+  /** Choose the delta threshold for presence detection by recording */
+  void choose_ping_threshold( AudioDev & audio, frequency freq );
 private:
   std::string filename;
   /** CALIBRATION FUNCTIONS */
@@ -37,9 +39,6 @@ private:
       register on the (probably cheap) audio equipment but high enough to be
       inaudible. */
   void choose_ping_freq( AudioDev & audio );
-  /** Choose the variance threshold for presence detection by prompting
-      the user. */
-  void choose_ping_threshold( AudioDev & audio, frequency freq );
   /** Ask the user whether or not to report anonymous statistics */
   void choose_phone_home();
   /** Plays a series of loud tones to help users adjust their speaker volume */
