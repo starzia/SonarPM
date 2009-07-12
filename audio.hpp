@@ -84,8 +84,9 @@ public:
       recording hardware device to use.
       Returns recording and playback device numbers.*/
   std::pair<unsigned int,unsigned int> prompt_device();
-  /** or if we already know which devices to use we can specify */
-  void choose_device( unsigned int in_dev_num, unsigned int out_dev_num );
+  /** or if we already know which devices to use we can specify
+    @return true iff device numbers specified are available */
+  bool choose_device( unsigned int in_dev_num, unsigned int out_dev_num );
   /** returns a list with all of the available audio device names,
       ordered by their corresponding device id */
   std::vector<std::string> list_devices();

@@ -123,7 +123,7 @@ AudioDev::AudioDev( unsigned int in_dev_num, unsigned int out_dev_num ){
 
 AudioDev::~AudioDev(){}
 
-void AudioDev::choose_device( unsigned int in_dev_num, 
+bool AudioDev::choose_device( unsigned int in_dev_num,
                               unsigned int out_dev_num ){
   // now create the device definition
   this->in_params.channelCount = 1;
@@ -146,10 +146,11 @@ void AudioDev::choose_device( unsigned int in_dev_num,
 	Pa_IsFormatSupported( NULL,&this->out_params,rates[i] ) == paNoError ){
       SAMPLE_RATE=rates[i];
       cerr << "Sample rate = "<<SAMPLE_RATE<<"Hz"<<endl;
-      return;
+      return true;
     }
   }
   cerr<<"ERROR: no supported sample rate found!"<<endl;
+  return false;
 }
 
 vector<string> AudioDev::list_devices(){
