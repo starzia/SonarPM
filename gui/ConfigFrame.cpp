@@ -25,9 +25,7 @@ ConfigFrame::ConfigFrame( Frame* p, const wxString & title ) :
   // add controls
   this->panel = new wxPanel( this, wxID_ANY, wxDefaultPosition,
                              this->GetClientSize());
-  this->modelName = new wxTextCtrl( this->panel, TEXT_MODEL, _T(""),
-                                    wxDefaultPosition, wxDefaultSize );
-  this->buttonSave = new wxButton( this->panel, BUTTON_SAVE, _T("save"),
+   this->buttonSave = new wxButton( this->panel, BUTTON_SAVE, _T("save"),
 				   wxDefaultPosition, wxDefaultSize );
   this->buttonCancel = new wxButton( this->panel, BUTTON_CANCEL, _T("cancel"),
 				   wxDefaultPosition, wxDefaultSize );
@@ -56,7 +54,6 @@ ConfigFrame::ConfigFrame( Frame* p, const wxString & title ) :
   this->recDev = new wxChoice( this->panel, CHOICE_RECDEV, wxDefaultPosition,
 				wxDefaultSize, devices.size(), dev_arr );
   delete [] dev_arr;
-  this->modelName;
   this->phoneHome = new wxCheckBox( this->panel, PHONEHOME_ENABLE,
                     _T("enable phone home"), wxDefaultPosition );
   this->phoneHome->SetValue(true);
@@ -76,9 +73,6 @@ ConfigFrame::ConfigFrame( Frame* p, const wxString & title ) :
 
   // create sizers for layout
   wxBoxSizer* sizer5 = new wxStaticBoxSizer(wxVERTICAL, panel, _T("Settings"));
-  sizer5->Add( new wxStaticText( panel, wxID_ANY,
-           _T("Computer description.  For example: 'Dell Inspiron 8600'") ) );
-  sizer5->Add( this->modelName, 1, wxALL | wxEXPAND, 5 );
   sizer5->Add( this->phoneHome, 1, wxALL | wxEXPAND, 5 );
   sizer5->Add( new wxStaticText( panel, wxID_ANY,
                _T("playback audio device:") ) );

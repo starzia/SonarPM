@@ -81,6 +81,7 @@ void SonarThread::power_management( AudioDev & audio, Config & conf ){
   //-- INITIAL THRESHOLD SETTING
   if( conf.threshold <= 0 ){ // initially threshold will be set to zero
     conf.choose_ping_threshold( audio, conf.ping_freq ); // set threshold.
+    conf.write_config_file(); // save new threshold
   }
 
   AudioBuf ping = tone( 1, conf.ping_freq, 0,0 ); // no fade since we loop it

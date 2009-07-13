@@ -28,7 +28,7 @@ private:
   wxPanel *panel; // container for all controls
 
   // controls
-  wxTextCtrl *modelName;
+  ///wxTextCtrl *modelName;
   wxCheckBox *phoneHome;
   wxChoice *playDev;
   wxChoice *recDev;

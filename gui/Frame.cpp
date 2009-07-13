@@ -6,6 +6,7 @@
 #include "PlotEvent.hpp"
 #include "ConfigFrame.hpp"
 #include "CloseConfirmFrame.hpp"
+#include <wx/textdlg.h>
 using namespace std;
 
 
@@ -99,9 +100,17 @@ void Frame::startSonar( ){
 
   // if configuration file does not exist, then prompt for cofiguration
   Config conf;
+  bool firstTime = !conf.load( SysInterface::config_dir()+CONFIG_FILENAME );
   while( !conf.load( SysInterface::config_dir()+CONFIG_FILENAME ) ){
     ConfigFrame* conf = new ConfigFrame( this,_T("First-time configuration") );
     int choice = conf->ShowModal();
+  }
+  if( firstTime ){
+    // prompt for model name
+    wxString modelName = wxGetTextFromUser(
+      _T("Please enter the manufacturer and model name of your computer."),
+      _T("Computer description"), _T("Generic"), this );
+    SysInterface::log( "model " + string(modelName.mb_str()) );
   }
 
   { wxCriticalSectionLocker locker( this->threadLock );
