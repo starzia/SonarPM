@@ -28,6 +28,9 @@ Frame::Frame( const wxString & title, int width, int height ) :
 	   | wxCLOSE_BOX | wxCLIP_CHILDREN | wxMINIMIZE_BOX //| wxRESIZE_BORDER
 	   | wxFULL_REPAINT_ON_RESIZE )
 {
+  // init lock
+  this->threadLock = new wxMutex();
+  
   // add controls
   this->CreateStatusBar();
   this->SetStatusText(_T("Sonar is stopped"));
@@ -87,15 +90,18 @@ Frame::~Frame(){
 }
 
 void Frame::nullifyThread(){
-  wxCriticalSectionLocker lock( this->threadLock );
+  this->threadLock->Lock();
   this->sThread = NULL;
+  this->threadLock->Unlock();
 }
 
 void Frame::startSonar( ){
   // The following lock prevents multiple new threads from starting.
   // It is released automatically by its destructor.
-  { wxCriticalSectionLocker locker( this->threadLock );
+  {
+    this->threadLock->Lock();
     if( this->sThread ) return; // cancel if already started
+    this->threadLock->Unlock();
   }
 
   // if configuration file does not exist, then prompt for cofiguration
@@ -106,19 +112,17 @@ void Frame::startSonar( ){
     int choice = conf->ShowModal();
   }
   if( firstTime ){
-    // prompt for model name
-    wxString modelName = wxGetTextFromUser(
-      _T("Please enter the manufacturer and model name of your computer."),
-      _T("Computer description"), _T("Generic"), this );
-    SysInterface::log( "model " + string(modelName.mb_str()) );
+    this->firstTime();
   }
 
-  { wxCriticalSectionLocker locker( this->threadLock );
+  {
+    this->threadLock->Lock();
     if( this->sThread ) return; // cancel if already started
 
     // start sonar processing thread
     bool doPowerManagement = ( this->choiceMode->GetCurrentSelection() == 0 );
     this->sThread = new SonarThread( this, doPowerManagement );
+    this->threadLock->Unlock();
   }
 
   if( this->sThread->Create( ) == wxTHREAD_NO_ERROR ){
@@ -129,13 +133,30 @@ void Frame::startSonar( ){
 
 void Frame::stopSonar(){
   // stop sonar processing thread
-  wxCriticalSectionLocker locker( this->threadLock );
+  this->threadLock->Lock();
   if( this->sThread ){ // stop only if started
     if( this->sThread->Delete() == wxTHREAD_NO_ERROR ){
       this->buttonPause->SetLabel( _T( "continue" ) );
       this->SetStatusText(_T("Sonar is stopped"));
     }
   }
+  this->threadLock->Unlock();
+}
+
+void Frame::firstTime(){
+  // Give some instructions/warning
+  int ret = wxMessageBox(
+    _T("In order for this software to function correctly, you must set your "
+       "audio volume level to a normal listening level and unplug any "
+       "headphones so that the speakers are used." ),
+    _T("Instructions"), wxOK | wxCANCEL, this );
+  if( ret == wxCANCEL ) this->Close(true); // quit if disagree
+
+  // prompt for model name
+  wxString modelName = wxGetTextFromUser(
+        _T("Please enter the manufacturer and model name of your computer."),
+        _T("Computer description"), _T("Generic"), this );
+  SysInterface::log( "model " + string(modelName.mb_str()) );
 }
 
 void Frame::onClose( wxCloseEvent& event ){

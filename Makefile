@@ -32,7 +32,7 @@ sonar_gui.exe: ${W32_OBJS} gui/gui.A
 	$(CXX) -o $@ ${W32_OBJS} \
           $(addprefix gui/, $(shell $(AR) -t gui/gui.A)) \
           libportaudio.a -lm -lwinmm -lwininet $(shell $(WX_CONFIG_W32) --libs)
-	$(STRIP) $@
+#	$(STRIP) $@
 
 ############################## COMPILING #################################
 

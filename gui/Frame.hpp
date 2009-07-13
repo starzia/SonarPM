@@ -24,6 +24,9 @@ public:
   void startSonar();
   void stopSonar();
 
+  /** routines to run if this is the first time the app is run */
+  void firstTime();
+
   wxThread*  sThread; // need access from App
   DECLARE_EVENT_TABLE()
 private:
@@ -38,7 +41,7 @@ private:
 
   TaskBarIcon* tbIcon;
   PlotPane* sonarHistory;
-  wxCriticalSection threadLock; // to protect access to thread pointer
+  wxMutex* threadLock; // to protect access to thread pointer
 };
 
 
