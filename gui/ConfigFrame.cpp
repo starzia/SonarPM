@@ -29,12 +29,14 @@ ConfigFrame::ConfigFrame( Frame* p, const wxString & title ) :
 				   wxDefaultPosition, wxDefaultSize );
   this->buttonCancel = new wxButton( this->panel, BUTTON_CANCEL, _T("cancel"),
 				   wxDefaultPosition, wxDefaultSize );
+  /*
   this->buttonEchoTest = new wxButton( this->panel, BUTTON_ECHOTEST, 
                   _T("echo test"), wxDefaultPosition, wxDefaultSize );
   this->buttonEchoTest->Disable(); // initially disabled
   this->buttonFreqResponse = new wxButton( this->panel, BUTTON_FREQRESPONSE,
                   _T("frequency response"), wxDefaultPosition, wxDefaultSize );
   this->buttonFreqResponse->Disable(); // initially disabled
+   */
   this->buttonDefaults = new wxButton( this->panel, BUTTON_DEFAULTS,
                   _T("reset to defaults"), wxDefaultPosition, wxDefaultSize );
 
@@ -55,7 +57,7 @@ ConfigFrame::ConfigFrame( Frame* p, const wxString & title ) :
 				wxDefaultSize, devices.size(), dev_arr );
   delete [] dev_arr;
   this->phoneHome = new wxCheckBox( this->panel, PHONEHOME_ENABLE,
-                    _T("enable phone home"), wxDefaultPosition );
+                    _T("send back usage log"), wxDefaultPosition );
   this->phoneHome->SetValue(true);
 
   // load previous configuration from file, if available
@@ -65,7 +67,7 @@ ConfigFrame::ConfigFrame( Frame* p, const wxString & title ) :
     this->phoneHome->SetValue( this->conf.allow_phone_home );
 
     // enable test button(s)
-    this->buttonEchoTest->Enable(true);
+    /// this->buttonEchoTest->Enable(true);
   }else{
     //load defaults
     this->loadDefaults();
@@ -73,17 +75,25 @@ ConfigFrame::ConfigFrame( Frame* p, const wxString & title ) :
 
   // create sizers for layout
   wxBoxSizer* sizer5 = new wxStaticBoxSizer(wxVERTICAL, panel, _T("Settings"));
-  sizer5->Add( this->phoneHome, 1, wxALL | wxEXPAND, 5 );
+  sizer5->Add( new wxStaticText( panel, wxID_ANY,
+   _T("Would you like to allow usage statistics to be sent back to Northwestern\n"
+      "University computer systems researchers for the purpose of evaluating this\n"
+      "software's performance and improving future versions of the software?")),
+   0, wxALL|wxEXPAND, 5 );
+
+  sizer5->Add( this->phoneHome, 0, wxALL | wxEXPAND, 5 );
   sizer5->Add( new wxStaticText( panel, wxID_ANY,
                _T("playback audio device:") ) );
-  sizer5->Add( this->playDev, 1, wxALL | wxEXPAND, 5 );
+  sizer5->Add( this->playDev, 0, wxALL | wxEXPAND, 5 );
   sizer5->Add( new wxStaticText( panel, wxID_ANY,
                _T("recording audio device:") ) );
-  sizer5->Add( this->recDev, 1, wxALL | wxEXPAND, 5 );
+  sizer5->Add( this->recDev, 0, wxALL | wxEXPAND, 5 );
 
+  /*
   wxBoxSizer* sizer4 = new wxBoxSizer( wxHORIZONTAL );
   sizer4->Add( this->buttonEchoTest, 1, wxALL | wxEXPAND, 5 );
   sizer4->Add( this->buttonFreqResponse, 1, wxALL | wxEXPAND, 5 );
+   */
 
   wxBoxSizer* sizer3 = new wxBoxSizer( wxHORIZONTAL );
   sizer3->Add( this->buttonSave, 1, wxALL | wxEXPAND, 5 );
@@ -92,9 +102,11 @@ ConfigFrame::ConfigFrame( Frame* p, const wxString & title ) :
   wxBoxSizer* sizer2 = new wxBoxSizer( wxVERTICAL );
   sizer2->Add( this->buttonDefaults, 0, wxALL | wxEXPAND, 5 );
   sizer2->Add( sizer5, 0, wxALL, 10 );
+  /*
   sizer2->Add( new wxStaticText( panel, wxID_ANY,
                                  _T("\nAudio testing features:")));
   sizer2->Add( sizer4, 0, wxALL | wxEXPAND );
+   */
   sizer2->Add( new wxStaticText( panel, wxID_ANY,
                               _T("\nTo continue choose one of the following:")));
   sizer2->Add( sizer3, 0, wxALL | wxEXPAND );

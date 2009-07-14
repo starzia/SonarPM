@@ -24,7 +24,7 @@ sonar_gui: ${OBJS} gui/gui.a
 
 sonar_tui.exe: ${W32_OBJS} sonar_tui.O
 	$(CXX) -o $@ $^ -lm libportaudio.a -lwinmm -lwininet
-	$(STRIP) $@
+#	$(STRIP) $@
 
 # for some reason, gui.A cannot be used directly, so I list its contents and
 # use those filenames instead.  This is a bit of a hack.
@@ -32,7 +32,7 @@ sonar_gui.exe: ${W32_OBJS} gui/gui.A
 	$(CXX) -o $@ ${W32_OBJS} \
           $(addprefix gui/, $(shell $(AR) -t gui/gui.A)) \
           libportaudio.a -lm -lwinmm -lwininet $(shell $(WX_CONFIG_W32) --libs)
-	$(STRIP) $@
+#	$(STRIP) $@
 
 ############################## COMPILING #################################
 

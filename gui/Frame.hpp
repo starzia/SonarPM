@@ -33,6 +33,9 @@ private:
   // update plot with a new point
   void addPoint( float p );
 
+  // wait for while freq response thread to stop running
+  void threadWait();
+
   // controls
   wxPanel *panel; // container for all controls
   wxButton* buttonPause;

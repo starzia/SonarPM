@@ -26,7 +26,7 @@ Frame::Frame( const wxString & title, int width, int height ) :
   wxFrame( (wxFrame*)NULL,-1,title,wxDefaultPosition,wxSize(width,height),
 	   wxFRAME_NO_TASKBAR | wxSYSTEM_MENU | wxCAPTION 
 	   | wxCLOSE_BOX | wxCLIP_CHILDREN | wxMINIMIZE_BOX //| wxRESIZE_BORDER
-	   | wxFULL_REPAINT_ON_RESIZE )
+	   | wxFULL_REPAINT_ON_RESIZE ), sThread(NULL)
 {
   // init lock
   this->threadLock = new wxMutex();
@@ -75,8 +75,6 @@ Frame::Frame( const wxString & title, int width, int height ) :
   this->SetSizer(sizer1);
   sizer1->SetSizeHints(this);
 
-  this->sThread=NULL; // prevent initially dangling pointer
-
   // start sonar by queuing up an event
   wxCommandEvent evt = wxCommandEvent( wxEVT_COMMAND_BUTTON_CLICKED,
                                        BUTTON_PAUSE );
@@ -86,7 +84,7 @@ Frame::Frame( const wxString & title, int width, int height ) :
 Frame::~Frame(){
   // TODO: this is a hack.  app should exit automatically when toplevelwindow is
   // closed.  However, in windows it was not.
-  wxTheApp->ExitMainLoop();
+  ///wxTheApp->ExitMainLoop();
 }
 
 void Frame::nullifyThread(){
@@ -111,23 +109,31 @@ void Frame::startSonar( ){
     ConfigFrame* conf = new ConfigFrame( this,_T("First-time configuration") );
     int choice = conf->ShowModal();
   }
+
   if( firstTime ){
     this->firstTime();
   }
+  this->SetStatusText(_T("Sonar is started"));
 
   {
     this->threadLock->Lock();
-    if( this->sThread ) return; // cancel if already started
+    if( this->sThread ){
+      this->threadLock->Unlock();
+      return; // cancel if already started
+    }
 
     // start sonar processing thread
-    bool doPowerManagement = ( this->choiceMode->GetCurrentSelection() == 0 );
-    this->sThread = new SonarThread( this, doPowerManagement );
+    if( this->choiceMode->GetCurrentSelection() == 0 ){
+      this->sThread = new SonarThread( this, MODE_POWER_MANAGEMENT );
+    }else{
+      this->sThread = new SonarThread( this, MODE_POLLING );
+    }
+   
+    if( this->sThread->Create( ) == wxTHREAD_NO_ERROR ){
+      this->sThread->Run( );
+      this->buttonPause->SetLabel( _T( "pause" ) );
+    }
     this->threadLock->Unlock();
-  }
-
-  if( this->sThread->Create( ) == wxTHREAD_NO_ERROR ){
-    this->sThread->Run( );
-    this->buttonPause->SetLabel( _T( "pause" ) );
   }
 }
 
@@ -141,6 +147,17 @@ void Frame::stopSonar(){
     }
   }
   this->threadLock->Unlock();
+}
+
+void Frame::threadWait(){
+  bool ready = false;
+  while( !ready ){
+    SysInterface::sleep( 0.5 );
+    wxSafeYield(); // let the GUI update
+    this->threadLock->Lock();
+    if( !this->sThread ) ready = true;
+    this->threadLock->Unlock();
+  }
 }
 
 void Frame::firstTime(){
@@ -157,6 +174,28 @@ void Frame::firstTime(){
         _T("Please enter the manufacturer and model name of your computer."),
         _T("Computer description"), _T("Generic"), this );
   SysInterface::log( "model " + string(modelName.mb_str()) );
+
+  // log frequency response
+  ret = wxMessageBox(
+    _T("Next, you may hear some high frequency noise while the system is calibrated.  "
+       "This should take less than thirty seconds.  "
+       "Afterwards, sonar power management will be active.  "
+       "At first, the sonar system may be too aggressive and "
+         "it may shut off your display when you are actually present.  "
+       "If this happens, simply wake up the display by moving the mouse.  "),
+    _T("Calibration"), wxOK, this );
+  this->threadLock->Lock();
+  if( !this->sThread ){
+    this->sThread = new SonarThread( this, MODE_FREQ_RESPONSE );
+    if( this->sThread->Create() == wxTHREAD_NO_ERROR ){
+      this->sThread->Run();
+    }
+  }
+  this->threadLock->Unlock();
+
+  // wait for freq_response thread to complete.
+  this->SetStatusText(_T("Measuring frequency response... Please wait."));
+  this->threadWait();
 }
 
 void Frame::onClose( wxCloseEvent& event ){

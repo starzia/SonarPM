@@ -184,7 +184,7 @@ void Config::choose_ping_freq( AudioDev & audio ){
   
 /** current implementation just chooses a threshold in the correct neighborhood
     and relies on dynamic runtime adjustment for fine-tuning.
-    Uses the square root of the initial reading as the threshold.
+    Uses one half of the initial reading as the threshold.
     Assumption here is that user is present when calibrating */
 void Config::choose_ping_threshold( AudioDev & audio, frequency freq ){
   cout << "Please wait while the system is calibrated."<<endl;
@@ -192,7 +192,7 @@ void Config::choose_ping_threshold( AudioDev & audio, frequency freq ){
   AudioBuf rec = audio.recordback( blip );
   Statistics blip_s = measure_stats( rec, freq );
   cout << "chose preliminary threshold of "<<FEATURE(blip_s)<<endl<<endl;
-  this->threshold = sqrt( FEATURE(blip_s) );
+  this->threshold = ( FEATURE(blip_s) )/2;
 }
 
 void Config::choose_phone_home(){

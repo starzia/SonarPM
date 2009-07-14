@@ -1,5 +1,6 @@
 #include "SonarThread.hpp"
 #include "PlotEvent.hpp"
+#include "../sonar.hpp"
 #include <iostream>
 
 #include <stdlib.h> //for rand
@@ -8,8 +9,8 @@
 
 using namespace std;
 
-SonarThread::SonarThread( Frame* mf, bool pm ) :
-  wxThread(wxTHREAD_DETACHED), mainFrame( mf ), doPowerManagement(pm){}
+SonarThread::SonarThread( Frame* mf, sonar_mode m ) :
+  wxThread(wxTHREAD_DETACHED), mainFrame( mf ), mode(m){}
 
 void* SonarThread::Entry(){
   Config conf;
@@ -19,11 +20,20 @@ void* SonarThread::Entry(){
    return 0;
   }
   AudioDev my_audio = AudioDev( conf.rec_dev, conf.play_dev );
-  
-  if( this->doPowerManagement ){
-    this->power_management( my_audio, conf );
-  }else{
-    this->poll( my_audio, conf );
+
+  switch( this->mode ){
+    case MODE_POWER_MANAGEMENT:
+      this->power_management( my_audio, conf );
+      break;
+    case MODE_POLLING:
+      this->poll( my_audio, conf );
+      break;
+    case MODE_FREQ_RESPONSE:
+      log_freq_response( my_audio );
+      break;
+    case MODE_ECHO_TEST:
+    default:
+      break;
   }
   return 0;
   // thread is now terminated.
@@ -32,12 +42,13 @@ void* SonarThread::Entry(){
 void SonarThread::OnExit(){
   this->mainFrame->nullifyThread(); // clear parent's pointer to this thread
   cerr << "SonarThread exited" <<endl;
-  if( this->doPowerManagement ){
+  if( this->mode == MODE_POWER_MANAGEMENT ){
       SysInterface::log( "quit" );
   }
 }
 
 void SonarThread::updateGUIThreshold( float thresh ){
+  cerr << "setting threshold to "<<thresh<<endl;
   // update gui
   PlotEvent evt = PlotEvent( PLOT_EVENT_THRESHOLD );
   evt.setVal( thresh );
@@ -73,11 +84,6 @@ void SonarThread::poll( AudioDev & audio, Config & conf ){
 
 
 void SonarThread::power_management( AudioDev & audio, Config & conf ){
-  // buffer duration is one second, but actually it just needs to be a multiple
-  // of the ping_period.
-
-  updateGUIThreshold( conf.threshold );
-
   //-- INITIAL THRESHOLD SETTING
   // ignore previously saved threshold and recalibrate each time
   conf.threshold = 0;
@@ -85,7 +91,11 @@ void SonarThread::power_management( AudioDev & audio, Config & conf ){
     conf.choose_ping_threshold( audio, conf.ping_freq ); // set threshold.
     ///conf.write_config_file(); // save new threshold
   }
+  updateGUIThreshold( conf.threshold );
 
+
+  // buffer duration is one second, but actually it just needs to be a multiple
+  // of the ping_period.
   AudioBuf ping = tone( 1, conf.ping_freq, 0,0 ); // no fade since we loop it
   cout << "Begin power management loop at frequency of " 
        <<conf.ping_freq<<"Hz"<<endl;

@@ -6,9 +6,16 @@
 #include "../dsp.hpp"
 #include "../audio.hpp"
 
+typedef enum {
+  MODE_POWER_MANAGEMENT,
+  MODE_POLLING,
+  MODE_FREQ_RESPONSE,
+  MODE_ECHO_TEST
+} sonar_mode;
+
 class SonarThread : public wxThread{
 public:
-  SonarThread( Frame* mainFrame, bool doPowerManagement );
+  SonarThread( Frame* mainFrame, sonar_mode mode );
 
   // starts some work
   void* Entry();
@@ -23,7 +30,7 @@ private:
   void updateGUIDelta( float echo_delta );
 
   Frame* mainFrame;
-  bool doPowerManagement; // if true do power management, else just poll.
+  sonar_mode mode; // power management, polling, etc.
 
  /** these two functions are similar to those in the SysInterface class, but
   * additionally run TestDestroy() periodically to respond to cancellation
