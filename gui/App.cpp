@@ -15,7 +15,7 @@ bool App::OnInit(){
   // initialize portaudio
   Pa_Initialize();
 
-  this->frame = new Frame( _T("Sonar status"),400,400);
+  this->frame = new Frame( _T("SonarPM version " VERSION),400,400);
   this->frame->Show(false); // start minimized
   SetTopWindow( this->frame );
 

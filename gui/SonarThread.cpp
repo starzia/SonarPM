@@ -63,7 +63,7 @@ void SonarThread::poll( AudioDev & audio, Config & conf ){
     Statistics st = measure_stats( rec, conf.ping_freq );
     cout << st << endl;
 
-    updateGUIDelta( st.delta );
+    updateGUIDelta( FEATURE(st) );
   }
 
   // clean up portaudio so that we can use it again later.
@@ -115,10 +115,10 @@ void SonarThread::power_management( AudioDev & audio, Config & conf ){
     Statistics s = measure_stats( rec, conf.ping_freq );
     cout << s << endl;
     SysInterface::log( s );
-    updateGUIDelta( s.delta );
+    updateGUIDelta( FEATURE(s) );
 
     // if sonar reading below thresh. and user is still idle ...
-    if( s.delta < conf.threshold 
+    if( FEATURE(s) < conf.threshold
 	&& SysInterface::idle_seconds() > IDLE_THRESH ){
       // sleep monitor
       SysInterface::sleep_monitor();

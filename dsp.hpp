@@ -40,6 +40,8 @@ struct Statistics{
 };
 std::ostream& operator<<(std::ostream& os, Statistics& s);
 
+/**The following macro allows us to easily change the sonar feature of interest*/
+#define FEATURE(s) (s.delta/s.mean)
 
 /** Returns the mean and variance of the intensities of a given frequency
     in the audio buffer sampled in windows spread throughout the recording. */

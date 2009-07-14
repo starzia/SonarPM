@@ -189,8 +189,8 @@ void Config::choose_ping_threshold( AudioDev & audio, frequency freq ){
   AudioBuf blip = tone( RECORDING_PERIOD, freq );
   AudioBuf rec = audio.recordback( blip );
   Statistics blip_s = measure_stats( rec, freq );
-  cout << "chose preliminary threshold of "<<blip_s.delta<<endl<<endl;
-  this->threshold = blip_s.delta;
+  cout << "chose preliminary threshold of "<<FEATURE(blip_s)<<endl<<endl;
+  this->threshold = FEATURE(blip_s);
 }
 
 void Config::choose_phone_home(){
@@ -539,7 +539,7 @@ void power_management( AudioDev & audio, Config & conf ){
     SysInterface::log( s );
 
     // if sonar reading below thresh. and user is still idle ...
-    if( s.delta < conf.threshold 
+    if( FEATURE(s) < conf.threshold
 	&& SysInterface::idle_seconds() > IDLE_THRESH ){
       // sleep monitor
       SysInterface::sleep_monitor();

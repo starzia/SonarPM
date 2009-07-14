@@ -98,4 +98,4 @@ int main( int argc, char **argv );
 #define DEFAULT_PING_FREQ (22000)
 #define DYNAMIC_THRESH_FACTOR (1.3) // how rapidly does dynamic threshold move
 #define PHONEHOME_TIME (604800) // number of seconds before phone home (1 week)
-
+#define VERSION "0.5a"
