@@ -79,9 +79,11 @@ void SonarThread::power_management( AudioDev & audio, Config & conf ){
   updateGUIThreshold( conf.threshold );
 
   //-- INITIAL THRESHOLD SETTING
+  // ignore previously saved threshold and recalibrate each time
+  conf.threshold = 0;
   if( conf.threshold <= 0 ){ // initially threshold will be set to zero
     conf.choose_ping_threshold( audio, conf.ping_freq ); // set threshold.
-    conf.write_config_file(); // save new threshold
+    ///conf.write_config_file(); // save new threshold
   }
 
   AudioBuf ping = tone( 1, conf.ping_freq, 0,0 ); // no fade since we loop it
@@ -105,7 +107,7 @@ void SonarThread::power_management( AudioDev & audio, Config & conf ){
       cout << "False attention detected." <<endl;
       SysInterface::log("false attention");
       conf.threshold *= DYNAMIC_THRESH_FACTOR;
-      conf.write_config_file(); // config save changes
+      ///conf.write_config_file(); // config save changes
       updateGUIThreshold( conf.threshold );
     }
 
@@ -132,7 +134,7 @@ void SonarThread::power_management( AudioDev & audio, Config & conf ){
 	cout << "False sleep detected." <<endl;
 	SysInterface::log("false sleep");
 	conf.threshold /= DYNAMIC_THRESH_FACTOR;
-	conf.write_config_file(); // config save changes
+	///conf.write_config_file(); // config save changes
         updateGUIThreshold ( conf.threshold );
       }
     }
