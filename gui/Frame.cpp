@@ -241,6 +241,8 @@ void Frame::onPlotEvent(PlotEvent& event){
     wxString s;
     s.Printf( wxT("Threshold updated to: %f"), event.a );
     this->SetStatusText(s);
+  }else if( event.getType() == PLOT_EVENT_GAP ){
+    this->sonarHistory->addPoint( 0.0/0.0, 0.0/0.0 ); //NaN
   }
   this->Refresh();
   this->Update();

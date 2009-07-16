@@ -42,14 +42,6 @@ void PlotPane::render(wxDC&  dc){
   this->drawLinePlot( dc, sonar_history, wxColor(200,200,255), 1, min, max );
   this->drawLinePlot( dc, thresh_history, wxColor(255,0,0), 2, min, max );
   this->drawLinePlot( dc, window_history, wxColor(0,0,0), 4, min, max );
-
-
-  /*// draw horizontal (constant) threshold line
-  dc.SetPen( wxPen( wxColor(255,0,0), 1 ) ); // red line, 1 pixels thick
-  dc.DrawLine( 0, h - y_stride*(this->threshold-min),
-	       x_stride*(this->history.size()-1), 
-	       h - y_stride*(this->threshold-min) );
-   **/
 }
 
 void PlotPane::drawLinePlot( wxDC& dc, std::deque<float>& values,
@@ -63,8 +55,11 @@ void PlotPane::drawLinePlot( wxDC& dc, std::deque<float>& values,
   unsigned int i, N = values.size();
   float x_stride =  ((float)w)/(N-1), y_stride = ((float)h)/(max-min);
   for( i=1; i < N; i++ ){
-    dc.DrawLine( w - (i-1)*x_stride, h - y_stride*(values[i-1]-min),
-		 w - (i)*x_stride, h - y_stride*(values[i]-min) );
+    // check that value is not NaN
+    if( (values[i] >= 0) && ( values[i-1] >= 0 ) ){ // test for NaN
+      dc.DrawLine( w - (i-1)*x_stride, h - y_stride*(values[i-1]-min),
+                   w - (i)*x_stride, h - y_stride*(values[i]-min) );
+    }
   }
 }
 

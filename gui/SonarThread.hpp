@@ -36,6 +36,8 @@ private:
   void recordAndProcessAndUpdateGUI();
   void updateGUI( float echo_delta, float window_avg, float thresh );
   void updateGUIThreshold( float thresh );
+  void gapGUI(); // create a gap in plot
+
 
   Frame* mainFrame;
   sonar_mode mode; // power management, polling, etc.

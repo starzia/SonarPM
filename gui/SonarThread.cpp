@@ -61,6 +61,11 @@ void SonarThread::updateGUI( float echo_delta, float window_avg, float thresh ){
   this->mainFrame->GetEventHandler()->AddPendingEvent( evt );
 }
 
+void SonarThread::gapGUI(){
+  PlotEvent evt = PlotEvent( PLOT_EVENT_GAP );
+  this->mainFrame->GetEventHandler()->AddPendingEvent( evt );
+}
+
 void SonarThread::poll(){
   AudioBuf ping = tone( 1, conf.ping_freq, 0,0 ); // no fade since we loop it 
   cout << "Begin pinging loop at frequency of " <<conf.ping_freq<<"Hz"<<endl;
@@ -138,6 +143,8 @@ void SonarThread::power_management(){
       // sleep monitor
       SysInterface::sleep_monitor();
       long sleep_timestamp = SysInterface::current_time();
+      this->gapGUI();
+
       if( !this->waitUntilActive() ) break; // break if interrupted
       // at this point, OS will have turned on monitor
       
