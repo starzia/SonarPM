@@ -94,13 +94,7 @@ void Frame::nullifyThread(){
 }
 
 void Frame::startSonar( ){
-  // The following lock prevents multiple new threads from starting.
-  // It is released automatically by its destructor.
-  {
-    this->threadLock->Lock();
-    if( this->sThread ) return; // cancel if already started
-    this->threadLock->Unlock();
-  }
+  if( this->sThread ) return; // cancel if already started
 
   // if configuration file does not exist, then prompt for cofiguration
   Config conf;
@@ -113,16 +107,18 @@ void Frame::startSonar( ){
   if( firstTime ){
     this->firstTime();
   }
-  this->SetStatusText(_T("Sonar is started"));
 
+  // The following lock prevents multiple new threads from starting.
   {
     this->threadLock->Lock();
+
     if( this->sThread ){
       this->threadLock->Unlock();
       return; // cancel if already started
     }
 
     // start sonar processing thread
+    this->SetStatusText(_T("Sonar is started"));
     if( this->choiceMode->GetCurrentSelection() == 0 ){
       this->sThread = new SonarThread( this, MODE_POWER_MANAGEMENT );
     }else{
