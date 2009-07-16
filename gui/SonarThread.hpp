@@ -22,21 +22,34 @@ public:
   /** called when the thread exits - whether it terminates normally or is
     * stopped with Delete() (but not when it is Kill()ed!) */
   void OnExit();
+
+  //====================== CONSTANTS =======================================
+  // duration of each recording window
+  static const duration_t WINDOW_LENGTH = (0.5);
+  // number of windows to consider when calculating echo delta
+  static const unsigned int SLIDING_WINDOW = (20);
+
 private:
-  void poll( AudioDev & audio, Config & conf );
-  void power_management( AudioDev & audio, Config & conf );
+  void poll();
+  void power_management();
   // GUI helpers
+  void recordAndProcessAndUpdateGUI();
+  void updateGUI( float echo_delta, float window_avg, float thresh );
   void updateGUIThreshold( float thresh );
-  void updateGUIDelta( float echo_delta );
 
   Frame* mainFrame;
   sonar_mode mode; // power management, polling, etc.
+
+  std::deque<float> windowHistory; // sliding window averages, index 0 is most recent
 
  /** these two functions are similar to those in the SysInterface class, but
   * additionally run TestDestroy() periodically to respond to cancellation
   * @return false iff interrupted by thread cancellation event */
   bool waitUntilIdle();
   bool waitUntilActive();
+
+  AudioDev audio;
+  Config conf;
 };
 
 /** performs a test of the audio system while updating a status window */
@@ -51,8 +64,3 @@ private:
   wxDialog *echoDialog;
   unsigned int rec_dev, play_dev;
 };
-
-/*
-// event types for updating status window
-const wxEventType recordingDoneCommandEvent = wxNewEventType();
- */

@@ -31,7 +31,7 @@ public:
   DECLARE_EVENT_TABLE()
 private:
   // update plot with a new point
-  void addPoint( float p );
+  void addPoint( float echo_delta, float window_avg );
 
   // wait for while freq response thread to stop running
   void threadWait();

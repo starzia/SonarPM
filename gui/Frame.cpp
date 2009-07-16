@@ -7,6 +7,7 @@
 #include "ConfigFrame.hpp"
 #include "CloseConfirmFrame.hpp"
 #include <wx/textdlg.h>
+#include "PlotEvent.hpp"
 using namespace std;
 
 
@@ -51,10 +52,9 @@ Frame::Frame( const wxString & title, int width, int height ) :
   // add sonar Plot
   this->sonarHistory = new PlotPane( panel, wxDefaultPosition,
 				     panel->GetClientSize() );
-  this->sonarHistory->setHistoryLength( 30 );
+  this->sonarHistory->setHistoryLength( PlotPane::HISTORY_WINDOW );
   
   // create sizers for layout
-
   wxBoxSizer* sizer3 = new wxBoxSizer( wxVERTICAL );
   sizer3->Add( new wxStaticText( panel, wxID_ANY, _T("operating mode:")));
   sizer3->Add( this->choiceMode, 1, wxALL | wxEXPAND, 5 );
@@ -230,16 +230,16 @@ void Frame::onSize( wxSizeEvent& event ){
 
 void Frame::onPlotEvent(PlotEvent& event){
   if( event.getType() == PLOT_EVENT_POINT ){
-    this->sonarHistory->addPoint( event.getVal() );
+    this->sonarHistory->addPoint( event.a, event.b );
     
     wxString s;
-    s.Printf( wxT("Last reading: %f"), event.getVal() );
+    s.Printf( wxT("Last reading: %f, avg: %f"), event.a, event.b );
     this->SetStatusText(s);
     
   }else if( event.getType() == PLOT_EVENT_THRESHOLD ){
-    this->sonarHistory->setThreshold( event.getVal() );
+    this->sonarHistory->setThreshold( event.a );
     wxString s;
-    s.Printf( wxT("Threshold updated to: %f"), event.getVal() );
+    s.Printf( wxT("Threshold updated to: %f"), event.a );
     this->SetStatusText(s);
   }
   this->Refresh();
@@ -259,8 +259,8 @@ void Frame::onConfig(wxCommandEvent& event){
   ConfigFrame* conf = new ConfigFrame( this,_T("Configuration") );
   int choice = conf->ShowModal();
   
-  // if user saved new configuration, then restart sonar
-  if( choice == BUTTON_SAVE ){
+  // if user saved new configuration & sonar running, then restart sonar
+  if( choice == BUTTON_SAVE && this->sThread ){
     this->stopSonar();
     this->startSonar();
   }

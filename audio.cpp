@@ -106,6 +106,8 @@ bool AudioRequest::done(){
   return this->progress_index > this->audio.get_num_samples();
 }
 
+
+
 void AudioDev::init(){
   check_error( Pa_Initialize() ); // Initialize PortAudio
 }

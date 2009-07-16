@@ -10,26 +10,25 @@
 using namespace std;
 
 SonarThread::SonarThread( Frame* mf, sonar_mode m ) :
-  wxThread(wxTHREAD_DETACHED), mainFrame( mf ), mode(m){}
+                      wxThread(wxTHREAD_DETACHED), mainFrame( mf ), mode(m){}
 
 void* SonarThread::Entry(){
-  Config conf;
   cerr << "SonarThread entered" <<endl;
-  if( !conf.load( SysInterface::config_dir()+CONFIG_FILENAME ) ){
+  if( !this->conf.load( SysInterface::config_dir()+CONFIG_FILENAME ) ){
    cerr << "fatal error: could not load config file" <<endl;
    return 0;
   }
-  AudioDev my_audio = AudioDev( conf.rec_dev, conf.play_dev );
+  this->audio = AudioDev( conf.rec_dev, conf.play_dev );
 
   switch( this->mode ){
     case MODE_POWER_MANAGEMENT:
-      this->power_management( my_audio, conf );
+      this->power_management();
       break;
     case MODE_POLLING:
-      this->poll( my_audio, conf );
+      this->poll();
       break;
     case MODE_FREQ_RESPONSE:
-      log_freq_response( my_audio );
+      log_freq_response( this->audio);
       break;
     case MODE_ECHO_TEST:
     default:
@@ -51,30 +50,34 @@ void SonarThread::updateGUIThreshold( float thresh ){
   cerr << "setting threshold to "<<thresh<<endl;
   // update gui
   PlotEvent evt = PlotEvent( PLOT_EVENT_THRESHOLD );
-  evt.setVal( thresh );
+  evt.setVal( thresh, 0, 0 ); // last vals will be ignored
   this->mainFrame->GetEventHandler()->AddPendingEvent( evt );
 }
 
-void SonarThread::updateGUIDelta( float echo_delta ){
+void SonarThread::updateGUI( float echo_delta, float window_avg, float thresh ){
   // update gui
   PlotEvent evt = PlotEvent( PLOT_EVENT_POINT );
-  evt.setVal( echo_delta );
+  evt.setVal( echo_delta, window_avg, thresh );
   this->mainFrame->GetEventHandler()->AddPendingEvent( evt );
 }
 
-void SonarThread::poll( AudioDev & audio, Config & conf ){
+void SonarThread::poll(){
   AudioBuf ping = tone( 1, conf.ping_freq, 0,0 ); // no fade since we loop it 
   cout << "Begin pinging loop at frequency of " <<conf.ping_freq<<"Hz"<<endl;
   PaStream* strm = audio.nonblocking_play_loop( ping );
 
   // test to see whether we should die
   while( !this->TestDestroy() ){
-    AudioBuf rec = audio.blocking_record( RECORDING_PERIOD );
+    this->recordAndProcessAndUpdateGUI();
+/*
+      AudioBuf rec = audio.blocking_record( SonarThread::WINDOW_LENGTH *
+                                          SonarThread::SLIDING_WINDOW );
     if( this->TestDestroy() ) break;
     Statistics st = measure_stats( rec, conf.ping_freq );
     cout << st << endl;
 
-    updateGUIDelta( FEATURE(st) );
+    updateGUI( FEATURE(st), 0, 0 );
+ */
   }
 
   // clean up portaudio so that we can use it again later.
@@ -83,12 +86,17 @@ void SonarThread::poll( AudioDev & audio, Config & conf ){
 }
 
 
-void SonarThread::power_management( AudioDev & audio, Config & conf ){
+void SonarThread::power_management(){
   //-- INITIAL THRESHOLD SETTING
   // ignore previously saved threshold and recalibrate each time
   conf.threshold = 0;
   if( conf.threshold <= 0 ){ // initially threshold will be set to zero
-    conf.choose_ping_threshold( audio, conf.ping_freq ); // set threshold.
+    AudioBuf blip = tone(SonarThread::WINDOW_LENGTH*SonarThread::SLIDING_WINDOW,
+                         conf.ping_freq );
+    AudioBuf rec = audio.recordback( blip );
+    Statistics blip_s = measure_stats( rec, conf.ping_freq );
+    cout << "chose preliminary threshold of "<<FEATURE(blip_s)<<endl<<endl;
+    conf.threshold = ( FEATURE(blip_s) )/2;
     ///conf.write_config_file(); // save new threshold
   }
   updateGUIThreshold( conf.threshold );
@@ -121,16 +129,11 @@ void SonarThread::power_management( AudioDev & audio, Config & conf ){
       updateGUIThreshold( conf.threshold );
     }
 
-    // record and process
-    AudioBuf rec = audio.blocking_record( RECORDING_PERIOD );
+    this->recordAndProcessAndUpdateGUI();
     AudioDev::check_error( Pa_StopStream( strm ) ); // stop ping
-    Statistics s = measure_stats( rec, conf.ping_freq );
-    cout << s << endl;
-    SysInterface::log( s );
-    updateGUIDelta( FEATURE(s) );
 
     // if sonar reading below thresh. and user is still idle ...
-    if( FEATURE(s) < conf.threshold
+    if( this->windowHistory[0] < conf.threshold
 	&& SysInterface::idle_seconds() > IDLE_THRESH ){
       // sleep monitor
       SysInterface::sleep_monitor();
@@ -160,6 +163,30 @@ void SonarThread::power_management( AudioDev & audio, Config & conf ){
   SysInterface::log( "interrupted" );
   // clean up portaudio so that we can use it again later.
   audio.check_error( Pa_CloseStream( strm ) );
+}
+
+void SonarThread::recordAndProcessAndUpdateGUI(){
+  // record and process
+  AudioBuf rec = audio.blocking_record( WINDOW_LENGTH );
+  Statistics s = measure_stats( rec, conf.ping_freq );
+  cout << s << endl;
+  ///SysInterface::log( s );
+
+  // update sliding window and GUI
+  unsigned int n = this->windowHistory.size();
+  float window_avg;
+  if( n == 0 ){
+    window_avg = FEATURE(s);
+  }else if( n < SonarThread::SLIDING_WINDOW ){
+    window_avg = ( (n-1) * this->windowHistory[0] + FEATURE(s) ) / n;
+  }else{
+    window_avg = ( n * this->windowHistory[0] +
+                   FEATURE(s) - this->windowHistory[n-1] ) / n;
+    this->windowHistory.pop_back();
+  }
+  this->windowHistory.push_front( window_avg );
+  updateGUI( FEATURE(s), window_avg, conf.threshold );
+  cerr << "window_avg (over "<<n<<"): " << window_avg <<endl;
 }
 
 bool SonarThread::waitUntilIdle(){
