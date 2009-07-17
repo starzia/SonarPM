@@ -39,6 +39,7 @@ void* SonarThread::Entry(){
 }
 
 void SonarThread::OnExit(){
+  this->reset(); // create gap in plot
   this->mainFrame->nullifyThread(); // clear parent's pointer to this thread
   cerr << "SonarThread exited" <<endl;
   if( this->mode == MODE_POWER_MANAGEMENT ){
@@ -61,9 +62,13 @@ void SonarThread::updateGUI( float echo_delta, float window_avg, float thresh ){
   this->mainFrame->GetEventHandler()->AddPendingEvent( evt );
 }
 
-void SonarThread::gapGUI(){
+void SonarThread::reset(){
+  // create gap in plot
   PlotEvent evt = PlotEvent( PLOT_EVENT_GAP );
   this->mainFrame->GetEventHandler()->AddPendingEvent( evt );
+
+  // clear sonar window
+  this->windowHistory.resize( 0,0 );
 }
 
 void SonarThread::poll(){
@@ -74,15 +79,6 @@ void SonarThread::poll(){
   // test to see whether we should die
   while( !this->TestDestroy() ){
     this->recordAndProcessAndUpdateGUI();
-/*
-      AudioBuf rec = audio.blocking_record( SonarThread::WINDOW_LENGTH *
-                                          SonarThread::SLIDING_WINDOW );
-    if( this->TestDestroy() ) break;
-    Statistics st = measure_stats( rec, conf.ping_freq );
-    cout << st << endl;
-
-    updateGUI( FEATURE(st), 0, 0 );
- */
   }
 
   // clean up portaudio so that we can use it again later.
@@ -138,12 +134,15 @@ void SonarThread::power_management(){
     AudioDev::check_error( Pa_StopStream( strm ) ); // stop ping
 
     // if sonar reading below thresh. and user is still idle ...
-    if( this->windowHistory[0] < conf.threshold
-	&& SysInterface::idle_seconds() > IDLE_THRESH ){
+    //   and we have a full window of data.
+    if( this->windowAvg < conf.threshold
+	&& SysInterface::idle_seconds() > IDLE_THRESH
+        && this->windowHistory.size() >= SonarThread::SLIDING_WINDOW ){
       // sleep monitor
       SysInterface::sleep_monitor();
       long sleep_timestamp = SysInterface::current_time();
-      this->gapGUI();
+
+      this->reset();
 
       if( !this->waitUntilActive() ) break; // break if interrupted
       // at this point, OS will have turned on monitor
@@ -181,19 +180,23 @@ void SonarThread::recordAndProcessAndUpdateGUI(){
 
   // update sliding window and GUI
   unsigned int n = this->windowHistory.size();
-  float window_avg;
-  if( n == 0 ){
-    window_avg = FEATURE(s);
-  }else if( n < SonarThread::SLIDING_WINDOW ){
-    window_avg = ( (n-1) * this->windowHistory[0] + FEATURE(s) ) / n;
+  this->windowHistory.push_front( FEATURE(s) );
+  this->windowAvg = 0;
+
+  int i;
+  for( i=0; i<n; i++ ) windowAvg += windowHistory[i];
+  windowAvg /= n;
+
+  cerr << "window_avg (over "<<n<<"): " << windowAvg <<endl;
+
+  // if window is incomplete, do not draw avg.
+  if ( n < SonarThread::SLIDING_WINDOW ){
+    windowAvg = 0.0/0.0;
   }else{
-    window_avg = ( n * this->windowHistory[0] +
-                   FEATURE(s) - this->windowHistory[n-1] ) / n;
-    this->windowHistory.pop_back();
+    windowHistory.pop_back();
   }
-  this->windowHistory.push_front( window_avg );
-  updateGUI( FEATURE(s), window_avg, conf.threshold );
-  cerr << "window_avg (over "<<n<<"): " << window_avg <<endl;
+  
+  updateGUI( FEATURE(s), windowAvg, conf.threshold );
 }
 
 bool SonarThread::waitUntilIdle(){

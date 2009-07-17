@@ -27,7 +27,7 @@ public:
   // duration of each recording window
   static const duration_t WINDOW_LENGTH = (0.5);
   // number of windows to consider when calculating echo delta
-  static const unsigned int SLIDING_WINDOW = (20);
+  static const unsigned int SLIDING_WINDOW = (10);
 
 private:
   void poll();
@@ -36,14 +36,16 @@ private:
   void recordAndProcessAndUpdateGUI();
   void updateGUI( float echo_delta, float window_avg, float thresh );
   void updateGUIThreshold( float thresh );
-  void gapGUI(); // create a gap in plot
+  void reset(); // create a gap in plot and clears sonar history window
 
 
   Frame* mainFrame;
   sonar_mode mode; // power management, polling, etc.
 
-  std::deque<float> windowHistory; // sliding window averages, index 0 is most recent
-
+  /** sliding window of sonar readings, index 0 is most recent */
+  std::deque<float> windowHistory;
+  float windowAvg; // average of window
+  
  /** these two functions are similar to those in the SysInterface class, but
   * additionally run TestDestroy() periodically to respond to cancellation
   * @return false iff interrupted by thread cancellation event */
