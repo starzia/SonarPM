@@ -230,19 +230,18 @@ void Frame::onSize( wxSizeEvent& event ){
 
 void Frame::onPlotEvent(PlotEvent& event){
   if( event.getType() == PLOT_EVENT_POINT ){
-    this->sonarHistory->addPoint( event.a, event.b );
+    this->sonarHistory->addPoint( event.a, event.b, event.c );
     
     wxString s;
     s.Printf( wxT("Last reading: %f, avg: %f"), event.a, event.b );
     this->SetStatusText(s);
     
   }else if( event.getType() == PLOT_EVENT_THRESHOLD ){
-    this->sonarHistory->setThreshold( event.a );
     wxString s;
     s.Printf( wxT("Threshold updated to: %f"), event.a );
     this->SetStatusText(s);
   }else if( event.getType() == PLOT_EVENT_GAP ){
-    this->sonarHistory->addPoint( 0.0/0.0, 0.0/0.0 ); //NaN
+    this->sonarHistory->addPoint( 0.0/0.0, 0.0/0.0, 0.0/0.0 ); //NaN
   }
   this->Refresh();
   this->Update();

@@ -9,7 +9,7 @@ EVT_PAINT( PlotPane::paintEvent )
 END_EVENT_TABLE()
 
 PlotPane::PlotPane( wxWindow* parent, wxPoint pos, wxSize size ) :
-wxPanel(parent, wxID_ANY, pos, size ), threshold(0) {}
+wxPanel(parent, wxID_ANY, pos, size ){}
 
 void PlotPane::paintEvent(wxPaintEvent & evt){
   wxPaintDC dc(this);
@@ -37,7 +37,6 @@ void PlotPane::render(wxDC&  dc){
     if( window_history[i] > max ) max = window_history[i];
   }
   if( min > 0 ) min = 0; // force min to be zero.
-  if( max < this->threshold ) max = this->threshold; //thresh is always visible
 
   this->drawLinePlot( dc, sonar_history, wxColor(200,200,255), 1, min, max );
   this->drawLinePlot( dc, thresh_history, wxColor(255,0,0), 2, min, max );
@@ -65,24 +64,19 @@ void PlotPane::drawLinePlot( wxDC& dc, std::deque<float>& values,
 
 void PlotPane::setHistoryLength( unsigned int l ){
   unsigned int currentLength = this->sonar_history.size();
-  this->sonar_history.resize( l, 0 ); // make new entries 0
-  this->window_history.resize( l, 0 ); // make new entries 0
-  this->thresh_history.resize( l, 0 ); // make new entries 0
+  this->sonar_history.resize( l, 0.0/0.0 ); // make new entries NaN
+  this->window_history.resize( l, 0.0/0.0 );
+  this->thresh_history.resize( l, 0.0/0.0 );
 }
 
 // add a new value to the plot and push off the oldest value
-void PlotPane::addPoint( float sonar, float window_avg ){
+void PlotPane::addPoint( float sonar, float window_avg, float thresh ){
   this->sonar_history.push_front( sonar );
   this->sonar_history.pop_back();
-  this->thresh_history.push_front(this->threshold);
+  this->thresh_history.push_front(thresh);
   this->thresh_history.pop_back();
   this->window_history.push_front( window_avg );
   this->window_history.pop_back();
 
-  this->paintNow();
-}
-
-void PlotPane::setThreshold( float t ){
-  this->threshold = t;
   this->paintNow();
 }

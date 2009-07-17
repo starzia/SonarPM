@@ -63,12 +63,15 @@ void SonarThread::updateGUI( float echo_delta, float window_avg, float thresh ){
 }
 
 void SonarThread::reset(){
-  // create gap in plot
-  PlotEvent evt = PlotEvent( PLOT_EVENT_GAP );
-  this->mainFrame->GetEventHandler()->AddPendingEvent( evt );
+  // check that we are not already in gap
+  if( this->windowHistory.size() > 0 ){
+    // create gap in plot
+    PlotEvent evt = PlotEvent( PLOT_EVENT_GAP );
+    this->mainFrame->GetEventHandler()->AddPendingEvent( evt );
 
-  // clear sonar window
-  this->windowHistory.resize( 0,0 );
+    // clear sonar window
+    this->windowHistory.resize( 0,0 );
+  }
 }
 
 void SonarThread::poll(){
@@ -88,24 +91,12 @@ void SonarThread::poll(){
 
 
 void SonarThread::power_management(){
-  //-- INITIAL THRESHOLD SETTING
   // ignore previously saved threshold and recalibrate each time
-  conf.threshold = 0;
-  if( conf.threshold <= 0 ){ // initially threshold will be set to zero
-    AudioBuf blip = tone(SonarThread::WINDOW_LENGTH*SonarThread::SLIDING_WINDOW,
-                         conf.ping_freq );
-    AudioBuf rec = audio.recordback( blip );
-    Statistics blip_s = measure_stats( rec, conf.ping_freq );
-    cout << "chose preliminary threshold of "<<FEATURE(blip_s)<<endl<<endl;
-    conf.threshold = ( FEATURE(blip_s) )/2;
-    ///conf.write_config_file(); // save new threshold
-  }
-  updateGUIThreshold( conf.threshold );
+  conf.threshold = 0.0/0.0;
 
-
-  // buffer duration is one second, but actually it just needs to be a multiple
+  // buffer duration is 100ms, but actually it just needs to be a multiple
   // of the ping_period.
-  AudioBuf ping = tone( 1, conf.ping_freq, 0,0 ); // no fade since we loop it
+  AudioBuf ping = tone( 0.1, conf.ping_freq, 0,0 ); // no fade since we loop it
   cout << "Begin power management loop at frequency of " 
        <<conf.ping_freq<<"Hz"<<endl;
   PaStream* strm;
@@ -116,9 +107,16 @@ void SonarThread::power_management(){
 
   // test to see whether we should die
   while( !this->TestDestroy() ){
-    if( !this->waitUntilIdle() ) break; // break if interrupted
-    AudioDev::check_error( Pa_StartStream( strm ) ); // resume ping
+    // Pause so that we don't poll idle_seconds() constantly
+    SysInterface::sleep( SonarThread::SLEEP_LENGTH );
 
+    // If active, reset window
+    if( SysInterface::idle_seconds() < SonarThread::IDLE_TIME ){
+      this->reset();
+      continue;
+    }
+
+    /*
     //-- THRESHOLD RAISING
     if( SysInterface::idle_seconds() > IDLE_SAFETYNET ){
       // if we've been tring to detect use for too long, then this probably
@@ -129,21 +127,31 @@ void SonarThread::power_management(){
       ///conf.write_config_file(); // config save changes
       updateGUIThreshold( conf.threshold );
     }
+     */
 
+    // run sonar
+    AudioDev::check_error( Pa_StartStream( strm ) ); // resume ping
     this->recordAndProcessAndUpdateGUI();
     AudioDev::check_error( Pa_StopStream( strm ) ); // stop ping
+
+    // check to see that threshold has been set. If not, set it to half of
+    // current, assuming that program has just been launched so user is present.
+    if( !(conf.threshold > 0) && // initially threshold will be set to zero or NaN
+        this->windowAvg > 0 ){
+      conf.threshold = this->windowAvg / 2;
+      cout << "set threshold to " << conf.threshold <<endl;
+      updateGUIThreshold( conf.threshold );
+    }
 
     // if sonar reading below thresh. and user is still idle ...
     //   and we have a full window of data.
     if( this->windowAvg < conf.threshold
-	&& SysInterface::idle_seconds() > IDLE_THRESH
-        && this->windowHistory.size() >= SonarThread::SLIDING_WINDOW ){
+	&& SysInterface::idle_seconds() > SonarThread::IDLE_TIME ){
       // sleep monitor
       SysInterface::sleep_monitor();
       long sleep_timestamp = SysInterface::current_time();
 
       this->reset();
-
       if( !this->waitUntilActive() ) break; // break if interrupted
       // at this point, OS will have turned on monitor
       
@@ -179,8 +187,8 @@ void SonarThread::recordAndProcessAndUpdateGUI(){
   ///SysInterface::log( s );
 
   // update sliding window and GUI
-  unsigned int n = this->windowHistory.size();
   this->windowHistory.push_front( FEATURE(s) );
+  unsigned int n = this->windowHistory.size();
   this->windowAvg = 0;
 
   int i;

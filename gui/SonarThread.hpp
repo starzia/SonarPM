@@ -28,6 +28,9 @@ public:
   static const duration_t WINDOW_LENGTH = (0.5);
   // number of windows to consider when calculating echo delta
   static const unsigned int SLIDING_WINDOW = (10);
+  // if there was input activit within IDLE_TIME, don't run sonar
+  static const duration_t IDLE_TIME = (1);
+  static const duration_t SLEEP_LENGTH = (0.2);
 
 private:
   void poll();

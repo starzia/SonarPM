@@ -10,11 +10,9 @@ public:
   // set x axis length of plot
   void setHistoryLength( unsigned int l );
   // add a new value to the plot and push off the oldest value
-  void addPoint( float sonar, float window_avg );
-  // change threshold line height;
-  void setThreshold( float t );
+  void addPoint( float sonar, float window_avg, float threshold );
 
-  static const unsigned int HISTORY_WINDOW=60; // default xyange of plot
+  static const unsigned int HISTORY_WINDOW=100; // default xyange of plot
 
   DECLARE_EVENT_TABLE()
   
@@ -28,5 +26,4 @@ private:
   std::deque<float> sonar_history; // sonar readings
   std::deque<float> window_history; // sliding window averages
   std::deque<float> thresh_history; // threshold history
-  float threshold; // horizontal line to be plotted
 };
