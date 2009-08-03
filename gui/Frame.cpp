@@ -10,6 +10,11 @@
 #include "PlotEvent.hpp"
 using namespace std;
 
+#define ASSERT( b ) if( !(b) ){ std::cerr<<"ERROR: Assertion "<<#b<<" violated, "<<__FILE__<<':'<<__LINE__<<std::endl; }
+#define LOCK() std::cerr << "Locking at line " << __LINE__ <<"..."; \
+               wxMutexLocker locker( this->threadLock ); \
+               std::cerr << "acquired" <<std::endl; \
+               ASSERT( locker.IsOk() );
 
 BEGIN_EVENT_TABLE( Frame, wxFrame )
 ///EVT_MENU    (wxID_EXIT, Frame::OnExit)
@@ -27,11 +32,9 @@ Frame::Frame( const wxString & title, int width, int height ) :
   wxFrame( (wxFrame*)NULL,-1,title,wxDefaultPosition,wxSize(width,height),
 	   wxFRAME_NO_TASKBAR | wxSYSTEM_MENU | wxCAPTION 
 	   | wxCLOSE_BOX | wxCLIP_CHILDREN | wxMINIMIZE_BOX //| wxRESIZE_BORDER
-	   | wxFULL_REPAINT_ON_RESIZE ), sThread(NULL)
-{
-  // init lock
-  this->threadLock = new wxMutex();
-  
+	   | wxFULL_REPAINT_ON_RESIZE ), 
+  sThread(NULL), threadLock(wxMUTEX_DEFAULT)
+{ 
   // add controls
   this->CreateStatusBar();
   this->SetStatusText(_T("Sonar is stopped"));
@@ -87,9 +90,8 @@ Frame::~Frame(){
 }
 
 void Frame::nullifyThread(){
-  this->threadLock->Lock();
+  LOCK();
   this->sThread = NULL;
-  this->threadLock->Unlock();
 }
 
 void Frame::startSonar( ){
@@ -109,10 +111,9 @@ void Frame::startSonar( ){
 
   // The following lock prevents multiple new threads from starting.
   {
-    this->threadLock->Lock();
+    LOCK();
 
     if( this->sThread ){
-      this->threadLock->Unlock();
       return; // cancel if already started
     }
 
@@ -128,20 +129,24 @@ void Frame::startSonar( ){
       this->sThread->Run( );
       this->buttonPause->SetLabel( _T( "pause" ) );
     }
-    this->threadLock->Unlock();
   }
 }
 
 void Frame::stopSonar(){
+  bool success;
+    
   // stop sonar processing thread
-  this->threadLock->Lock();
-  if( this->sThread ){ // stop only if started
-    if( this->sThread->Delete() == wxTHREAD_NO_ERROR ){
-      this->buttonPause->SetLabel( _T( "continue" ) );
-      this->SetStatusText(_T("Sonar is stopped"));
+  {
+    LOCK();
+    if( this->sThread ){ // stop only if started
+     success = ( this->sThread->Delete() == wxTHREAD_NO_ERROR );
     }
   }
-  this->threadLock->Unlock();
+  // update gui controls
+  if( success ){
+    this->buttonPause->SetLabel( _T( "continue" ) );
+    this->SetStatusText(_T("Sonar is stopped"));
+  }
 }
 
 void Frame::threadWait(){
@@ -149,9 +154,8 @@ void Frame::threadWait(){
   while( !ready ){
     SysInterface::sleep( 0.5 );
     wxSafeYield(); // let the GUI update
-    this->threadLock->Lock();
+    LOCK();
     if( !this->sThread ) ready = true;
-    this->threadLock->Unlock();
   }
 }
 
@@ -179,14 +183,16 @@ void Frame::firstTime(){
          "it may shut off your display when you are actually present.  "
        "If this happens, simply wake up the display by moving the mouse.  "),
     _T("Calibration"), wxOK, this );
-  this->threadLock->Lock();
-  if( !this->sThread ){
-    this->sThread = new SonarThread( this, MODE_FREQ_RESPONSE );
-    if( this->sThread->Create() == wxTHREAD_NO_ERROR ){
-      this->sThread->Run();
+
+  {
+    LOCK();
+    if( !this->sThread ){
+      this->sThread = new SonarThread( this, MODE_FREQ_RESPONSE );
+      if( this->sThread->Create() == wxTHREAD_NO_ERROR ){
+        this->sThread->Run();
+      }
     }
   }
-  this->threadLock->Unlock();
 
   // wait for freq_response thread to complete.
   this->SetStatusText(_T("Measuring frequency response... Please wait."));

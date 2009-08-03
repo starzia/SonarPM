@@ -36,9 +36,10 @@ sonar_gui.exe: ${W32_OBJS} gui/gui.A
 
 # the following target lets me see STDOUT and STDERR in windows
 sonar_gui_debug.exe: ${W32_OBJS} gui/gui.A
-	/usr/bin/i686-pc-mingw32-c++ -o sonar_gui.exe \
- audio.O dsp.O sonar.O gui/App.O gui/Frame.O gui/TaskBarIcon.O gui/PlotPane.O gui/SonarThread.O gui/PlotEvent.O gui/ConfigFrame.O gui/CloseConfirmFrame.O \
- libportaudio.a -lm -lwinmm -lwininet -L/usr/local/wx-2.8.10-mingw32/lib  -mthreads  -Wl,--subsystem,windows -mwindows /usr/local/wx-2.8.10-mingw32/lib/libwx_msw_richtext-2.8.a /usr/local/wx-2.8.10-mingw32/lib/libwx_msw_aui-2.8.a /usr/local/wx-2.8.10-mingw32/lib/libwx_msw_xrc-2.8.a /usr/local/wx-2.8.10-mingw32/lib/libwx_msw_qa-2.8.a /usr/local/wx-2.8.10-mingw32/lib/libwx_msw_html-2.8.a /usr/local/wx-2.8.10-mingw32/lib/libwx_msw_adv-2.8.a /usr/local/wx-2.8.10-mingw32/lib/libwx_msw_core-2.8.a /usr/local/wx-2.8.10-mingw32/lib/libwx_base_xml-2.8.a /usr/local/wx-2.8.10-mingw32/lib/libwx_base_net-2.8.a /usr/local/wx-2.8.10-mingw32/lib/libwx_base-2.8.a -lwxregex-2.8 -lwxexpat-2.8 -lwxtiff-2.8 -lwxjpeg-2.8 -lwxpng-2.8 -lwxzlib-2.8 -lrpcrt4 -loleaut32 -lole32 -luuid -lwinspool -lwinmm -lshell32 -lcomctl32 -lcomdlg32 -lctl3d32 -ladvapi32 -lwsock32 -lgdi32
+	/usr/bin/i686-pc-mingw32-c++ -o $@ ${W32_OBJS} \
+          $(addprefix gui/, $(shell $(AR) -t gui/gui.A)) \
+ libportaudio.a -lm -lwinmm -lwininet -L/usr/local/wx-2.8.10-mingw32/lib  -mthreads /usr/local/wx-2.8.10-mingw32/lib/libwx_msw_richtext-2.8.a /usr/local/wx-2.8.10-mingw32/lib/libwx_msw_aui-2.8.a /usr/local/wx-2.8.10-mingw32/lib/libwx_msw_xrc-2.8.a /usr/local/wx-2.8.10-mingw32/lib/libwx_msw_qa-2.8.a /usr/local/wx-2.8.10-mingw32/lib/libwx_msw_html-2.8.a /usr/local/wx-2.8.10-mingw32/lib/libwx_msw_adv-2.8.a /usr/local/wx-2.8.10-mingw32/lib/libwx_msw_core-2.8.a /usr/local/wx-2.8.10-mingw32/lib/libwx_base_xml-2.8.a /usr/local/wx-2.8.10-mingw32/lib/libwx_base_net-2.8.a /usr/local/wx-2.8.10-mingw32/lib/libwx_base-2.8.a -lwxregex-2.8 -lwxexpat-2.8 -lwxtiff-2.8 -lwxjpeg-2.8 -lwxpng-2.8 -lwxzlib-2.8 -lrpcrt4 -loleaut32 -lole32 -luuid -lwinspool -lwinmm -lshell32 -lcomctl32 -lcomdlg32 -lctl3d32 -ladvapi32 -lwsock32 -lgdi32
+	$(STRIP) $@
 
 ############################## COMPILING #################################
 

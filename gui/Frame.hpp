@@ -33,7 +33,7 @@ private:
   // update plot with a new point
   void addPoint( float echo_delta, float window_avg );
 
-  // wait for while freq response thread to stop running
+  // wait for sonar thread to stop running
   void threadWait();
 
   // controls
@@ -44,7 +44,7 @@ private:
 
   TaskBarIcon* tbIcon;
   PlotPane* sonarHistory;
-  wxMutex* threadLock; // to protect access to thread pointer
+  wxMutex threadLock; // to protect access to thread pointer
 };
 
 
