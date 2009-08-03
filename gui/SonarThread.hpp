@@ -6,6 +6,15 @@
 #include "../dsp.hpp"
 #include "../audio.hpp"
 
+#define ASSERT( b ) if( !(b) ){ std::cerr<<"ERROR: Assertion "<<#b<<" violated, "<<__FILE__<<':'<<__LINE__<<std::endl; }
+/*
+#define LOCK( l ) std::cerr << "Locking at " <<__FILE__<<':'<< __LINE__ <<"..."; \
+                  wxMutexLocker locker( l ); \
+                  std::cerr << "acquired" <<std::endl; \
+                  ASSERT( locker.IsOk() );
+*/
+#define LOCK( l ) wxMutexLocker locker( l );
+
 typedef enum {
   MODE_POWER_MANAGEMENT,
   MODE_POLLING,

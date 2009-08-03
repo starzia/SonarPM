@@ -40,7 +40,6 @@ void* SonarThread::Entry(){
 
 void SonarThread::OnExit(){
   this->reset(); // create gap in plot
-  this->mainFrame->nullifyThread(); // clear parent's pointer to this thread
   cerr << "SonarThread exited" <<endl;
   if( this->mode == MODE_POWER_MANAGEMENT ){
       SysInterface::log( "quit" );

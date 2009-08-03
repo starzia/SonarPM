@@ -10,11 +10,6 @@
 #include "PlotEvent.hpp"
 using namespace std;
 
-#define ASSERT( b ) if( !(b) ){ std::cerr<<"ERROR: Assertion "<<#b<<" violated, "<<__FILE__<<':'<<__LINE__<<std::endl; }
-#define LOCK() std::cerr << "Locking at line " << __LINE__ <<"..."; \
-               wxMutexLocker locker( this->threadLock ); \
-               std::cerr << "acquired" <<std::endl; \
-               ASSERT( locker.IsOk() );
 
 BEGIN_EVENT_TABLE( Frame, wxFrame )
 ///EVT_MENU    (wxID_EXIT, Frame::OnExit)
@@ -89,11 +84,6 @@ Frame::~Frame(){
   delete this->tbIcon;
 }
 
-void Frame::nullifyThread(){
-  LOCK();
-  this->sThread = NULL;
-}
-
 void Frame::startSonar( ){
   if( this->sThread ) return; // cancel if already started
 
@@ -111,7 +101,7 @@ void Frame::startSonar( ){
 
   // The following lock prevents multiple new threads from starting.
   {
-    LOCK();
+    LOCK( this->threadLock );
 
     if( this->sThread ){
       return; // cancel if already started
@@ -132,20 +122,19 @@ void Frame::startSonar( ){
   }
 }
 
-void Frame::stopSonar(){
-  bool success;
-    
+void Frame::stopSonar(){   
   // stop sonar processing thread
-  {
-    LOCK();
-    if( this->sThread ){ // stop only if started
-     success = ( this->sThread->Delete() == wxTHREAD_NO_ERROR );
+  LOCK( this->threadLock );
+  if( this->sThread ){ // stop only if started
+    if( this->sThread->Delete() == wxTHREAD_NO_ERROR ){
+      // note that previously we were nullifying in the thread's OnExit.
+      // However, this was causing locking problems in Windows.
+      this->sThread = NULL;
+
+      // update gui controls
+      this->buttonPause->SetLabel( _T( "continue" ) );
+      this->SetStatusText(_T("Sonar is stopped"));
     }
-  }
-  // update gui controls
-  if( success ){
-    this->buttonPause->SetLabel( _T( "continue" ) );
-    this->SetStatusText(_T("Sonar is stopped"));
   }
 }
 
@@ -154,7 +143,7 @@ void Frame::threadWait(){
   while( !ready ){
     SysInterface::sleep( 0.5 );
     wxSafeYield(); // let the GUI update
-    LOCK();
+    LOCK( this->threadLock );
     if( !this->sThread ) ready = true;
   }
 }
@@ -185,7 +174,7 @@ void Frame::firstTime(){
     _T("Calibration"), wxOK, this );
 
   {
-    LOCK();
+    LOCK( this->threadLock );
     if( !this->sThread ){
       this->sThread = new SonarThread( this, MODE_FREQ_RESPONSE );
       if( this->sThread->Create() == wxTHREAD_NO_ERROR ){

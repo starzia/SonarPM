@@ -19,7 +19,6 @@ public:
 
   void onPlotEvent(PlotEvent& event);
   void onPause( wxCommandEvent& event );
-  void nullifyThread();
 
   void startSonar();
   void stopSonar();
