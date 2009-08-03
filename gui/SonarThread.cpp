@@ -75,7 +75,9 @@ void SonarThread::reset(){
 }
 
 void SonarThread::poll(){
-  AudioBuf ping = tone( 1, conf.ping_freq, 0,0 ); // no fade since we loop it 
+  this->conf.threshold = (0.0/0.0); // blank threshold, so it won't be drawn
+
+  AudioBuf ping = tone( 1, conf.ping_freq, 0,0 ); // no fade since we loop it
   cout << "Begin pinging loop at frequency of " <<conf.ping_freq<<"Hz"<<endl;
   PaStream* strm = audio.nonblocking_play_loop( ping );
 

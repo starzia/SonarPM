@@ -45,7 +45,7 @@ Frame::Frame( const wxString & title, int width, int height ) :
   this->choiceMode->SetSelection( 0 ); // power management by default
   this->buttonConfig = new wxButton( panel, BUTTON_CONFIG, _T("configure"),
 				     wxDefaultPosition, wxDefaultSize );
-  
+
   // add taskbar icon
   this->tbIcon = new TaskBarIcon( this );
 
@@ -82,9 +82,8 @@ Frame::Frame( const wxString & title, int width, int height ) :
 }
 
 Frame::~Frame(){
-  // TODO: this is a hack.  app should exit automatically when toplevelwindow is
-  // closed.  However, in windows it was not.
-  ///wxTheApp->ExitMainLoop();
+  // Under windows, if we don't do the following, process will never exit!
+  delete this->tbIcon;
 }
 
 void Frame::nullifyThread(){
