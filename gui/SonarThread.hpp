@@ -37,13 +37,22 @@ public:
   static const duration_t WINDOW_LENGTH = (0.5);
   // number of windows to consider when calculating echo delta
   static const unsigned int SLIDING_WINDOW = (10);
-  // if there was input activit within IDLE_TIME, don't run sonar
+  // if there was input activity within IDLE_TIME, don't run sonar
   static const duration_t IDLE_TIME = (1);
   static const duration_t SLEEP_LENGTH = (0.2);
+  // if there is input activity within this window of a sleep, then call it a
+  // false negative
+  static const duration_t FALSE_NEG = (5);
+  // how rapidly does dynamic threshold move
+  static const float dynamicThreshFactor = 0.8;
+  // time between phone home events
+  static const duration_t PHONEHOME_INTERVAL = (3600); // one hour
+  static const duration_t RECALIBRATION_INTERVAL = (3600);
 
 private:
   void poll();
   void power_management();
+
   // GUI helpers
   void recordAndProcessAndUpdateGUI();
   void updateGUI( float echo_delta, float window_avg, float thresh );
@@ -57,8 +66,22 @@ private:
   /** sliding window of sonar readings, index 0 is most recent */
   std::deque<float> windowHistory;
   float windowAvg; // average of window
-  
- /** these two functions are similar to those in the SysInterface class, but
+
+  /** sets the screen blanking threshold (this->conf.threshold).
+   * @return true if successful false if interrupted by thread cancellation */
+  bool updateThreshold();
+
+  /** runs any pending period tasks such as phone home or recalibration
+   * @param start_time is when the thread started
+   * @return true if successful false if interrupted by thread cancellation */
+  bool scheduler( long start_time );
+
+  /* various events are triggered periodically */
+  long lastPhoneHome;
+  long lastCalibration;
+  ///long lastSleep;
+
+  /** these two functions are similar to those in the SysInterface class, but
   * additionally run TestDestroy() periodically to respond to cancellation
   * @return false iff interrupted by thread cancellation event */
   bool waitUntilIdle();
