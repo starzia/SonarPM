@@ -265,3 +265,25 @@ void Frame::onModeSwitch( wxCommandEvent& event ){
   // if sonar is running, stop it so that new operating mode can be used.
   this->stopSonar();
 }
+
+#ifdef PLATFORM_WINDOWS
+WXLRESULT Frame::MSWWindowProc( WXUINT message,
+                                WXWPARAM wParam, WXLPARAM lParam ){
+  if( message == WM_POWERBROADCAST ){
+    if( wParam == PBT_APMRESUMEAUTOMATIC ){
+      SysInterface::log( "resume" );
+    }else if( wParam == PBT_APMSUSPEND ){
+      SysInterface::log( "suspend" );
+    }else if( wParam == PBT_APMPOWERSTATUSCHANGE ){
+      SYSTEM_POWER_STATUS status;
+      GetSystemPowerStatus( &status );
+      if( status.ACLineStatus == 0 ){
+        SysInterface::log( "battery" );
+      }else if( status.ACLineStatus == 1 ){
+        SysInterface::log( "AC" );
+      }
+    }
+  }
+  else this->MSWWindowProc( message, wParam, lParam );
+}
+#endif

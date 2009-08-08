@@ -11,6 +11,12 @@ class Frame : public wxFrame
 public:
   Frame( const wxString & title, int width, int height );
   ~Frame();
+
+#ifdef PLATFORM_WINDOWS
+  /** windows message handling. We use this for logging suspend/resume events */
+  WXLRESULT MSWWindowProc( WXUINT message, WXWPARAM wParam, WXLPARAM lParam );
+#endif
+
   void onIconize( wxIconizeEvent& event );
   void onSize( wxSizeEvent& event );
   void onClose( wxCloseEvent& event );
