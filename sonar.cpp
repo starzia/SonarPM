@@ -78,11 +78,7 @@ bool Config::load( string filename ){
       ss.clear();
       ss.str( ini.GetValue("calibration","frequency" ) );
       ss >> this->ping_freq;
-      ss.clear();
-      ss.str( ini.GetValue("calibration","threshold" ) );
-      ss >> this->threshold;
-      cerr<< "Loaded config file "<<filename<<" with threshold: " 
-	  << this->threshold <<endl;
+      cerr<< "Loaded config file "<<filename<<endl;
     }catch( const exception& e ){
       cerr <<"Error loading data from Config file "<<filename<<endl
 	   <<"Please check the file for errors and correct or delete it"<<endl;
@@ -103,7 +99,6 @@ void Config::new_config( AudioDev & audio ){
     this->warn_audio_level( audio );
     //this->choose_ping_freq( audio );
     this->ping_freq = DEFAULT_PING_FREQ;
-    this->choose_ping_threshold( audio, this->ping_freq );
 }
 
 bool Config::write_config_file(){
@@ -123,9 +118,6 @@ bool Config::write_config_file(){
   ss.str("");
   ss << this->ping_freq;
   ini.SetValue("calibration","frequency", ss.str().c_str());
-  ss.str("");
-  ss << this->threshold;
-  ini.SetValue("calibration","threshold", ss.str().c_str());
 
   // write to file
   SI_Error rc = ini.SaveFile( this->filename.c_str() );
@@ -133,11 +125,7 @@ bool Config::write_config_file(){
     cerr<< "Error saving config file "<<this->filename<<endl;
     return false;
   }else{
-    cerr<< "Saved config file "<<this->filename<<" with threshold: "
-	<< this->threshold <<endl<<endl;
-    ostringstream msg;
-    msg << "threshold " << this->threshold;
-    SysInterface::log( msg.str() );
+    cerr<< "Saved config file "<<this->filename<<endl;
   }
   return true;
 }
@@ -186,13 +174,13 @@ void Config::choose_ping_freq( AudioDev & audio ){
     and relies on dynamic runtime adjustment for fine-tuning.
     Uses one half of the initial reading as the threshold.
     Assumption here is that user is present when calibrating */
-void Config::choose_ping_threshold( AudioDev & audio, frequency freq ){
+float choose_ping_threshold( AudioDev & audio, frequency freq ){
   cout << "Please wait while the system is calibrated."<<endl;
   AudioBuf blip = tone( RECORDING_PERIOD, freq );
   AudioBuf rec = audio.recordback( blip );
   Statistics blip_s = measure_stats( rec, freq );
   cout << "chose preliminary threshold of "<<FEATURE(blip_s)<<endl<<endl;
-  this->threshold = ( FEATURE(blip_s) )/2;
+  return ( FEATURE(blip_s) )/2;
 }
 
 void Config::choose_phone_home(){
@@ -511,6 +499,7 @@ void power_management( AudioDev & audio, Config & conf ){
   // buffer duration is one second, but actually it just needs to be a multiple
   // of the ping_period.
   SysInterface::register_term_handler();
+  float threshold = choose_ping_threshold( audio, conf.ping_freq );
   AudioBuf ping = tone( 1, conf.ping_freq, 0,0 ); // no fade since we loop it
   cout << "Begin power management loop at frequency of " 
        <<conf.ping_freq<<"Hz"<<endl;
@@ -529,7 +518,7 @@ void power_management( AudioDev & audio, Config & conf ){
       // means that the threshold is too low.
       cout << "False attention detected." <<endl;
       SysInterface::log("false attention");
-      conf.threshold *= DYNAMIC_THRESH_FACTOR;
+      threshold *= DYNAMIC_THRESH_FACTOR;
       conf.write_config_file(); // config save changes
     }
 
@@ -541,8 +530,7 @@ void power_management( AudioDev & audio, Config & conf ){
     SysInterface::log( s );
 
     // if sonar reading below thresh. and user is still idle ...
-    if( FEATURE(s) < conf.threshold
-	&& SysInterface::idle_seconds() > IDLE_THRESH ){
+    if( FEATURE(s) < threshold && SysInterface::idle_seconds() > IDLE_THRESH ){
       // sleep monitor
       SysInterface::sleep_monitor();
       long sleep_timestamp = SysInterface::current_time();
@@ -550,19 +538,18 @@ void power_management( AudioDev & audio, Config & conf ){
       
       //-- THRESHOLD LOWERING
       // waking up too soon means that we've just irritated the user
-      if( SysInterface::current_time() - sleep_timestamp < IDLE_THRESH ){
-	cout << "False sleep detected." <<endl;
-	SysInterface::log("false sleep");
-	conf.threshold /= DYNAMIC_THRESH_FACTOR;
-	conf.write_config_file(); // config save changes
+      if( SysInterface::current_time( ) - sleep_timestamp < IDLE_THRESH ){
+        cout << "False sleep detected." << endl;
+        SysInterface::log( "false sleep" );
+        threshold /= DYNAMIC_THRESH_FACTOR;
       }
     }
     //-- PHONE HOME, if enough time has passed
     if( conf.allow_phone_home &&
 	(SysInterface::current_time()-start_time) > PHONEHOME_TIME ){
-      if( SysInterface::phone_home() ){
-	// if phone home was successful, then disable future phonehome attempts
-	conf.disable_phone_home();
+      if( SysInterface::phone_home( ) ){
+        // if phone home was successful, then disable future phonehome attempts
+        conf.disable_phone_home( );
       }
     }
       

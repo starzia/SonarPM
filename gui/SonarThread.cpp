@@ -10,7 +10,8 @@
 using namespace std;
 
 SonarThread::SonarThread( Frame* mf, sonar_mode m ) :
-     wxThread(wxTHREAD_DETACHED), mainFrame( mf ), mode(m), lastCalibration(0){
+     wxThread(wxTHREAD_DETACHED), mainFrame( mf ), mode(m), lastCalibration(0),
+     windowAvg(0.0/0.0), threshold(0.0/0.0){
   // The following gets phone home scheduling started.
   // Note that if we set lastPhoneHome to zero then it would phone home each
   // time the app is started.  Instead, we wait for a full PHONEHOME_INTERVAL.
@@ -80,13 +81,13 @@ void SonarThread::reset(){
 
 bool SonarThread::updateThreshold(){
   // check to see whether threshold has already been set, if not then set it
-  if( !(conf.threshold > 0) ){ // initially threshold will be set to zero or NaN
+  if( !(this->threshold > 0) ){ // initially threshold will be set to zero or NaN
 
     // set threshold to half of
     // current, assuming that program has just been launched so user is present.
-    conf.threshold = this->windowAvg / 2;
-    cout << "set threshold to " << conf.threshold << endl;
-    updateGUIThreshold( conf.threshold );
+    this->threshold = this->windowAvg / 2;
+    cout << "set threshold to " << this->threshold << endl;
+    updateGUIThreshold( this->threshold );
   }
   return true; // true for uninterrupted completion
 }
@@ -105,7 +106,7 @@ bool SonarThread::scheduler( long log_start_time ){
 
   // recalibrate, if enough time has passed
   if( currentTime - this->lastCalibration  > SonarThread::RECALIBRATION_INTERVAL ){
-    this->conf.threshold = 0.0/0.0; // blank the threshold so it will be reset
+    this->threshold = 0.0/0.0; // blank the threshold so it will be reset
     this->lastCalibration = currentTime;
   }
   return true; // true for uninterrupted completion
@@ -129,7 +130,7 @@ void SonarThread::setupSystemHooks(){
 */
 
 void SonarThread::poll(){
-  this->conf.threshold = (0.0/0.0); // blank threshold, so it won't be drawn
+  this->threshold = (0.0/0.0); // blank threshold, so it won't be drawn
 
   AudioBuf ping = tone( 0.01, conf.ping_freq, 0,0 ); // no fade since we loop it
   cout << "Begin pinging loop at frequency of " <<conf.ping_freq<<"Hz"<<endl;
@@ -154,7 +155,7 @@ void SonarThread::power_management(){
   // TODO: inhibit screensaver as well
 
   // ignore previously saved threshold and recalibrate each time
-  conf.threshold = 0.0/0.0;
+  this->threshold = 0.0/0.0;
 
   // buffer duration is 10ms, but actually it just needs to be a multiple
   // of the ping_period.
@@ -185,6 +186,7 @@ void SonarThread::power_management(){
     //==== ACTIVE =============================================================
     // If user is active, reset window and test for false negatives.
     if( SysInterface::idle_seconds() < SonarThread::IDLE_TIME ){
+      this->reset(); // throw out history
       sleeping=false; // OS will wake up monitor on user input
 
       // waking up too soon means that we just irritated the user
@@ -199,8 +201,8 @@ void SonarThread::power_management(){
         SysInterface::log("false sleep");
         lastSleep=0;   // don't want to double-count false negatives
         //-- THRESHOLD LOWERING
-        conf.threshold /= SonarThread::dynamicThreshFactor;
-        updateGUIThreshold( conf.threshold );
+        this->threshold /= SonarThread::dynamicThreshFactor;
+        updateGUIThreshold( this->threshold );
       }
 
       //==== INACTIVE ===========================================================
@@ -225,7 +227,7 @@ void SonarThread::power_management(){
         if( !this->updateThreshold( ) ) break; // break if interrupted
 
         // if sonar reading below threshold
-        if( this->windowAvg < conf.threshold ){
+        if( this->windowAvg < this->threshold ){
           SysInterface::sleep_monitor( ); // sleep monitor
           lastSleep = SysInterface::current_time( );
           sleeping = true;
@@ -268,7 +270,7 @@ void SonarThread::recordAndProcessAndUpdateGUI(){
     windowHistory.pop_back();
   }
   
-  updateGUI( FEATURE(s), windowAvg, conf.threshold );
+  updateGUI( FEATURE(s), windowAvg, this->threshold );
 }
 
 // send a dummy keystroke to disable OS screensaver and power management

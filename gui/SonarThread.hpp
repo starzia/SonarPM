@@ -64,6 +64,7 @@ private:
 
   Frame* mainFrame;
   sonar_mode mode; // power management, polling, etc.
+  float threshold; // sonar threshold
 
   /** sliding window of sonar readings, index 0 is most recent */
   std::deque<float> windowHistory;

@@ -24,7 +24,6 @@ public:
   void disable_phone_home();
 
   frequency ping_freq;
-  float threshold;
   bool allow_phone_home;
   unsigned int rec_dev;
   unsigned int play_dev;
