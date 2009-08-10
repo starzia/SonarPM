@@ -48,6 +48,8 @@ public:
   // time between phone home events
   static const duration_t PHONEHOME_INTERVAL = (3600); // one hour
   static const duration_t RECALIBRATION_INTERVAL = (3600);
+  // timeout for naive power managment policy
+  static const duration_t DISPLAY_TIMEOUT = (600); // ten minutes
 
 private:
   void poll();
@@ -72,14 +74,14 @@ private:
   bool updateThreshold();
 
   /** runs any pending period tasks such as phone home or recalibration
-   * @param start_time is when the thread started
+   * @param log_start_time is when the app was first run (when logfile created).
+   *   passing this as a param prevents accessing the log file each time.
    * @return true if successful false if interrupted by thread cancellation */
-  bool scheduler( long start_time );
+  bool scheduler( long log_start_time );
 
   /* various events are triggered periodically */
   long lastPhoneHome;
   long lastCalibration;
-  ///long lastSleep;
 
   /** these two functions are similar to those in the SysInterface class, but
   * additionally run TestDestroy() periodically to respond to cancellation
