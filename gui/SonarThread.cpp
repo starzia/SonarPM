@@ -2,7 +2,7 @@
 #include "PlotEvent.hpp"
 #include "../sonar.hpp"
 #include <iostream>
-
+#include <sstream>
 #include <stdlib.h> //for rand
 
 #include <wx/event.h> // for wxxQueueEvent
@@ -52,12 +52,17 @@ void SonarThread::OnExit(){
   }
 }
 
-void SonarThread::updateGUIThreshold( float thresh ){
-  cerr << "setting threshold to "<<thresh<<endl;
+void SonarThread::setThreshold( float thresh ){
+  cout << "setting threshold to "<<thresh<<endl;
+  this->threshold = thresh;
   // update gui
   PlotEvent evt = PlotEvent( PLOT_EVENT_THRESHOLD );
   evt.setVal( thresh, 0, 0 ); // last vals will be ignored
   this->mainFrame->GetEventHandler()->AddPendingEvent( evt );
+  // log new value
+  ostringstream log_msg;
+  log_msg << "threshold " << thresh;
+  SysInterface::log( log_msg.str() );
 }
 
 void SonarThread::updateGUI( float echo_delta, float window_avg, float thresh ){
@@ -85,9 +90,7 @@ bool SonarThread::updateThreshold(){
 
     // set threshold to half of
     // current, assuming that program has just been launched so user is present.
-    this->threshold = this->windowAvg / 2;
-    cout << "set threshold to " << this->threshold << endl;
-    updateGUIThreshold( this->threshold );
+    this->setThreshold( this->windowAvg / 2 );
   }
   return true; // true for uninterrupted completion
 }
@@ -130,8 +133,6 @@ void SonarThread::setupSystemHooks(){
 */
 
 void SonarThread::poll(){
-  this->threshold = (0.0/0.0); // blank threshold, so it won't be drawn
-
   AudioBuf ping = tone( 0.01, conf.ping_freq, 0,0 ); // no fade since we loop it
   cout << "Begin pinging loop at frequency of " <<conf.ping_freq<<"Hz"<<endl;
   PaStream* strm = audio.nonblocking_play_loop( ping );
@@ -153,9 +154,6 @@ void SonarThread::power_management(){
   SetThreadExecutionState( ES_DISPLAY_REQUIRED | ES_CONTINUOUS );
 #endif
   // TODO: inhibit screensaver as well
-
-  // ignore previously saved threshold and recalibrate each time
-  this->threshold = 0.0/0.0;
 
   // buffer duration is 10ms, but actually it just needs to be a multiple
   // of the ping_period.
@@ -201,8 +199,7 @@ void SonarThread::power_management(){
         SysInterface::log("false sleep");
         lastSleep=0;   // don't want to double-count false negatives
         //-- THRESHOLD LOWERING
-        this->threshold /= SonarThread::dynamicThreshFactor;
-        updateGUIThreshold( this->threshold );
+        this->setThreshold( this->threshold/SonarThread::dynamicThreshFactor );
       }
 
       //==== INACTIVE ===========================================================

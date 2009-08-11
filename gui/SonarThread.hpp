@@ -58,7 +58,6 @@ private:
   // GUI helpers
   void recordAndProcessAndUpdateGUI();
   void updateGUI( float echo_delta, float window_avg, float thresh );
-  void updateGUIThreshold( float thresh );
   void reset(); // create a gap in plot and clears sonar history window
 
 
@@ -70,9 +69,10 @@ private:
   std::deque<float> windowHistory;
   float windowAvg; // average of window
 
-  /** sets the screen blanking threshold (this->conf.threshold).
+  /** sets the screen blanking threshold, if it is unset or stale.
    * @return true if successful false if interrupted by thread cancellation */
   bool updateThreshold();
+  void setThreshold( float thresh );
 
   /** runs any pending period tasks such as phone home or recalibration
    * @param log_start_time is when the app was first run (when logfile created).
