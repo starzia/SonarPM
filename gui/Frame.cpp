@@ -139,10 +139,11 @@ void Frame::stopSonar(){
   }
 }
 
+/** this function seems to be buggy */
 void Frame::threadWait(){
   bool ready = false;
   while( !ready ){
-    SysInterface::sleep( 0.5 );
+    SysInterface::sleep( 0.2 );
     wxSafeYield(); // let the GUI update
     LOCK( this->threadLock );
     if( !this->sThread ) ready = true;
@@ -180,13 +181,11 @@ void Frame::firstTime(){
       this->sThread = new SonarThread( this, MODE_FREQ_RESPONSE );
       if( this->sThread->Create() == wxTHREAD_NO_ERROR ){
         this->sThread->Run();
+        this->SetStatusText(_T("Measuring frequency response... Please wait."));
+        this->Disable(); // gray out GUI controls while freq response is running
       }
     }
   }
-
-  // wait for freq_response thread to complete.
-  this->SetStatusText(_T("Measuring frequency response... Please wait."));
-  this->threadWait();
 }
 
 void Frame::onClose( wxCloseEvent& event ){

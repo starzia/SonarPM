@@ -35,6 +35,8 @@ void* SonarThread::Entry(){
       break;
     case MODE_FREQ_RESPONSE:
       this->mainFrame->logger.log_freq_response( this->audio);
+      this->mainFrame->Enable(); // re-enable gui controls
+      this->mainFrame->SetStatusText(_T(""));
       break;
     case MODE_ECHO_TEST:
     default:
@@ -48,7 +50,7 @@ void SonarThread::OnExit(){
   this->reset(); // create gap in plot
   cerr << "SonarThread exited" <<endl;
   if( this->mode == MODE_POWER_MANAGEMENT ){
-      this->mainFrame->logger.log( "quit" );
+    this->mainFrame->logger.log( "quit" );
   }
 }
 
