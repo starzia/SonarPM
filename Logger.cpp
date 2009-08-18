@@ -59,9 +59,6 @@ bool Logger::log( msg message ){
     if( SysInterface::current_time() - this->get_log_start_time() >
             this->PHONEHOME_INTERVAL ){
       this->phone_home();
-      conf->log_id++; // increment log_id
-      conf->write_config_file(); // save new log_id
-      this->setFilename(); // update filename to reflect new log_id
     }
   }
   return ret;
@@ -87,24 +84,28 @@ long Logger::get_log_start_time( ){
 template bool Logger::log(Statistics s);
 
 bool Logger::phone_home(){
-  this->log( "phonehome" );
   cerr << "Sending log file to Northwestern University server."<<endl;
+  bool ret;
 #if defined PLATFORM_WINDOWS
   HINTERNET hnet = InternetOpen( "sonar", INTERNET_OPEN_TYPE_PRECONFIG,
 				 NULL,NULL,NULL);
   hnet = InternetConnect( hnet, FTP_SERVER,
 			  INTERNET_DEFAULT_FTP_PORT, FTP_USER, FTP_PASSWD,
 			  INTERNET_SERVICE_FTP, NULL, NULL );
-  bool ret = FtpPutFile( hnet, this->filename, this->filename,
-			 FTP_TRANSFER_TYPE_BINARY, NULL );
+  ret = FtpPutFile( hnet, this->filename, this->filename,
+                    FTP_TRANSFER_TYPE_BINARY, NULL );
   InternetCloseHandle( hnet );
-  return ret;
 #else
   string command = "curl -T " + this->filename +
     " ftp://"+FTP_USER+':'+FTP_PASSWD+'@'+FTP_SERVER+'/'+this->filename;
   system( command.c_str() );
-  return true;
+  ret = true;
 #endif
+  conf->log_id++; // increment log_id
+  conf->write_config_file(); // save new log_id
+  this->setFilename(); // update filename to reflect new log_id
+  this->log( "phonehome" );
+  return ret;
 }
 
 
