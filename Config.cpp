@@ -6,7 +6,7 @@
 
 using namespace std;
 
-const char* Config::CONFIG_FILENAME = ".sonarPM.cfg";
+const char* Config::CONFIG_FILENAME = "sonarPM.cfg";
 
 Config::Config(){
   // these default values will be overwritten if a config file is loaded

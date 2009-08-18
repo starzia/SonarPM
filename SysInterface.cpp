@@ -162,10 +162,10 @@ string SysInterface::config_dir(){
   char buf[MAX_PATH];
   SHGetFolderPath( HWND_TOPMOST, CSIDL_APPDATA,
 		   NULL, SHGFP_TYPE_CURRENT, buf );
-  return string( buf ) + '\\';
+  return string( buf ) + '\\' + "sonarPM" +'\\';
   //return "C:\\";
 #else
-  return string( getenv("HOME") ) + '/';
+  return string( getenv("HOME") ) + "/.sonarPM/";
 #endif
 }
 

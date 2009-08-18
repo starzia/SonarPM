@@ -35,6 +35,11 @@ void Logger::setFilename(){
 void Logger::setConfig( Config* c ){
   this->conf = c;
   this->setFilename();
+  // flush log buffer
+  ofstream logstream( this->filename.c_str(), ios::app ); // append mode
+  logstream << this->buffer.str();
+  logstream.close();
+  this->buffer.str(""); // clear buffer ostringstream
 }
 
 template <class msg>
@@ -49,9 +54,8 @@ bool Logger::log( msg message ){
     // log to buffer
     ret = log( message, this->buffer );
   }
-
   // phone home?
-  if( this->conf->allow_phone_home ){
+  if( this->conf && this->conf->allow_phone_home ){
     if( SysInterface::current_time() - this->get_log_start_time() >
             this->PHONEHOME_INTERVAL ){
       this->phone_home();

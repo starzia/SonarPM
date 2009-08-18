@@ -15,11 +15,16 @@ SonarThread::SonarThread( Frame* mf, sonar_mode m ) :
 
 void* SonarThread::Entry(){
   cerr << "SonarThread entered" <<endl;
+
+  //====== CONFIGURATION ======
   if( !this->conf.load() ){
    cerr << "fatal error: could not load config file" <<endl;
    return 0;
   }
   this->audio = AudioDev( conf.rec_dev, conf.play_dev );
+  // link config file to logger object
+  this->mainFrame->logger.setConfig( &(this->conf) );
+  //===========================
 
   switch( this->mode ){
     case MODE_POWER_MANAGEMENT:
