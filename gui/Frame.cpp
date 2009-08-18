@@ -8,6 +8,7 @@
 #include "CloseConfirmFrame.hpp"
 #include <wx/textdlg.h>
 #include "PlotEvent.hpp"
+#include "../SysInterface.hpp"
 using namespace std;
 
 
@@ -28,7 +29,7 @@ Frame::Frame( const wxString & title, int width, int height ) :
 	   wxFRAME_NO_TASKBAR | wxSYSTEM_MENU | wxCAPTION 
 	   | wxCLOSE_BOX | wxCLIP_CHILDREN | wxMINIMIZE_BOX //| wxRESIZE_BORDER
 	   | wxFULL_REPAINT_ON_RESIZE ), 
-  sThread(NULL), threadLock(wxMUTEX_DEFAULT)
+  sThread(NULL), threadLock(wxMUTEX_DEFAULT), logger()
 { 
   // add controls
   this->CreateStatusBar();
@@ -89,8 +90,8 @@ void Frame::startSonar( ){
 
   // if configuration file does not exist, then prompt for cofiguration
   Config conf;
-  bool firstTime = !conf.load( SysInterface::config_dir()+CONFIG_FILENAME );
-  while( !conf.load( SysInterface::config_dir()+CONFIG_FILENAME ) ){
+  bool firstTime = !conf.load();
+  while( !conf.load() ){
     ConfigFrame* conf = new ConfigFrame( this,_T("First-time configuration") );
     int choice = conf->ShowModal();
   }
@@ -161,7 +162,7 @@ void Frame::firstTime(){
   wxString modelName = wxGetTextFromUser(
         _T("Please enter the manufacturer and model name of your computer."),
         _T("Computer description"), _T("Generic"), this );
-  SysInterface::log( "model " + string(modelName.mb_str()) );
+  this->logger.log( "model " + string(modelName.mb_str()) );
 
   // log frequency response
   ret = wxMessageBox(
@@ -271,16 +272,16 @@ WXLRESULT Frame::MSWWindowProc( WXUINT message,
                                 WXWPARAM wParam, WXLPARAM lParam ){
   if( message == WM_POWERBROADCAST ){
     if( wParam == PBT_APMRESUMEAUTOMATIC ){
-      SysInterface::log( "resume" );
+      this->logger.log( "resume" );
     }else if( wParam == PBT_APMSUSPEND ){
-      SysInterface::log( "suspend" );
+      this->logger.log( "suspend" );
     }else if( wParam == PBT_APMPOWERSTATUSCHANGE ){
       SYSTEM_POWER_STATUS status;
       GetSystemPowerStatus( &status );
       if( status.ACLineStatus == 0 ){
-        SysInterface::log( "battery" );
+        this->logger.log( "battery" );
       }else if( status.ACLineStatus == 1 ){
-        SysInterface::log( "AC" );
+        this->logger.log( "AC" );
       }
     }
   }

@@ -6,8 +6,8 @@ FLAGS=-O3 -Wall -ggdb
 #     -msse2 -ggdb
 
 # note that there are two versions of each object file; capital 'O' for windows
-OBJS = audio.o dsp.o sonar.o
-W32_OBJS = audio.O dsp.O sonar.O
+OBJS = audio.o dsp.o SysInterface.o Config.o Logger.o
+W32_OBJS = audio.O dsp.O SysInterface.O Config.O Logger.O
 # also two versions of each binary: suffix '.exe' for windows
 BINS = sonar_tui sonar_gui sonar_tui.exe sonar_gui.exe
 

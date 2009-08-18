@@ -1,6 +1,6 @@
 #include "SonarThread.hpp"
 #include "PlotEvent.hpp"
-#include "../sonar.hpp"
+#include "../SysInterface.hpp"
 #include <iostream>
 #include <sstream>
 #include <stdlib.h> //for rand
@@ -11,16 +11,11 @@ using namespace std;
 
 SonarThread::SonarThread( Frame* mf, sonar_mode m ) :
      wxThread(wxTHREAD_DETACHED), mainFrame( mf ), mode(m), lastCalibration(0),
-     windowAvg(0.0/0.0), threshold(0.0/0.0){
-  // The following gets phone home scheduling started.
-  // Note that if we set lastPhoneHome to zero then it would phone home each
-  // time the app is started.  Instead, we wait for a full PHONEHOME_INTERVAL.
-  this->lastPhoneHome = SysInterface::current_time();
-}
+     windowAvg(0.0/0.0), threshold(0.0/0.0){}
 
 void* SonarThread::Entry(){
   cerr << "SonarThread entered" <<endl;
-  if( !this->conf.load( SysInterface::config_dir()+CONFIG_FILENAME ) ){
+  if( !this->conf.load() ){
    cerr << "fatal error: could not load config file" <<endl;
    return 0;
   }
@@ -34,7 +29,7 @@ void* SonarThread::Entry(){
       this->poll();
       break;
     case MODE_FREQ_RESPONSE:
-      log_freq_response( this->audio);
+      this->mainFrame->logger.log_freq_response( this->audio);
       break;
     case MODE_ECHO_TEST:
     default:
@@ -48,7 +43,7 @@ void SonarThread::OnExit(){
   this->reset(); // create gap in plot
   cerr << "SonarThread exited" <<endl;
   if( this->mode == MODE_POWER_MANAGEMENT ){
-      SysInterface::log( "quit" );
+      this->mainFrame->logger.log( "quit" );
   }
 }
 
@@ -62,7 +57,7 @@ void SonarThread::setThreshold( float thresh ){
   // log new value
   ostringstream log_msg;
   log_msg << "threshold " << thresh;
-  SysInterface::log( log_msg.str() );
+  this->mainFrame->logger.log( log_msg.str() );
 }
 
 void SonarThread::updateGUI( float echo_delta, float window_avg, float thresh ){
@@ -97,15 +92,6 @@ bool SonarThread::updateThreshold(){
 
 bool SonarThread::scheduler( long log_start_time ){
   long currentTime = SysInterface::current_time();
-
-  //-- PHONE HOME, if enough time has passed
-  if( conf.allow_phone_home 
-      && (currentTime - this->lastPhoneHome) > SonarThread::PHONEHOME_INTERVAL ){
-    if( SysInterface::phone_home() ){
-      // if phone home was successful, then record time
-      this->lastPhoneHome = currentTime;
-    }
-  }
 
   // recalibrate, if enough time has passed
   if( currentTime - this->lastCalibration  > SonarThread::RECALIBRATION_INTERVAL ){
@@ -163,8 +149,8 @@ void SonarThread::power_management(){
   // initialize and start ping
   PaStream* strm = audio.nonblocking_play_loop( ping );
   AudioDev::check_error( Pa_StopStream( strm ) ); // stop ping
-  SysInterface::log( "begin" );
-  long log_start_time = get_log_start_time();
+  this->mainFrame->logger.log( "begin" );
+  long log_start_time = this->mainFrame->logger.get_log_start_time();
 
   // keep track of certain program events
   long lastSleep=0; // sleep means sonar-caused display sleep
@@ -191,12 +177,12 @@ void SonarThread::power_management(){
       long currentTime = SysInterface::current_time();
       if( currentTime - lastTimeout < SonarThread::FALSE_NEG ){
         cout << "False timeout detected." <<endl;
-        SysInterface::log("false timeout");
+        this->mainFrame->logger.log("false timeout");
         lastTimeout=0; // don't want to double-count false negatives
       }
       if( currentTime - lastSleep   < SonarThread::FALSE_NEG ){
         cout << "False sleep detected." <<endl;
-        SysInterface::log("false sleep");
+        this->mainFrame->logger.log("false sleep");
         lastSleep=0;   // don't want to double-count false negatives
         //-- THRESHOLD LOWERING
         this->setThreshold( this->threshold/SonarThread::dynamicThreshFactor );
@@ -210,8 +196,7 @@ void SonarThread::power_management(){
         // if we've been tring to detect use for too long, then this probably
         // means that the threshold is too low.
         cout << "Display timeout." << endl;
-        SysInterface::log( "timeout" );
-
+        this->mainFrame->logger.log( "sleep timeout" );
         SysInterface::sleep_monitor( ); // sleep monitor
         lastTimeout = SysInterface::current_time( );
       }
@@ -225,6 +210,7 @@ void SonarThread::power_management(){
 
         // if sonar reading below threshold
         if( this->windowAvg < this->threshold ){
+          this->mainFrame->logger.log( "sleep sonar" );
           SysInterface::sleep_monitor( ); // sleep monitor
           lastSleep = SysInterface::current_time( );
           sleeping = true;
@@ -237,7 +223,7 @@ void SonarThread::power_management(){
       AudioDev::check_error( Pa_StopStream( strm ) ); // stop ping
     }
   }
-  SysInterface::log( "interrupted" );
+  this->mainFrame->logger.log( "interrupted" );
   // clean up portaudio so that we can use it again later.
   audio.check_error( Pa_CloseStream( strm ) );
 }
@@ -247,7 +233,7 @@ void SonarThread::recordAndProcessAndUpdateGUI(){
   AudioBuf rec = audio.blocking_record( WINDOW_LENGTH );
   Statistics s = measure_stats( rec, conf.ping_freq );
   cout << s << endl;
-  SysInterface::log( s );
+  this->mainFrame->logger.log( s );
 
   // update sliding window and GUI
   this->windowHistory.push_front( FEATURE(s) );
@@ -292,11 +278,11 @@ void sendDummyInput(){
 #endif
 
 bool SonarThread::waitUntilIdle(){
-  while( SysInterface::idle_seconds() < IDLE_THRESH ){
-    SysInterface::sleep( SLEEP_TIME ); //don't poll idle_seconds() constantly
+  while( SysInterface::idle_seconds() < SonarThread::IDLE_TIME ){
+    SysInterface::sleep( SonarThread::SLEEP_LENGTH ); //don't poll idle_seconds() constantly
     if( this->TestDestroy() ) return false; //test to see if thread was destroyed
   }
-  SysInterface::log( "idle" );
+  this->mainFrame->logger.log( "idle" );
   return true;
 }
 
@@ -304,12 +290,12 @@ bool SonarThread::waitUntilActive(){
   duration_t prev_idle_time = SysInterface::idle_seconds();
   duration_t current_idle_time = SysInterface::idle_seconds();
   while( current_idle_time >= prev_idle_time ){
-    SysInterface::sleep( SLEEP_TIME );
+    SysInterface::sleep( SonarThread::SLEEP_LENGTH );
     prev_idle_time = current_idle_time;
     current_idle_time = SysInterface::idle_seconds();
     if( this->TestDestroy() ) return false; //test to see if thread was destroyed
   }
-  SysInterface::log( "active" );
+  this->mainFrame->logger.log( "active" );
   return true;
 }
 

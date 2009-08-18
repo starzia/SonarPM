@@ -3,6 +3,8 @@
 #include "Frame.hpp"
 #include "ConfigFrame.hpp"
 
+#define VERSION "0.5a"
+
 class App : public wxApp{
  public:
   virtual bool OnInit();

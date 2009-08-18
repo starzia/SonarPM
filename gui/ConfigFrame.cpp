@@ -4,6 +4,7 @@
 #include "ConfigFrame.hpp"
 #include "SonarThread.hpp" // for echo test thread
 #include "../audio.hpp" // for listing audio devices
+#include "../SysInterface.hpp"
 
 using namespace std;
 
@@ -61,7 +62,7 @@ ConfigFrame::ConfigFrame( Frame* p, const wxString & title ) :
   this->phoneHome->SetValue(true);
 
   // load previous configuration from file, if available
-  if( this->conf.load( SysInterface::config_dir()+CONFIG_FILENAME ) ){
+  if( this->conf.load() ){
     this->recDev->SetSelection( this->conf.rec_dev );
     this->playDev->SetSelection( this->conf.play_dev );
     this->phoneHome->SetValue( this->conf.allow_phone_home );
@@ -140,8 +141,8 @@ bool ConfigFrame::saveSettings(){
   AudioDev test_audio;
   if( !test_audio.choose_device( this->recDev->GetSelection(),
                                  this->playDev->GetSelection() ) ){
-      return false;
-      // TODO: message box "invalid choice"
+    return false;
+    // TODO: message box "invalid choice"
     // TODO: reset to defaults.
   }
 
@@ -149,7 +150,7 @@ bool ConfigFrame::saveSettings(){
   this->conf.rec_dev = this->recDev->GetSelection();
   this->conf.play_dev = this->playDev->GetSelection();
   this->conf.allow_phone_home = this->phoneHome->IsChecked();
-  this->conf.ping_freq = DEFAULT_PING_FREQ; // note that this has no widget yet.
+  this->conf.ping_freq = SonarThread::DEFAULT_PING_FREQ; // note that this has no widget yet.
 
   // save changes to file
   return this->conf.write_config_file();

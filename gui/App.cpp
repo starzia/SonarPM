@@ -1,5 +1,7 @@
 #include "App.hpp"
-#include "../sonar.hpp"
+#include "../SysInterface.hpp"
+#include "../Config.hpp"
+#include "../Logger.hpp"
 
 using namespace std;
 
@@ -21,7 +23,7 @@ bool App::OnInit(){
 
   // TODO: note that term_handler will print a "quit" msg in the log even if 
   // sonar power management had not been started.
-  SysInterface::register_term_handler();
+  SysInterface::register_term_handler( this->frame->logger );
 
   return true;
 }
@@ -29,9 +31,9 @@ bool App::OnInit(){
 int App::OnExit(){
   // if sonar thread did not close properly, then ensure that log has quit msg
   if( this->frame )
-    if( this->frame->sThread )
-      SysInterface::log( "quit" );
-
+    if( this->frame->sThread ){
+      this->frame->logger.log( "quit" );
+    }
   // close portaudio
   Pa_Terminate();
   return 0;

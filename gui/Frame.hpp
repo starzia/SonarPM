@@ -5,6 +5,7 @@
 #include "TaskBarIcon.hpp"
 #include "PlotPane.hpp"
 #include "PlotEvent.hpp"
+#include "../Logger.hpp"
 
 class Frame : public wxFrame
 {
@@ -32,7 +33,10 @@ public:
   /** routines to run if this is the first time the app is run */
   void firstTime();
 
-  wxThread*  sThread; // need access from App
+  // the following are public because we need access from App
+  wxThread*  sThread;
+  Logger  logger;
+  
   DECLARE_EVENT_TABLE()
 private:
   // update plot with a new point
