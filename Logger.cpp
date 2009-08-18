@@ -44,12 +44,16 @@ void Logger::setConfig( Config* c ){
 
 template <class msg>
 bool Logger::log( msg message ){
-  bool ret; // return value
+  bool ret=true; // return value
   if( this->filename.length() > 0 ){
-    // log to file
-    ofstream logstream( this->filename.c_str(), ios::app ); // append mode
-    ret = log( message, logstream );
-    logstream.close();
+    // if !allow_phone_home do not log anything.  This prevents energy
+    // inefficiency due to hard disk access
+    if( this->conf->allow_phone_home ){
+      // log to file
+      ofstream logstream( this->filename.c_str(), ios::app ); // append mode
+      ret = log( message, logstream );
+      logstream.close();
+    }
   }else{
     // log to buffer
     ret = log( message, this->buffer );
