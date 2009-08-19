@@ -36,4 +36,5 @@ private:
   std::string filename;
   /** queue up messages here when we are not ready to write to the logfile */
   std::ostringstream buffer;
+  unsigned long lastLogTime; // time of the last log entry, used for calulating diff
 };

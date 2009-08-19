@@ -21,7 +21,7 @@ const char* Logger::FTP_USER = "sonar";
 const char* Logger::FTP_PASSWD = "ppiinngg";
 
 
-Logger::Logger(): conf(NULL){
+Logger::Logger(): conf(NULL), lastLogTime(0) {
   this->filename = ""; // update this on setConfig()
 }
 
@@ -45,7 +45,7 @@ void Logger::setConfig( Config* c ){
 template <class msg>
 bool Logger::log( msg message ){
   bool ret=true; // return value
-  if( this->filename.length() > 0 ){
+  if( this->filename.length() > 0 && this->conf ){
     // if !allow_phone_home do not log anything.  This prevents energy
     // inefficiency due to hard disk access
     if( this->conf->allow_phone_home ){
@@ -70,7 +70,16 @@ bool Logger::log( msg message ){
 
 template <class msg, class ostream>
 bool Logger::log( msg message, ostream& logstream ){
-  logstream << SysInterface::current_time() << ": " << message << endl;
+  unsigned long logTime, currentTime = SysInterface::current_time();
+  if( this->lastLogTime == 0 ){
+    // if this is the first log message we're writing, use absolute time
+    logTime = currentTime;
+  }else{
+    // otherwise use time differential
+    logTime = currentTime - this->lastLogTime;
+  }
+  this->lastLogTime = currentTime;
+  logstream << logTime << ": " << message << endl;
   return true; // TODO: test success
 }
 
@@ -89,27 +98,29 @@ template bool Logger::log(Statistics s);
 
 bool Logger::phone_home(){
   cerr << "Sending log file to Northwestern University server."<<endl;
-  bool ret;
+  bool success;
 #if defined PLATFORM_WINDOWS
   HINTERNET hnet = InternetOpen( "sonar", INTERNET_OPEN_TYPE_PRECONFIG,
 				 NULL,NULL,NULL);
   hnet = InternetConnect( hnet, FTP_SERVER,
 			  INTERNET_DEFAULT_FTP_PORT, FTP_USER, FTP_PASSWD,
 			  INTERNET_SERVICE_FTP, NULL, NULL );
-  ret = FtpPutFile( hnet, this->filename, this->filename,
-                    FTP_TRANSFER_TYPE_BINARY, NULL );
+  success = FtpPutFile( hnet, this->filename, this->filename,
+                        FTP_TRANSFER_TYPE_BINARY, NULL );
   InternetCloseHandle( hnet );
 #else
   string command = "curl -T " + this->filename +
     " ftp://"+FTP_USER+':'+FTP_PASSWD+'@'+FTP_SERVER+'/'+this->filename;
-  system( command.c_str() );
-  ret = true;
+  success = ( system( command.c_str() ) == EXIT_SUCCESS );
 #endif
-  conf->log_id++; // increment log_id
-  conf->write_config_file(); // save new log_id
-  this->setFilename(); // update filename to reflect new log_id
-  this->log( "phonehome" );
-  return ret;
+  // on success
+  if( success ){
+    conf->log_id++; // increment log_id
+    conf->write_config_file(); // save new log_id
+    this->setFilename(); // update filename to reflect new log_id
+    this->log( "phonehome" );
+  }
+  return success;
 }
 
 
