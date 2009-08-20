@@ -2,6 +2,7 @@
 #include <vector>
 #include <cmath>
 #include <iostream>
+#include <iomanip> // for tweaked printing
 
 #ifdef PLATFORM_WINDOWS
 #include <windows.h> //for rand
@@ -101,13 +102,19 @@ template<class precision> precision delta( const vector<precision> & arr ){
 }
 
 ostream& operator<<(ostream& os, const Statistics& s){
+  os << scientific << setprecision(3) << s.mean << " " << s.delta;
+  /*
   os<< "stat m:" <<s.mean<< "\tv:" <<s.variance<< "\td:" <<s.delta
     << "\tf:" << FEATURE(s);
+  */
   return os;
 }
 ostream& operator<< (ostream& os, Statistics& s){
+  os << scientific << setprecision(3) << s.mean << " " << s.delta;
+  /*
   os<< "stat m:" <<s.mean<< "\tv:" <<s.variance<< "\td:" <<s.delta
     << "\tf:" << FEATURE(s);
+  */
   return os;
 }
 

@@ -27,9 +27,14 @@ Logger::Logger(): conf(NULL), lastLogTime(0) {
 
 void Logger::setFilename(){
   ostringstream filenameStream;
-  filenameStream << SysInterface::config_dir() << this->conf->GUID << '.'
-          << this->conf->log_id << ".log";
+  filenameStream << SysInterface::config_dir() << this->getFilenameNoPath();
   this->filename = filenameStream.str();
+}
+
+string Logger::getFilenameNoPath(){
+  ostringstream filenameStream;
+  filenameStream << this->conf->GUID << '.' << this->conf->log_id << ".log";
+  return filenameStream.str();
 }
 
 void Logger::setConfig( Config* c ){
@@ -105,12 +110,13 @@ bool Logger::phone_home(){
   hnet = InternetConnect( hnet, FTP_SERVER,
 			  INTERNET_DEFAULT_FTP_PORT, FTP_USER, FTP_PASSWD,
 			  INTERNET_SERVICE_FTP, NULL, NULL );
-  success = FtpPutFile( hnet, this->filename, this->filename,
+  success = FtpPutFile( hnet, this->filename, this->getFilenameNoPath(),
                         FTP_TRANSFER_TYPE_BINARY, NULL );
   InternetCloseHandle( hnet );
 #else
-  string command = "curl -T " + this->filename +
-    " ftp://"+FTP_USER+':'+FTP_PASSWD+'@'+FTP_SERVER+'/'+this->filename;
+  string command = "curl -T " + this->filename + " ftp://"+FTP_USER+
+          ':'+FTP_PASSWD+'@'+FTP_SERVER+'/'+this->getFilenameNoPath();
+  cerr << command << endl;
   success = ( system( command.c_str() ) == EXIT_SUCCESS );
 #endif
   // on success
@@ -118,6 +124,8 @@ bool Logger::phone_home(){
     conf->log_id++; // increment log_id
     conf->write_config_file(); // save new log_id
     this->setFilename(); // update filename to reflect new log_id
+    this->lastLogTime = 0; // force the absolute time to be logged next time
+                           // this is important since it will be first in new file
     this->log( "phonehome" );
   }
   return success;

@@ -31,9 +31,11 @@ private:
    bool log( msg message, ostream& output );
   /** sets filename data member based on log_id stored in conf */
   void setFilename();
+  /** @return current log filename, excluding path */
+  std::string getFilenameNoPath();
 
   Config* conf; // conf is needed for phonehome flag and log_id
-  std::string filename;
+  std::string filename; // filename including path
   /** queue up messages here when we are not ready to write to the logfile */
   std::ostringstream buffer;
   unsigned long lastLogTime; // time of the last log entry, used for calulating diff
