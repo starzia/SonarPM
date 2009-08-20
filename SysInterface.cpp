@@ -179,7 +179,7 @@ BOOL windows_term_handler( DWORD fdwCtrlType ) {
   case CTRL_BREAK_EVENT:
   case CTRL_LOGOFF_EVENT:
   case CTRL_SHUTDOWN_EVENT:
-    g_logger->log( "quit" );
+    g_logger->log( "end" );
     AudioDev::terminate();
     exit( 0 );
     return true;
@@ -190,7 +190,7 @@ BOOL windows_term_handler( DWORD fdwCtrlType ) {
 }
 #else
 void posix_term_handler( int signum ){
-  g_logger->log( "quit" );
+  g_logger->log( "end" );
   AudioDev::terminate();
   exit( 0 );
 }

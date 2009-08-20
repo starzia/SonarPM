@@ -84,7 +84,7 @@ bool Logger::log( msg message, ostream& logstream ){
     logTime = currentTime - this->lastLogTime;
   }
   this->lastLogTime = currentTime;
-  logstream << logTime << ": " << message << endl;
+  logstream << logTime << " " << message << endl;
   return true; // TODO: test success
 }
 
@@ -116,7 +116,6 @@ bool Logger::phone_home(){
 #else
   string command = "curl -T " + this->filename + " ftp://"+FTP_USER+
           ':'+FTP_PASSWD+'@'+FTP_SERVER+'/'+this->getFilenameNoPath();
-  cerr << command << endl;
   success = ( system( command.c_str() ) == EXIT_SUCCESS );
 #endif
   // on success

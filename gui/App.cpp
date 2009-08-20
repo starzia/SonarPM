@@ -32,7 +32,7 @@ int App::OnExit(){
   // if sonar thread did not close properly, then ensure that log has quit msg
   if( this->frame )
     if( this->frame->sThread ){
-      this->frame->logger.log( "quit" );
+      this->frame->logger.log( "end" );
     }
   // close portaudio
   Pa_Terminate();

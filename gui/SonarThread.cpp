@@ -50,7 +50,7 @@ void SonarThread::OnExit(){
   this->reset(); // create gap in plot
   cerr << "SonarThread exited" <<endl;
   if( this->mode == MODE_POWER_MANAGEMENT ){
-    this->mainFrame->logger.log( "quit" );
+    this->mainFrame->logger.log( "end" );
   }
 }
 
@@ -230,7 +230,7 @@ void SonarThread::power_management(){
       AudioDev::check_error( Pa_StopStream( strm ) ); // stop ping
     }
   }
-  this->mainFrame->logger.log( "interrupted" );
+  this->mainFrame->logger.log( "end" );
   // clean up portaudio so that we can use it again later.
   audio.check_error( Pa_CloseStream( strm ) );
 }
