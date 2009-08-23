@@ -3,6 +3,9 @@
 #include "SimpleIni.h" // for config files
 #include <iostream>
 #include <sstream>
+#ifdef PLATFORM_WINDOWS
+#include <rpc.h> // for UUID
+#endif
 
 using namespace std;
 
@@ -103,7 +106,17 @@ void Config::disable_phone_home(){
 
 void Config::generate_GUID(){
   ostringstream guid;
-  // TODO: improve GUID generation
-  guid << 1234 << SysInterface::current_time();
+#ifdef PLATFORM_WINDOWS
+  UUID* uuid;
+  unsigned char** uuid_string;
+  UuidCreate( uuid );
+  UuidToString( uuid, uuid_string );
+  guid << &uuid_string;
+  RpcStringFree( uuid_string );
+  delete uuid;
+#else
+  // TODO: improve GUID generation in Linux
+  guid << "linux" << SysInterface::current_time();
+#endif
   this->GUID = guid.str();
 }

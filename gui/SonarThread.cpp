@@ -3,7 +3,6 @@
 #include "../SysInterface.hpp"
 #include <iostream>
 #include <sstream>
-#include <stdlib.h> //for rand
 
 #include <wx/event.h> // for wxxQueueEvent
 

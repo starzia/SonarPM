@@ -7,6 +7,7 @@ using namespace std;
 //#define PLATFORM_WINDOWS
 //#define PLATFORM_MAC
 
+#include <iostream>
 #include <ctime>
 #include <cmath> // floor
 #if defined PLATFORM_LINUX

@@ -5,7 +5,6 @@
 #include <fstream> // for logfile writing
 #include <sstream>
 #include <limits> // for numeric_limit
-#include <stdlib.h> //system, getenv, etc.
 
 #if defined PLATFORM_WINDOWS
 #include <wininet.h> //  for ftp
@@ -110,7 +109,8 @@ bool Logger::phone_home(){
   hnet = InternetConnect( hnet, FTP_SERVER,
 			  INTERNET_DEFAULT_FTP_PORT, FTP_USER, FTP_PASSWD,
 			  INTERNET_SERVICE_FTP, NULL, NULL );
-  success = FtpPutFile( hnet, this->filename, this->getFilenameNoPath(),
+  success = FtpPutFile( hnet, this->filename.c_str(),
+                              this->getFilenameNoPath().c_str(),
                         FTP_TRANSFER_TYPE_BINARY, NULL );
   InternetCloseHandle( hnet );
 #else
