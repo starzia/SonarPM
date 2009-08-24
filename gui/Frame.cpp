@@ -287,6 +287,7 @@ WXLRESULT Frame::MSWWindowProc( WXUINT message,
       }
     }
   }
-  else this->MSWWindowProc( message, wParam, lParam );
+  // pass message on to base class version for standard processing.
+  return wxFrame::MSWWindowProc( message, wParam, lParam );
 }
 #endif
