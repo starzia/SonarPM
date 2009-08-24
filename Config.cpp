@@ -107,7 +107,7 @@ void Config::disable_phone_home(){
 void Config::generate_GUID(){
   ostringstream guid;
 #ifdef PLATFORM_WINDOWS
-  UUID* uuid;
+  UUID* uuid = new UUID();
   unsigned char** uuid_string;
   UuidCreate( uuid );
   UuidToString( uuid, uuid_string );
