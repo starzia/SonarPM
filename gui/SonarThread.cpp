@@ -10,7 +10,9 @@ using namespace std;
 
 SonarThread::SonarThread( Frame* mf, sonar_mode m ) :
      wxThread(wxTHREAD_DETACHED), mainFrame( mf ), mode(m), lastCalibration(0),
-     windowAvg(0.0/0.0), threshold(0.0/0.0){}
+     windowAvg(0.0/0.0), threshold(0.0/0.0){
+  lastUserInputTime = lastDummyInputTime = SysInterface::current_time();
+}
 
 void* SonarThread::Entry(){
   cerr << "SonarThread entered" <<endl;
@@ -104,25 +106,13 @@ bool SonarThread::scheduler( long log_start_time ){
     this->threshold = 0.0/0.0; // blank the threshold so it will be reset
     this->lastCalibration = currentTime;
   }
-  return true; // true for uninterrupted completion
+  // generate dummy keyboard input if enough idle time has passed
+  if( SysInterface::idle_seconds() > SonarThread::DUMMY_INPUT_INTERVAL ){
+    this->sendDummyInput();
+    this->lastDummyInputTime = currentTime;
+  }
+  return true; // return true for uninterrupted completion
 }
-
-/*
-#ifdef PLATFORM_WINDOWS
-LRESULT wndProcCallback( int nCode, WPARAM wParam, LPARAM lParam ){
-  CWPSTRUCT* msgData = (CWPSTRUCT*)lParam;
-
-}
-#endif
-
-void SonarThread::setupSystemHooks(){
-#ifdef PLATFORM_WINDOWS
-  SetWindowsHookEx( WH_CALLWNDPROC, wndProcCallback, 0, 0 );
-#else
-  return;
-#endif
-}
-*/
 
 void SonarThread::poll(){
   AudioBuf ping = tone( 0.01, conf.ping_freq, 0,0 ); // no fade since we loop it
@@ -145,8 +135,6 @@ void SonarThread::power_management(){
 #ifdef PLATFORM_WINDOWS
   SetThreadExecutionState( ES_DISPLAY_REQUIRED | ES_CONTINUOUS );
 #endif
-  // TODO: inhibit screensaver as well
-
   // buffer duration is 10ms, but actually it just needs to be a multiple
   // of the ping_period.
   AudioBuf ping = tone( 0.01, conf.ping_freq, 0,0 ); // no fade since we loop it
@@ -175,12 +163,13 @@ void SonarThread::power_management(){
 
     //==== ACTIVE =============================================================
     // If user is active, reset window and test for false negatives.
-    if( SysInterface::idle_seconds() < SonarThread::IDLE_TIME ){
+    if( this->true_idle_seconds() < SonarThread::IDLE_TIME ){
       this->reset(); // throw out history
       sleeping=false; // OS will wake up monitor on user input
 
       // waking up too soon means that we just irritated the user
       long currentTime = SysInterface::current_time();
+      this->lastUserInputTime = currentTime;
       if( currentTime - lastTimeout < SonarThread::FALSE_NEG ){
         cout << "False timeout detected." <<endl;
         this->mainFrame->logger.log("false timeout");
@@ -191,14 +180,14 @@ void SonarThread::power_management(){
         this->mainFrame->logger.log("false sleep");
         lastSleep=0;   // don't want to double-count false negatives
         //-- THRESHOLD LOWERING
-        this->setThreshold( this->threshold/SonarThread::dynamicThreshFactor );
+        this->setThreshold( this->threshold/SonarThread::DYN_THRESH_FACTOR );
       }
 
       //==== INACTIVE ===========================================================
     }else if( !sleeping ){ // If inactive and sleeping, wait until awakened.
       // ---TIMEOUT---
       // if user has been idle a very long time, then simulate default PM action
-      if( SysInterface::idle_seconds( ) > SonarThread::DISPLAY_TIMEOUT ){
+      if( this->true_idle_seconds( ) > SonarThread::DISPLAY_TIMEOUT ){
         // if we've been tring to detect use for too long, then this probably
         // means that the threshold is too low.
         cout << "Display timeout." << endl;
@@ -263,26 +252,44 @@ void SonarThread::recordAndProcessAndUpdateGUI(){
 }
 
 // send a dummy keystroke to disable OS screensaver and power management
+void SonarThread::sendDummyInput(){
 #ifdef PLATFORM_WINDOWS
-void sendDummyInput(){
-    INPUT input[2];
-    ///memset(input, 0, sizeof(input));
-    input[0].type = INPUT_KEYBOARD;
+  INPUT input[2];
+  ///memset(input, 0, sizeof(input));
+  input[0].type = INPUT_KEYBOARD;
 
-    input[0].ki.wVk = VK_NONAME; // character to send
-    input[0].ki.dwFlags = 0;
-    input[0].ki.time = 0;
-    input[0].ki.dwExtraInfo = 0;
+  input[0].ki.wVk = VK_NONAME; // character to send
+  input[0].ki.dwFlags = 0;
+  input[0].ki.time = 0;
+  input[0].ki.dwExtraInfo = 0;
 
-    input[1].ki.wVk = VK_NONAME; // character to send
-    input[1].ki.dwFlags = KEYEVENTF_KEYUP;
-    input[1].ki.time = 0;
-    input[1].ki.dwExtraInfo = 0;
+  input[1].ki.wVk = VK_NONAME; // character to send
+  input[1].ki.dwFlags = KEYEVENTF_KEYUP;
+  input[1].ki.time = 0;
+  input[1].ki.dwExtraInfo = 0;
 
-    SendInput(2,input,sizeof(INPUT));
-}
+  SendInput( 2, input, sizeof(INPUT) );
 #endif
+  // TODO: linux version (or some linux-specific screensaver deactivation)
+}
 
+duration_t SonarThread::true_idle_seconds(){
+  long currentTime = SysInterface::current_time();
+  duration_t sinceOS = SysInterface::idle_seconds(); // OS-reported idle time
+  duration_t sinceDummy = currentTime - this->lastDummyInputTime;
+  duration_t sinceUser  = currentTime - this->lastUserInputTime;
+  // the above value is not up-to-date if the last input event was from user.
+
+  if( sinceOS < sinceDummy ){
+    // last input was from user
+    return sinceOS;
+  }else{
+    // last input was from app
+    return sinceUser;
+  }
+}
+
+/* these functions are not currently needed
 bool SonarThread::waitUntilIdle(){
   while( SysInterface::idle_seconds() < SonarThread::IDLE_TIME ){
     SysInterface::sleep( SonarThread::SLEEP_LENGTH ); //don't poll idle_seconds() constantly
@@ -304,7 +311,7 @@ bool SonarThread::waitUntilActive(){
   this->mainFrame->logger.log( "active" );
   return true;
 }
-
+*/
 
 //=========================================================================
 EchoThread::EchoThread( wxDialog* diag,
