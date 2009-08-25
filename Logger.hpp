@@ -20,7 +20,9 @@ public:
   bool log_model();
 
   // phone home constants
-  static const long PHONEHOME_INTERVAL = (3600); // in seconds
+  static const int PHONEHOME_INTERVAL = 3600; // in seconds
+  /** time to wait after a phonehome upload failure before attempting again */
+  static const int FAILURE_BACKOFF = 60;
   static const char* FTP_SERVER;
   static const char* FTP_USER;
   static const char* FTP_PASSWD;
@@ -38,5 +40,6 @@ private:
   std::string filename; // filename including path
   /** queue up messages here when we are not ready to write to the logfile */
   std::ostringstream buffer;
-  unsigned long lastLogTime; // time of the last log entry, used for calulating diff
+  long lastLogTime; // time of the last log entry, used for calulating diff
+  int numFailedAttempts; // number of consecutive phonehome failures
 };

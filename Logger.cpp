@@ -20,7 +20,7 @@ const char* Logger::FTP_USER = "sonar";
 const char* Logger::FTP_PASSWD = "ppiinngg";
 
 
-Logger::Logger(): conf(NULL), lastLogTime(0) {
+Logger::Logger(): conf(NULL), lastLogTime(0), numFailedAttempts(0) {
   this->filename = ""; // update this on setConfig()
 }
 
@@ -64,8 +64,11 @@ bool Logger::log( msg message ){
   }
   // phone home?
   if( this->conf && this->conf->allow_phone_home ){
+    // test to see whether age of log is greater than phone home interval plus
+    // FAILURE_BACKOFF time since the last failed upload attempt, if any.
     if( SysInterface::current_time() - this->get_log_start_time() >
-            this->PHONEHOME_INTERVAL ){
+              Logger::PHONEHOME_INTERVAL
+              + this->numFailedAttempts * Logger::FAILURE_BACKOFF){
       this->phone_home();
     }
   }
@@ -125,7 +128,10 @@ bool Logger::phone_home(){
     this->setFilename(); // update filename to reflect new log_id
     this->lastLogTime = 0; // force the absolute time to be logged next time
                            // this is important since it will be first in new file
+    this->numFailedAttempts = 0; // reset failure counter
     this->log( "phonehome" );
+  }else{
+    this->numFailedAttempts++; // count this failure
   }
   return success;
 }
