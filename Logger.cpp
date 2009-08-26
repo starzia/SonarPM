@@ -103,23 +103,57 @@ long Logger::get_log_start_time( ){
 // explicitly instantiate log function for type Statistics (not sure why needed)
 template bool Logger::log(Statistics s);
 
+/** in this function zipping of the logs is handled by an external gzip binary,
+ * both in linux and windows */
 bool Logger::phone_home(){
   cerr << "Sending log file to Northwestern University server."<<endl;
   bool success;
 #if defined PLATFORM_WINDOWS
-  HINTERNET hnet = InternetOpen( "sonar", INTERNET_OPEN_TYPE_PRECONFIG,
-				 NULL,NULL,NULL);
-  hnet = InternetConnect( hnet, FTP_SERVER,
-			  INTERNET_DEFAULT_FTP_PORT, FTP_USER, FTP_PASSWD,
-			  INTERNET_SERVICE_FTP, NULL, NULL );
-  success = FtpPutFile( hnet, this->filename.c_str(),
-                              this->getFilenameNoPath().c_str(),
-                        FTP_TRANSFER_TYPE_BINARY, NULL );
-  InternetCloseHandle( hnet );
+  // gzip the log
+  STARTUPINFO info;
+  memset( &info, 0, sizeof(info) );
+  info.cb = sizeof(info);
+  PROCESS_INFORMATION pinfo;
+  char cmd[128];
+  strcpy( cmd, ("gzip.exe -9 \"" + this->filename + "\"").c_str() );
+  success = CreateProcess( NULL, cmd, NULL, NULL, false,
+                           NORMAL_PRIORITY_CLASS, NULL, NULL, &info, &pinfo );
+  if( success ){
+    // wait for gzip to complete
+    WaitForSingleObject( pinfo.hProcess, INFINITE );
+
+    // ftp upload
+    HINTERNET hnet = InternetOpen( "sonar", INTERNET_OPEN_TYPE_PRECONFIG,
+                                   NULL,NULL,NULL);
+    hnet = InternetConnect( hnet, FTP_SERVER,
+                            INTERNET_DEFAULT_FTP_PORT, FTP_USER, FTP_PASSWD,
+                            INTERNET_SERVICE_FTP, NULL, NULL );
+    success = FtpPutFile( hnet, (this->filename + ".gz").c_str(),
+                          this->getFilenameNoPath().c_str(),
+                          FTP_TRANSFER_TYPE_BINARY, NULL );
+    if( !success ){
+      // gunzip log so that we can continue logging to it
+      strcpy( cmd, ("gzip.exe -d -9 \"" + this->filename + ".gz\"").c_str() );
+      CreateProcess( NULL, cmd, NULL, NULL, false,
+                     NORMAL_PRIORITY_CLASS, NULL, NULL, &info, &pinfo );
+      WaitForSingleObject( pinfo.hProcess, INFINITE ); // wait for gunzip
+
+    }
+    InternetCloseHandle( hnet );
+  }
 #else
-  string command = "curl -T " + this->filename + " ftp://"+FTP_USER+
-          ':'+FTP_PASSWD+'@'+FTP_SERVER+'/'+this->getFilenameNoPath();
-  success = ( system( command.c_str() ) == EXIT_SUCCESS );
+  // gzip it
+  success = ( system( ("gzip -9 " + this->filename).c_str() ) == EXIT_SUCCESS );
+  if( success ){
+    // ftp upload
+    string command = "curl -T " + this->filename + ".gz ftp://"+FTP_USER+
+            ':'+FTP_PASSWD+'@'+FTP_SERVER+'/'+this->getFilenameNoPath();
+    success = ( system( command.c_str() ) == EXIT_SUCCESS );
+    if( !success ){
+       // gunzip it to continue logging
+      system( ("gunzip " + this->filename + ".gz").c_str() );
+    }
+  }
 #endif
   // on success
   if( success ){

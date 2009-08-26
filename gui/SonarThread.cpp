@@ -183,7 +183,7 @@ void SonarThread::power_management(){
     if( !this->scheduler( log_start_time ) ) break;
 
     // check to see that threshold has been set.
-    if( !(this->threshold > 0) ){
+    if( !(this->threshold > 0) && !sleeping ){
       // If not, set it.
       AudioDev::check_error( Pa_StartStream( strm ) ); // resume ping
       bool ret = this->updateThreshold();

@@ -131,9 +131,9 @@ void Frame::stopSonar(){
   // stop sonar processing thread
   LOCK( this->threadLock );
   if( this->sThread ){ // stop only if started
-    //if( this->sThread->Delete() == wxTHREAD_NO_ERROR ){
-    this->sThread->Delete();
     this->buttonPause->Disable(); // gray-out pause control
+    this->sThread->Delete();
+    //if( this->sThread->Delete() == wxTHREAD_NO_ERROR ){
   }
 }
 
