@@ -58,7 +58,7 @@ void PlotPane::drawLinePlot( wxDC& dc, std::deque<float>& values,
       // draw point
       wxCoord x = w - (i)*x_stride;
       wxCoord y = h - y_stride*(values[i]-min);
-      wxCoord RADIUS = 2;
+      wxCoord RADIUS = 1;
       dc.DrawCircle( x, y, RADIUS );
 
       // draw line from previous point

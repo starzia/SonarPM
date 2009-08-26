@@ -108,10 +108,8 @@ bool SonarThread::updateThreshold(){
     // if active
     if( this->true_idle_seconds() < SonarThread::IDLE_TIME ){
       activeReadings.push_back( FEATURE(s) );
-      updateGUI( 0, 0, FEATURE(s) ); // draw active readings w/thresh line
-    }else{
-      updateGUI( FEATURE(s), 0, 0 ); // draw inactive readings w/regular line
     }
+    updateGUI( FEATURE(s), 0.0/0.0, 0.0/0.0 ); // draw readings w/ line
   }
   // set threshold to 1/2 * average of active sonar readings
   float newThreshold = 0;
@@ -214,7 +212,7 @@ void SonarThread::power_management(){
         this->mainFrame->logger.log("false sleep");
         lastSleep=0;   // don't want to double-count false negatives
         //-- THRESHOLD LOWERING
-        this->setThreshold( this->threshold/SonarThread::DYN_THRESH_FACTOR );
+        this->setThreshold( this->threshold*SonarThread::DYN_THRESH_FACTOR );
       }
 
     //==== INACTIVE ===========================================================
