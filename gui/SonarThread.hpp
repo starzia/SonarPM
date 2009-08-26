@@ -45,8 +45,8 @@ public:
   static const duration_t FALSE_NEG = (5);
   // how rapidly does dynamic threshold move
   static const float DYN_THRESH_FACTOR = 0.8;
-  // time between phone home events
-  static const duration_t RECALIBRATION_INTERVAL = (3600);
+  // time after which threshold is reset
+  static const duration_t RECALIBRATION_INTERVAL = (1200);
   // timeout for naive power managment policy
   static const duration_t DISPLAY_TIMEOUT = (600); // ten minutes
   static const frequency DEFAULT_PING_FREQ = (22000);

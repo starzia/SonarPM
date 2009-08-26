@@ -36,13 +36,14 @@ void* SonarThread::Entry(){
       break;
     case MODE_FREQ_RESPONSE:
       this->mainFrame->logger.log_freq_response( this->audio);
-      this->mainFrame->Enable(); // re-enable gui controls
-      this->mainFrame->SetStatusText(_T(""));
       break;
     case MODE_ECHO_TEST:
     default:
       break;
   }
+  // signal completion to frame
+  PlotEvent evt = PlotEvent( SONAR_DONE );
+  this->mainFrame->GetEventHandler()->AddPendingEvent( evt );
   return 0;
   // thread is now terminated.
 }
@@ -111,11 +112,11 @@ bool SonarThread::updateThreshold(){
     }
     updateGUI( FEATURE(s), 0.0/0.0, 0.0/0.0 ); // draw readings w/ line
   }
-  // set threshold to 1/2 * average of active sonar readings
+  // set threshold to 1/3 * average of active sonar readings
   float newThreshold = 0;
   int i;
   for( i=0; i<activeReadings.size(); i++ ) newThreshold += activeReadings[i];
-  newThreshold /= activeReadings.size() * 2;
+  newThreshold /= activeReadings.size() * 3;
   this->setThreshold( newThreshold );
   return true;
 }
@@ -187,6 +188,9 @@ void SonarThread::power_management(){
       AudioDev::check_error( Pa_StartStream( strm ) ); // resume ping
       bool ret = this->updateThreshold();
       AudioDev::check_error( Pa_StopStream( strm ) ); // stop ping
+      // make a gap in the plot to separate training data
+      PlotEvent evt = PlotEvent( PLOT_EVENT_GAP );
+      this->mainFrame->GetEventHandler()->AddPendingEvent( evt );
       if( !ret ) break; // break if it was interrupted
     }
 

@@ -125,19 +125,15 @@ void Frame::startSonar( ){
   }
 }
 
+/** note that the gui's response to the thread stopping doesn't happen here but
+ * after the thread sends back a plotEvent(SONAR_DONE) event */
 void Frame::stopSonar(){   
   // stop sonar processing thread
   LOCK( this->threadLock );
   if( this->sThread ){ // stop only if started
-    if( this->sThread->Delete() == wxTHREAD_NO_ERROR ){
-      // note that previously we were nullifying in the thread's OnExit.
-      // However, this was causing locking problems in Windows.
-      this->sThread = NULL;
-
-      // update gui controls
-      this->buttonPause->SetLabel( _T( "continue" ) );
-      this->SetStatusText(_T("Sonar is stopped"));
-    }
+    //if( this->sThread->Delete() == wxTHREAD_NO_ERROR ){
+    this->sThread->Delete();
+    this->buttonPause->Disable(); // gray-out pause control
   }
 }
 
@@ -238,6 +234,17 @@ void Frame::onPlotEvent(PlotEvent& event){
     this->SetStatusText(s);
   }else if( event.getType() == PLOT_EVENT_GAP ){
     this->sonarHistory->addPoint( 0.0/0.0, 0.0/0.0, 0.0/0.0 ); //NaN
+  }else if( event.getType() == SONAR_DONE ){
+    // note that previously we were nullifying in the thread's OnExit.
+    // However, this was causing locking problems in Windows.
+    this->sThread = NULL;
+
+    // update gui controls
+    this->buttonPause->SetLabel( _T( "start" ) );
+    this->SetStatusText(_T("Sonar is stopped.  Click start to begin."));
+
+    this->Enable(); // un-gray-out the controls in this window
+    this->buttonPause->Enable(); // un-gray-out pause control
   }
   this->Refresh();
   this->Update();
