@@ -87,16 +87,41 @@ void SonarThread::reset(){
   }
 }
 
+/** updateThreshold() sets the threshold if it is not already set.
+ * It collects sonar readings of the user in the active state by continuously
+ * recording and discarding readings that do not coincide with user input.
+ * Then it simply sets the threshold to half of the average active reading.
+ * @return false if this fcn was interrupted by thread deletion
+ *         true if threshold was successfully set.
+ */
 bool SonarThread::updateThreshold(){
-  // check to see whether threshold has already been set, if not then set it
-  if( !(this->threshold > 0) ){ // initially threshold will be set to zero or NaN
+  cout << "updating threshold using active readings..." << endl;
+  vector<float> activeReadings;
 
-    // set threshold to half of
-    // current, assuming that program has just been launched so user is present.
-    this->setThreshold( this->windowAvg / 2 );
+  while( activeReadings.size() < SonarThread::SLIDING_WINDOW ){
+    if( this->TestDestroy() ) return false; // test to see whether we should die
+      
+    // take sonar reading
+    AudioBuf rec = audio.blocking_record( WINDOW_LENGTH );
+    Statistics s = measure_stats( rec, conf.ping_freq );
+
+    // if active
+    if( this->true_idle_seconds() < SonarThread::IDLE_TIME ){
+      activeReadings.push_back( FEATURE(s) );
+      updateGUI( 0, 0, FEATURE(s) ); // draw active readings w/thresh line
+    }else{
+      updateGUI( FEATURE(s), 0, 0 ); // draw inactive readings w/regular line
+    }
   }
-  return true; // true for uninterrupted completion
+  // set threshold to 1/2 * average of active sonar readings
+  float newThreshold = 0;
+  int i;
+  for( i=0; i<activeReadings.size(); i++ ) newThreshold += activeReadings[i];
+  newThreshold /= activeReadings.size() * 2;
+  this->setThreshold( newThreshold );
+  return true;
 }
+
 
 bool SonarThread::scheduler( long log_start_time ){
   long currentTime = SysInterface::current_time();
@@ -158,6 +183,15 @@ void SonarThread::power_management(){
     // check scheduler to see if there are any periodic tasks to complete.
     if( !this->scheduler( log_start_time ) ) break;
 
+    // check to see that threshold has been set.
+    if( !(this->threshold > 0) ){
+      // If not, set it.
+      AudioDev::check_error( Pa_StartStream( strm ) ); // resume ping
+      bool ret = this->updateThreshold();
+      AudioDev::check_error( Pa_StopStream( strm ) ); // stop ping
+      if( !ret ) break; // break if it was interrupted
+    }
+
     // Pause so that we don't poll idle_seconds() constantly
     SysInterface::sleep( SonarThread::SLEEP_LENGTH );
 
@@ -183,7 +217,7 @@ void SonarThread::power_management(){
         this->setThreshold( this->threshold/SonarThread::DYN_THRESH_FACTOR );
       }
 
-      //==== INACTIVE ===========================================================
+    //==== INACTIVE ===========================================================
     }else if( !sleeping ){ // If inactive and sleeping, wait until awakened.
       // ---TIMEOUT---
       // if user has been idle a very long time, then simulate default PM action
@@ -199,10 +233,6 @@ void SonarThread::power_management(){
       // if we have not collected enough consecutive readings to comprise a
       // single averaging window, then we can't yet do anything further.
       if( this->windowAvg > 0 ){
-
-        // check to see that threshold has been set. If not, set it.
-        if( !this->updateThreshold( ) ) break; // break if interrupted
-
         // if sonar reading below threshold
         if( this->windowAvg < this->threshold ){
           this->mainFrame->logger.log( "sleep sonar" );

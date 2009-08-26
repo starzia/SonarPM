@@ -76,7 +76,7 @@ private:
   long lastUserInputTime;
   long lastDummyInputTime;
 
-  /** sets the screen blanking threshold, if it is unset or stale.
+  /** sets the screen blanking threshold.
    * @return true if successful false if interrupted by thread cancellation */
   bool updateThreshold();
   void setThreshold( float thresh );

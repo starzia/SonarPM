@@ -53,11 +53,20 @@ void PlotPane::drawLinePlot( wxDC& dc, std::deque<float>& values,
   dc.SetPen( wxPen( color, lineThickness ) );
   unsigned int i, N = values.size();
   float x_stride =  ((float)w)/(N-1), y_stride = ((float)h)/(max-min);
-  for( i=1; i < N; i++ ){
-    // check that value is not NaN
-    if( (values[i] >= 0) && ( values[i-1] >= 0 ) ){ // test for NaN
-      dc.DrawLine( w - (i-1)*x_stride, h - y_stride*(values[i-1]-min),
-                   w - (i)*x_stride, h - y_stride*(values[i]-min) );
+  for( i=0; i < N; i++ ){
+    if( values[i] >= 0 ){ // test for NaN
+      // draw point
+      wxCoord x = w - (i)*x_stride;
+      wxCoord y = h - y_stride*(values[i]-min);
+      wxCoord RADIUS = 2;
+      dc.DrawCircle( x, y, RADIUS );
+
+      // draw line from previous point
+      if( i>0 && values[i-1] >= 0 ){ // test for NaN
+        wxCoord x1 = w - (i-1)*x_stride;
+        wxCoord y1 = h - y_stride*(values[i-1]-min);
+        dc.DrawLine( x1, y1, x, y );
+      }
     }
   }
 }
