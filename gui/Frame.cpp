@@ -9,6 +9,8 @@
 #include <wx/textdlg.h>
 #include "PlotEvent.hpp"
 #include "../SysInterface.hpp"
+// the icon files
+#include "bat_32.xpm" 
 using namespace std;
 
 
@@ -47,6 +49,8 @@ Frame::Frame( const wxString & title, int width, int height ) :
 
   // add taskbar icon
   this->tbIcon = new TaskBarIcon( this );
+  // set window icon
+  this->SetIcon( bat_32_xpm );
 
   // add sonar Plot
   this->sonarHistory = new PlotPane( panel, wxDefaultPosition,
