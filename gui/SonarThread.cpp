@@ -161,12 +161,11 @@ void SonarThread::power_management(){
 #endif
   // buffer duration is 10ms, but actually it just needs to be a multiple
   // of the ping_period.
-  AudioBuf ping = tone( 0.01, conf.ping_freq, 0,0 ); // no fade since we loop it
+  AudioBuf ping = tone( 0.1, conf.ping_freq, 0,0 );
   cout << "Begin power management loop at frequency of " 
        <<conf.ping_freq<<"Hz"<<endl;
   // initialize and start ping
   PaStream* strm = audio.nonblocking_play_loop( ping );
-  AudioDev::check_error( Pa_StopStream( strm ) ); // stop ping
   this->mainFrame->logger.log( "begin" );
   long log_start_time = this->mainFrame->logger.get_log_start_time();
 
@@ -176,18 +175,22 @@ void SonarThread::power_management(){
   bool sleeping=false; // indicates whether the sonar system caused a sleep
                        // note that timeout-sleeps do not set this flag
                        // so sonar readings continue even after timeout-sleep
+  bool pingOn = true; // initially, ping is playing, but it will be turned off
+  // and on as the user is active and idle
 
   // test to see whether we should die
   while( !this->TestDestroy() ){
     // check scheduler to see if there are any periodic tasks to complete.
     if( !this->scheduler( log_start_time ) ) break;
 
-    // check to see that threshold has been set.
+    // check to see that threshold has been set.  If not, set it.
     if( !(this->threshold > 0) && !sleeping ){
-      // If not, set it.
-      AudioDev::check_error( Pa_StartStream( strm ) ); // resume ping
+      // start ping, if necessary
+      if( !pingOn ){
+        AudioDev::check_error( Pa_StartStream( strm ) ); // resume ping
+        pingOn = true;
+      }
       bool ret = this->updateThreshold();
-      AudioDev::check_error( Pa_StopStream( strm ) ); // stop ping
       // make a gap in the plot to separate training data
       PlotEvent evt = PlotEvent( PLOT_EVENT_GAP );
       this->mainFrame->GetEventHandler()->AddPendingEvent( evt );
@@ -218,6 +221,11 @@ void SonarThread::power_management(){
         //-- THRESHOLD LOWERING
         this->setThreshold( this->threshold*SonarThread::DYN_THRESH_FACTOR );
       }
+      // stop ping, if necessary
+      if( pingOn ){
+        AudioDev::check_error( Pa_StopStream( strm ) ); // stop ping
+        pingOn = false;
+      }
 
     //==== INACTIVE ===========================================================
     }else if( !sleeping ){ // If inactive and sleeping, wait until awakened.
@@ -244,10 +252,13 @@ void SonarThread::power_management(){
           this->reset();
         }
       }
+      // start ping, if necessary
+      if( !pingOn ){
+        AudioDev::check_error( Pa_StartStream( strm ) ); // resume ping
+        pingOn = true;
+      }
       // run sonar, and store a new reading
-      AudioDev::check_error( Pa_StartStream( strm ) ); // resume ping
       this->recordAndProcessAndUpdateGUI( );
-      AudioDev::check_error( Pa_StopStream( strm ) ); // stop ping
     }
   }
   this->mainFrame->logger.log( "end" );
