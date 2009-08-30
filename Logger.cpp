@@ -115,7 +115,7 @@ bool Logger::phone_home(){
   info.cb = sizeof(info);
   PROCESS_INFORMATION pinfo;
   char cmd[128];
-  strcpy( cmd, ("gzip.exe -9 \"" + this->filename + "\"").c_str() );
+  strcpy( cmd, ("gzip.exe -9f \"" + this->filename + "\"").c_str() );
   success = CreateProcess( NULL, cmd, NULL, NULL, false,
                            NORMAL_PRIORITY_CLASS, NULL, NULL, &info, &pinfo );
   if( success ){
@@ -133,7 +133,7 @@ bool Logger::phone_home(){
                           FTP_TRANSFER_TYPE_BINARY, NULL );
     if( !success ){
       // gunzip log so that we can continue logging to it
-      strcpy( cmd, ("gzip.exe -d -9 \"" + this->filename + ".gz\"").c_str() );
+      strcpy( cmd, ("gzip.exe -df \"" + this->filename + ".gz\"").c_str() );
       CreateProcess( NULL, cmd, NULL, NULL, false,
                      NORMAL_PRIORITY_CLASS, NULL, NULL, &info, &pinfo );
       WaitForSingleObject( pinfo.hProcess, INFINITE ); // wait for gunzip
@@ -143,7 +143,7 @@ bool Logger::phone_home(){
   }
 #else
   // gzip it
-  success = ( system( ("gzip -9 " + this->filename).c_str() ) == EXIT_SUCCESS );
+  success = ( system( ("gzip -9f " + this->filename).c_str() ) == EXIT_SUCCESS );
   if( success ){
     // ftp upload
     string command = "curl -T " + this->filename + ".gz ftp://"+FTP_USER+
@@ -151,7 +151,7 @@ bool Logger::phone_home(){
     success = ( system( command.c_str() ) == EXIT_SUCCESS );
     if( !success ){
        // gunzip it to continue logging
-      system( ("gunzip " + this->filename + ".gz").c_str() );
+      system( ("gzip -df " + this->filename + ".gz").c_str() );
     }
   }
 #endif
@@ -195,4 +195,17 @@ bool Logger::log_model(){
   cin.ignore();
   getline( cin, description );
   return this->log( "model " + description );
+}
+
+bool Logger::log_basic( string msg ){
+  Logger logger;
+  Config conf;
+  if( conf.load() ){
+    logger.setConfig( &conf );
+    logger.log( msg );
+    return true;
+  }else{
+    cerr << "logging <<" << msg << ">> failed!" << endl;
+    return false;
+  }
 }

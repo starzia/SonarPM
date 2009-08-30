@@ -18,6 +18,10 @@ public:
   bool log_freq_response( AudioDev & audio );
   /** asks the user to describe their computer model and logs this */
   bool log_model();
+  /** static function to log a string.  This is inefficient since it loads the
+   * configuration file each time, however it is useful for callback functions
+   * which have no reference to the active logger object */
+  static bool log_basic( std::string message );
 
   // phone home constants
   static const int PHONEHOME_INTERVAL = 3600; // in seconds

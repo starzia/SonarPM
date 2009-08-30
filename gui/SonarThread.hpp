@@ -52,6 +52,9 @@ public:
   static const frequency DEFAULT_PING_FREQ = (22000);
   // just less than min Windows screensaver activation time of one minute
   static const duration_t DUMMY_INPUT_INTERVAL = (55);
+  // this is how much higher we expect active state readings to be than absent
+  // state.  This determines where the initial threshold is set.
+  static const float ACTIVE_GAIN = 2;
 
 private:
   void poll();
@@ -102,6 +105,7 @@ private:
 
   AudioDev audio;
   Config conf;
+  Logger logger;
 };
 
 /** performs a test of the audio system while updating a status window */

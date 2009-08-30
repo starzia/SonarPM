@@ -31,7 +31,7 @@ Frame::Frame( const wxString & title, int width, int height ) :
 	   wxFRAME_NO_TASKBAR | wxSYSTEM_MENU | wxCAPTION 
 	   | wxCLOSE_BOX | wxCLIP_CHILDREN | wxMINIMIZE_BOX //| wxRESIZE_BORDER
 	   | wxFULL_REPAINT_ON_RESIZE ), 
-  sThread(NULL), threadLock(wxMUTEX_DEFAULT), logger()
+  sThread(NULL), threadLock(wxMUTEX_DEFAULT)
 { 
   // add controls
   this->CreateStatusBar();
@@ -165,7 +165,7 @@ void Frame::firstTime(){
   wxString modelName = wxGetTextFromUser(
         _T("Please enter the manufacturer and model name of your computer."),
         _T("Computer description"), _T("Generic"), this );
-  this->logger.log( "model " + string(modelName.mb_str()) );
+  Logger::log_basic( "model " + string(modelName.mb_str()) );
 
   // log frequency response
   ret = wxMessageBox(
@@ -285,16 +285,16 @@ WXLRESULT Frame::MSWWindowProc( WXUINT message,
                                 WXWPARAM wParam, WXLPARAM lParam ){
   if( message == WM_POWERBROADCAST ){
     if( wParam == PBT_APMRESUMEAUTOMATIC ){
-      this->logger.log( "resume" );
+      Logger::log_basic( "resume" );
     }else if( wParam == PBT_APMSUSPEND ){
-      this->logger.log( "suspend" );
+      Logger::log_basic( "suspend" );
     }else if( wParam == PBT_APMPOWERSTATUSCHANGE ){
       SYSTEM_POWER_STATUS status;
       GetSystemPowerStatus( &status );
       if( status.ACLineStatus == 0 ){
-        this->logger.log( "battery" );
+        Logger::log_basic( "battery" );
       }else if( status.ACLineStatus == 1 ){
-        this->logger.log( "AC" );
+        Logger::log_basic( "AC" );
       }
     }
   }

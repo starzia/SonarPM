@@ -17,5 +17,5 @@ class SysInterface{
   /** returns the name of configuration directory, creating if nonexistant */
   static std::string config_dir();
   /** register fcn to clean up on terminattion */
-  static void register_term_handler( Logger & logger );
+  static void register_term_handler();
 };

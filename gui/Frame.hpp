@@ -33,10 +33,6 @@ public:
   /** routines to run if this is the first time the app is run */
   void firstTime();
 
-  // the following are public because we need access from App
-  wxThread*  sThread;
-  Logger  logger;
-  
   DECLARE_EVENT_TABLE()
 private:
   // update plot with a new point
@@ -54,6 +50,8 @@ private:
   TaskBarIcon* tbIcon;
   PlotPane* sonarHistory;
   wxMutex threadLock; // to protect access to thread pointer
+  wxThread*  sThread;
+  Logger logger;
 };
 
 

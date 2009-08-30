@@ -170,7 +170,6 @@ string SysInterface::config_dir(){
 #endif
 }
 
-Logger* g_logger; // global reference to logger for termination callback fcns.
 
 #ifdef PLATFORM_WINDOWS
 BOOL windows_term_handler( DWORD fdwCtrlType ) {
@@ -180,7 +179,7 @@ BOOL windows_term_handler( DWORD fdwCtrlType ) {
   case CTRL_BREAK_EVENT:
   case CTRL_LOGOFF_EVENT:
   case CTRL_SHUTDOWN_EVENT:
-    g_logger->log( "end" );
+    Logger::log_basic( "end" );
     AudioDev::terminate();
     exit( 0 );
     return true;
@@ -191,15 +190,14 @@ BOOL windows_term_handler( DWORD fdwCtrlType ) {
 }
 #else
 void posix_term_handler( int signum ){
-  g_logger->log( "end" );
+  Logger::log_basic( "end" );
   AudioDev::terminate();
   exit( 0 );
 }
 #endif
 
 
-void SysInterface::register_term_handler( Logger & logger ){
-  g_logger = &logger;
+void SysInterface::register_term_handler(){
 #ifdef PLATFORM_WINDOWS
   if(!SetConsoleCtrlHandler( (PHANDLER_ROUTINE) windows_term_handler, TRUE ))
     cerr << "register handler failed!" <<endl;

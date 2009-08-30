@@ -24,7 +24,7 @@ void* SonarThread::Entry(){
   }
   this->audio = AudioDev( conf.rec_dev, conf.play_dev );
   // link config file to logger object
-  this->mainFrame->logger.setConfig( &(this->conf) );
+  this->logger.setConfig( &(this->conf) );
   //===========================
 
   switch( this->mode ){
@@ -35,7 +35,7 @@ void* SonarThread::Entry(){
       this->poll();
       break;
     case MODE_FREQ_RESPONSE:
-      this->mainFrame->logger.log_freq_response( this->audio);
+      this->logger.log_freq_response( this->audio);
       break;
     case MODE_ECHO_TEST:
     default:
@@ -52,7 +52,7 @@ void SonarThread::OnExit(){
   this->reset(); // create gap in plot
   cerr << "SonarThread exited" <<endl;
   if( this->mode == MODE_POWER_MANAGEMENT ){
-    this->mainFrame->logger.log( "end" );
+    this->logger.log( "end" );
   }
 }
 
@@ -66,7 +66,7 @@ void SonarThread::setThreshold( float thresh ){
   // log new value
   ostringstream log_msg;
   log_msg << "threshold " << thresh;
-  this->mainFrame->logger.log( log_msg.str() );
+  this->logger.log( log_msg.str() );
 }
 
 void SonarThread::updateGUI( float echo_delta, float window_avg, float thresh ){
@@ -103,7 +103,7 @@ bool SonarThread::updateThreshold(){
     if( this->TestDestroy() ) return false; // test to see whether we should die
       
     // take sonar reading
-    AudioBuf rec = audio.blocking_record( WINDOW_LENGTH );
+    AudioBuf rec = audio.blocking_record( SonarThread::WINDOW_LENGTH );
     Statistics s = measure_stats( rec, conf.ping_freq );
 
     // if active
@@ -112,12 +112,16 @@ bool SonarThread::updateThreshold(){
     }
     updateGUI( FEATURE(s), 0.0/0.0, 0.0/0.0 ); // draw readings w/ line
   }
-  // set threshold to 1/3 * average of active sonar readings
+  // set threshold to 1/ACTIVE_GAIN * average of active sonar readings
   float newThreshold = 0;
   int i;
   for( i=0; i<activeReadings.size(); i++ ) newThreshold += activeReadings[i];
-  newThreshold /= activeReadings.size() * 3;
+  newThreshold /= activeReadings.size() * SonarThread::ACTIVE_GAIN;
   this->setThreshold( newThreshold );
+
+  // make a gap in the plot to separate training data
+  PlotEvent evt = PlotEvent( PLOT_EVENT_GAP );
+  this->mainFrame->GetEventHandler()->AddPendingEvent( evt );
   return true;
 }
 
@@ -166,8 +170,8 @@ void SonarThread::power_management(){
        <<conf.ping_freq<<"Hz"<<endl;
   // initialize and start ping
   PaStream* strm = audio.nonblocking_play_loop( ping );
-  this->mainFrame->logger.log( "begin" );
-  long log_start_time = this->mainFrame->logger.get_log_start_time();
+  this->logger.log( "begin" );
+  long log_start_time = this->logger.get_log_start_time();
 
   // keep track of certain program events
   long lastSleep=0; // sleep means sonar-caused display sleep
@@ -190,11 +194,7 @@ void SonarThread::power_management(){
         AudioDev::check_error( Pa_StartStream( strm ) ); // resume ping
         pingOn = true;
       }
-      bool ret = this->updateThreshold();
-      // make a gap in the plot to separate training data
-      PlotEvent evt = PlotEvent( PLOT_EVENT_GAP );
-      this->mainFrame->GetEventHandler()->AddPendingEvent( evt );
-      if( !ret ) break; // break if it was interrupted
+      if( !this->updateThreshold() ) break; // break if it was interrupted
     }
 
     // Pause so that we don't poll idle_seconds() constantly
@@ -211,12 +211,12 @@ void SonarThread::power_management(){
       this->lastUserInputTime = currentTime;
       if( currentTime - lastTimeout < SonarThread::FALSE_NEG ){
         cout << "False timeout detected." <<endl;
-        this->mainFrame->logger.log("false timeout");
+        this->logger.log("false timeout");
         lastTimeout=0; // don't want to double-count false negatives
       }
       if( currentTime - lastSleep   < SonarThread::FALSE_NEG ){
         cout << "False sleep detected." <<endl;
-        this->mainFrame->logger.log("false sleep");
+        this->logger.log("false sleep");
         lastSleep=0;   // don't want to double-count false negatives
         //-- THRESHOLD LOWERING
         this->setThreshold( this->threshold*SonarThread::DYN_THRESH_FACTOR );
@@ -235,7 +235,7 @@ void SonarThread::power_management(){
         // if we've been tring to detect use for too long, then this probably
         // means that the threshold is too low.
         cout << "Display timeout." << endl;
-        this->mainFrame->logger.log( "sleep timeout" );
+        this->logger.log( "sleep timeout" );
         SysInterface::sleep_monitor( ); // sleep monitor
         lastTimeout = SysInterface::current_time( );
       }
@@ -245,7 +245,7 @@ void SonarThread::power_management(){
       if( this->windowAvg > 0 ){
         // if sonar reading below threshold
         if( this->windowAvg < this->threshold ){
-          this->mainFrame->logger.log( "sleep sonar" );
+          this->logger.log( "sleep sonar" );
           SysInterface::sleep_monitor( ); // sleep monitor
           lastSleep = SysInterface::current_time( );
           sleeping = true;
@@ -261,17 +261,18 @@ void SonarThread::power_management(){
       this->recordAndProcessAndUpdateGUI( );
     }
   }
-  this->mainFrame->logger.log( "end" );
+  this->logger.log( "end" );
   // clean up portaudio so that we can use it again later.
-  audio.check_error( Pa_CloseStream( strm ) );
+  AudioDev::check_error( Pa_StopStream( strm ) ); // stop ping
+  AudioDev::check_error( Pa_CloseStream( strm ) );
 }
 
 void SonarThread::recordAndProcessAndUpdateGUI(){
   // record and process
-  AudioBuf rec = audio.blocking_record( WINDOW_LENGTH );
+  AudioBuf rec = audio.blocking_record( SonarThread::WINDOW_LENGTH );
   Statistics s = measure_stats( rec, conf.ping_freq );
   cout << s << endl;
-  this->mainFrame->logger.log( s );
+  this->logger.log( s );
 
   // update sliding window and GUI
   this->windowHistory.push_front( FEATURE(s) );
@@ -338,7 +339,7 @@ bool SonarThread::waitUntilIdle(){
     SysInterface::sleep( SonarThread::SLEEP_LENGTH ); //don't poll idle_seconds() constantly
     if( this->TestDestroy() ) return false; //test to see if thread was destroyed
   }
-  this->mainFrame->logger.log( "idle" );
+  this->logger.log( "idle" );
   return true;
 }
 
@@ -351,7 +352,7 @@ bool SonarThread::waitUntilActive(){
     current_idle_time = SysInterface::idle_seconds();
     if( this->TestDestroy() ) return false; //test to see if thread was destroyed
   }
-  this->mainFrame->logger.log( "active" );
+  this->logger.log( "active" );
   return true;
 }
 */
