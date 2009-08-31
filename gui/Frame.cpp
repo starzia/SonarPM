@@ -3,11 +3,9 @@
 #include <wx/sizer.h>
 #include <sstream>
 #include <wx/event.h>
-#include "PlotEvent.hpp"
 #include "ConfigFrame.hpp"
 #include "CloseConfirmFrame.hpp"
 #include <wx/textdlg.h>
-#include "PlotEvent.hpp"
 #include "../SysInterface.hpp"
 // the icon files
 #include "bat_32.xpm" 
@@ -19,7 +17,7 @@ BEGIN_EVENT_TABLE( Frame, wxFrame )
 ///EVT_MENU    (DO_TEST,   Frame::DoTest)
 EVT_SIZE( Frame::onSize )
 EVT_ICONIZE( Frame::onIconize )
-EVT_PLOT( wxID_ANY, Frame::onPlotEvent )
+EVT_SONAR( wxID_ANY, Frame::onSonarEvent )
 EVT_BUTTON( BUTTON_PAUSE, Frame::onPause )
 EVT_BUTTON( BUTTON_CONFIG, Frame::onConfig )
 EVT_CHOICE( CHOICE_MODE, Frame::onModeSwitch )
@@ -130,7 +128,7 @@ void Frame::startSonar( ){
 }
 
 /** note that the gui's response to the thread stopping doesn't happen here but
- * after the thread sends back a plotEvent(SONAR_DONE) event */
+ * after the thread sends back a SonarEvent(SONAR_DONE) event */
 void Frame::stopSonar(){   
   // stop sonar processing thread
   LOCK( this->threadLock );
@@ -224,14 +222,9 @@ void Frame::onSize( wxSizeEvent& event ){
   //this->Update();
 }
 
-void Frame::onPlotEvent(PlotEvent& event){
+void Frame::onSonarEvent(SonarEvent& event){
   if( event.getType() == PLOT_EVENT_POINT ){
     this->sonarHistory->addPoint( event.a, event.b, event.c );
-    
-    wxString s;
-    s.Printf( wxT("Last reading: %f, avg: %f"), event.a, event.b );
-    this->SetStatusText(s);
-    
   }else if( event.getType() == PLOT_EVENT_THRESHOLD ){
     wxString s;
     s.Printf( wxT("Threshold updated to: %f"), event.a );
@@ -249,6 +242,9 @@ void Frame::onPlotEvent(PlotEvent& event){
 
     this->Enable(); // un-gray-out the controls in this window
     this->buttonPause->Enable(); // un-gray-out pause control
+  }else if( event.getType() == STATUS_MSG ){
+    wxString str = wxString::FromAscii( event.msg.c_str() );
+    this->SetStatusText( str );
   }
   this->Refresh();
   this->Update();

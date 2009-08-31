@@ -4,7 +4,7 @@
 ///#include <wx/event.h> // for wxThreadEvent
 #include "TaskBarIcon.hpp"
 #include "PlotPane.hpp"
-#include "PlotEvent.hpp"
+#include "SonarEvent.hpp"
 #include "../Logger.hpp"
 
 class Frame : public wxFrame
@@ -24,7 +24,7 @@ public:
   void onModeSwitch( wxCommandEvent& event );
   void onConfig( wxCommandEvent& event );
 
-  void onPlotEvent(PlotEvent& event);
+  void onSonarEvent(SonarEvent& event);
   void onPause( wxCommandEvent& event );
 
   void startSonar();

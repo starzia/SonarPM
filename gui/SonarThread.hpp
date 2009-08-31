@@ -62,7 +62,10 @@ private:
 
   // GUI helpers
   void recordAndProcessAndUpdateGUI();
-  void updateGUI( float echo_delta, float window_avg, float thresh );
+  /** @param setStatus determines whether window's status text is updated with
+   *   this reading's values */
+  void updateGUI( float echo_delta, float window_avg, float thresh,
+                  bool setStatus );
   void reset(); // create a gap in plot and clears sonar history window
 
 

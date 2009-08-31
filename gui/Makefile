@@ -1,8 +1,8 @@
 FLAGS = -Wno-write-strings -ggdb
 
-OBJS = App.o Frame.o TaskBarIcon.o PlotPane.o SonarThread.o PlotEvent.o \
+OBJS = App.o Frame.o TaskBarIcon.o PlotPane.o SonarThread.o SonarEvent.o \
  ConfigFrame.o CloseConfirmFrame.o
-W32_OBJS = App.O Frame.O TaskBarIcon.O PlotPane.O SonarThread.O PlotEvent.O \
+W32_OBJS = App.O Frame.O TaskBarIcon.O PlotPane.O SonarThread.O SonarEvent.O \
  ConfigFrame.O CloseConfirmFrame.O
 
 App: $(OBJS)

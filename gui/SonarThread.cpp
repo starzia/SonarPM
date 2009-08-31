@@ -1,5 +1,5 @@
 #include "SonarThread.hpp"
-#include "PlotEvent.hpp"
+#include "SonarEvent.hpp"
 #include "../SysInterface.hpp"
 #include <iostream>
 #include <sstream>
@@ -42,7 +42,7 @@ void* SonarThread::Entry(){
       break;
   }
   // signal completion to frame
-  PlotEvent evt = PlotEvent( SONAR_DONE );
+  SonarEvent evt = SonarEvent( SONAR_DONE );
   this->mainFrame->GetEventHandler()->AddPendingEvent( evt );
   return 0;
   // thread is now terminated.
@@ -60,7 +60,7 @@ void SonarThread::setThreshold( float thresh ){
   cout << "setting threshold to "<<thresh<<endl;
   this->threshold = thresh;
   // update gui
-  PlotEvent evt = PlotEvent( PLOT_EVENT_THRESHOLD );
+  SonarEvent evt = SonarEvent( PLOT_EVENT_THRESHOLD );
   evt.setVal( thresh, 0, 0 ); // last vals will be ignored
   this->mainFrame->GetEventHandler()->AddPendingEvent( evt );
   // log new value
@@ -69,18 +69,29 @@ void SonarThread::setThreshold( float thresh ){
   this->logger.log( log_msg.str() );
 }
 
-void SonarThread::updateGUI( float echo_delta, float window_avg, float thresh ){
-  // update gui
-  PlotEvent evt = PlotEvent( PLOT_EVENT_POINT );
+void SonarThread::updateGUI( float echo_delta, float window_avg, float thresh,
+                             bool setStatus = true ){
+  // update plot
+  SonarEvent evt = SonarEvent( PLOT_EVENT_POINT );
   evt.setVal( echo_delta, window_avg, thresh );
   this->mainFrame->GetEventHandler()->AddPendingEvent( evt );
+
+  if( setStatus ){
+    // set status text
+    SonarEvent evt2 = SonarEvent( STATUS_MSG );
+    ostringstream ss;
+    ss << "Last reading: " << echo_delta
+       << ",  ten-point average: " << window_avg;
+    evt2.setMsg( ss.str() );
+    this->mainFrame->GetEventHandler()->AddPendingEvent( evt2 );
+  }
 }
 
 void SonarThread::reset(){
   // check that we are not already in gap
   if( this->windowHistory.size() > 0 ){
     // create gap in plot
-    PlotEvent evt = PlotEvent( PLOT_EVENT_GAP );
+    SonarEvent evt = SonarEvent( PLOT_EVENT_GAP );
     this->mainFrame->GetEventHandler()->AddPendingEvent( evt );
 
     // clear sonar window
@@ -96,8 +107,12 @@ void SonarThread::reset(){
  *         true if threshold was successfully set.
  */
 bool SonarThread::updateThreshold(){
-  cout << "updating threshold using active readings..." << endl;
   vector<float> activeReadings;
+  cout << "updating threshold using active readings..." << endl;
+  // set status text
+  SonarEvent evt = SonarEvent( STATUS_MSG );
+  evt.setMsg( "Calibrating...  Please move the mouse for a few seconds." );
+  this->mainFrame->GetEventHandler()->AddPendingEvent( evt );
 
   while( activeReadings.size() < SonarThread::SLIDING_WINDOW ){
     if( this->TestDestroy() ) return false; // test to see whether we should die
@@ -110,7 +125,8 @@ bool SonarThread::updateThreshold(){
     if( this->true_idle_seconds() < SonarThread::IDLE_TIME ){
       activeReadings.push_back( FEATURE(s) );
     }
-    updateGUI( FEATURE(s), 0.0/0.0, 0.0/0.0 ); // draw readings w/ line
+    // plot readings, but don't update status text
+    updateGUI( FEATURE(s), 0.0/0.0, 0.0/0.0, false );
   }
   // set threshold to 1/ACTIVE_GAIN * average of active sonar readings
   float newThreshold = 0;
@@ -120,8 +136,8 @@ bool SonarThread::updateThreshold(){
   this->setThreshold( newThreshold );
 
   // make a gap in the plot to separate training data
-  PlotEvent evt = PlotEvent( PLOT_EVENT_GAP );
-  this->mainFrame->GetEventHandler()->AddPendingEvent( evt );
+  SonarEvent evt2 = SonarEvent( PLOT_EVENT_GAP );
+  this->mainFrame->GetEventHandler()->AddPendingEvent( evt2 );
   return true;
 }
 
