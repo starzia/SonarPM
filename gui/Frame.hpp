@@ -49,8 +49,8 @@ private:
 
   TaskBarIcon* tbIcon;
   PlotPane* sonarHistory;
-  wxMutex threadLock; // to protect access to thread pointer
   wxThread*  sThread;
+  wxMutex threadLock; // to protect access to thread pointer
   Logger logger;
 };
 

@@ -97,7 +97,8 @@ void Frame::startSonar( ){
   bool firstTime = !conf.load();
   while( !conf.load() ){
     ConfigFrame* conf = new ConfigFrame( this,_T("First-time configuration") );
-    int choice = conf->ShowModal();
+    int choice;
+    choice = conf->ShowModal();
   }
 
   if( firstTime ){

@@ -72,7 +72,6 @@ void PlotPane::drawLinePlot( wxDC& dc, std::deque<float>& values,
 }
 
 void PlotPane::setHistoryLength( unsigned int l ){
-  unsigned int currentLength = this->sonar_history.size();
   this->sonar_history.resize( l, 0.0/0.0 ); // make new entries NaN
   this->window_history.resize( l, 0.0/0.0 );
   this->thresh_history.resize( l, 0.0/0.0 );

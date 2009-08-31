@@ -9,8 +9,8 @@
 using namespace std;
 
 SonarThread::SonarThread( Frame* mf, sonar_mode m ) :
-     wxThread(wxTHREAD_DETACHED), mainFrame( mf ), mode(m), lastCalibration(0),
-     windowAvg(0.0/0.0), threshold(0.0/0.0){
+     wxThread(wxTHREAD_DETACHED), mainFrame( mf ), mode(m),
+     threshold(0.0/0.0), windowAvg(0.0/0.0), lastCalibration(0) {
   lastUserInputTime = lastDummyInputTime = SysInterface::current_time();
 }
 
@@ -130,7 +130,7 @@ bool SonarThread::updateThreshold(){
   }
   // set threshold to 1/ACTIVE_GAIN * average of active sonar readings
   float newThreshold = 0;
-  int i;
+  unsigned int i;
   for( i=0; i<activeReadings.size(); i++ ) newThreshold += activeReadings[i];
   newThreshold /= activeReadings.size() * SonarThread::ACTIVE_GAIN;
   this->setThreshold( newThreshold );
@@ -279,7 +279,7 @@ void SonarThread::power_management(){
   }
   this->logger.log( "end" );
   // clean up portaudio so that we can use it again later.
-  AudioDev::check_error( Pa_StopStream( strm ) ); // stop ping
+  if( pingOn ) AudioDev::check_error( Pa_StopStream( strm ) ); // stop ping
   AudioDev::check_error( Pa_CloseStream( strm ) );
 }
 
@@ -295,7 +295,7 @@ void SonarThread::recordAndProcessAndUpdateGUI(){
   unsigned int n = this->windowHistory.size();
   this->windowAvg = 0;
 
-  int i;
+  unsigned int i;
   for( i=0; i<n; i++ ) windowAvg += windowHistory[i];
   windowAvg /= n;
 
@@ -377,7 +377,7 @@ bool SonarThread::waitUntilActive(){
 EchoThread::EchoThread( wxDialog* diag,
                         unsigned int r_dev, unsigned int p_dev )
   : wxThread(wxTHREAD_DETACHED), 
-    echoDialog(diag), play_dev(p_dev), rec_dev(r_dev){}
+    echoDialog(diag), rec_dev(r_dev), play_dev(p_dev) {}
 
 EchoThread::~EchoThread(){}
 

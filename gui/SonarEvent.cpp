@@ -3,7 +3,7 @@
 DEFINE_EVENT_TYPE( SONAR_EVENT )
 
 SonarEvent::SonarEvent(enum SonarEventType t, wxEventType commandType, int id )
-:  wxCommandEvent(commandType, id), type(t), a(0), b(0), c(0) {}
+:  wxCommandEvent(commandType, id), a(0), b(0), c(0), type(t) {}
  
 SonarEvent::SonarEvent( const SonarEvent &event )
     :  wxCommandEvent(event) { 

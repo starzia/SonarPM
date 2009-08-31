@@ -47,7 +47,8 @@ ConfigFrame::ConfigFrame( Frame* p, const wxString & title ) :
   AudioDev audio;
   vector<string> devices = audio.list_devices();
   wxString* dev_arr = new wxString[ devices.size() ];
-  int i; for( i=0; i<devices.size(); i++ ){
+  unsigned int i;
+  for( i=0; i<devices.size(); i++ ){
       dev_arr[i] = wxString(devices[i].c_str(),wxConvUTF8);
   }
 
@@ -166,8 +167,8 @@ void ConfigFrame::onDefaults( wxCommandEvent& event ){
 }
 
 void ConfigFrame::loadDefaults(){
-  unsigned int defaultInput = Pa_GetDefaultInputDevice();
-  unsigned int defaultOutput = Pa_GetDefaultOutputDevice();
+  int defaultInput = Pa_GetDefaultInputDevice();
+  int defaultOutput = Pa_GetDefaultOutputDevice();
   if( defaultInput == paNoDevice ) defaultInput = 0;
   if( defaultOutput == paNoDevice ) defaultOutput = 0;
   // update widgets

@@ -27,8 +27,8 @@ public:
   static const frequency DEFAULT_PING_FREQ = (22000);
   static const char* CONFIG_FILENAME;
   bool allow_phone_home;
-  unsigned int rec_dev;
-  unsigned int play_dev;
+  int rec_dev;
+  int play_dev;
   std::string GUID;
   unsigned int log_id; // this is the number of logs phoned home so far
 
