@@ -46,7 +46,11 @@ public:
   // how rapidly does dynamic threshold move
   static const float DYN_THRESH_FACTOR = 0.8;
   // time after which threshold is reset
-  static const duration_t RECALIBRATION_INTERVAL = (1200);
+  // NOTE: currently I have effectively disabled recalibration
+  //  this is to prevent endless recalibration attempts after an idle machine
+  //  is "bumped"; it is woken up but will never have enough active samples to
+  //  recalibrate.
+  static const duration_t RECALIBRATION_INTERVAL = 9999999; //1200;
   // timeout for naive power managment policy
   static const duration_t DISPLAY_TIMEOUT = (600); // ten minutes
   static const frequency DEFAULT_PING_FREQ = (22000);

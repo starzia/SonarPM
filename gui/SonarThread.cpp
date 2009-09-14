@@ -200,6 +200,10 @@ void SonarThread::power_management(){
 
   // test to see whether we should die
   while( !this->TestDestroy() ){
+    cerr << ">> idle time " << true_idle_seconds() << '\t'
+         << "lastTimeout="<<lastTimeout<<'\t'<<"lastSleep="<<lastSleep<< '\t'
+         << "sleeping="<<sleeping<<'\t'<<"pingOn="<<pingOn<<endl;
+
     // check scheduler to see if there are any periodic tasks to complete.
     if( !this->scheduler( log_start_time ) ) break;
 
@@ -245,7 +249,16 @@ void SonarThread::power_management(){
 
     //==== INACTIVE ===========================================================
     }else if( !sleeping ){ // If inactive and sleeping, wait until awakened.
-      // ---TIMEOUT---
+      // ---SONAR READING---
+      // start ping, if necessary
+      if( !pingOn ){
+        AudioDev::check_error( Pa_StartStream( strm ) ); // resume ping
+        pingOn = true;
+      }
+      // run sonar, and store a new reading
+      this->recordAndProcessAndUpdateGUI( );
+
+      // ---TIMEOUT POLICY---
       // if user has been idle a very long time, then simulate default PM action
       if( this->true_idle_seconds( ) > SonarThread::DISPLAY_TIMEOUT ){
         // if we've been tring to detect use for too long, then this probably
@@ -255,7 +268,7 @@ void SonarThread::power_management(){
         SysInterface::sleep_monitor( ); // sleep monitor
         lastTimeout = SysInterface::current_time( );
       }
-      // ---SONAR---
+      // ---SONAR POLICY---
       // if we have not collected enough consecutive readings to comprise a
       // single averaging window, then we can't yet do anything further.
       if( this->windowAvg > 0 ){
@@ -265,16 +278,13 @@ void SonarThread::power_management(){
           SysInterface::sleep_monitor( ); // sleep monitor
           lastSleep = SysInterface::current_time( );
           sleeping = true;
+          if( pingOn ){
+            AudioDev::check_error( Pa_StopStream( strm ) ); // stop ping
+            pingOn = false;
+          }
           this->reset();
         }
       }
-      // start ping, if necessary
-      if( !pingOn ){
-        AudioDev::check_error( Pa_StartStream( strm ) ); // resume ping
-        pingOn = true;
-      }
-      // run sonar, and store a new reading
-      this->recordAndProcessAndUpdateGUI( );
     }
   }
   this->logger.log( "end" );
