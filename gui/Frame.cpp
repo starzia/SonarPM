@@ -76,12 +76,12 @@ Frame::Frame( const wxString & title, int width, int height ) :
   this->SetSizer(sizer1);
   sizer1->SetSizeHints(this);
 
-  /*
   // start sonar by queuing up an event
   wxCommandEvent evt = wxCommandEvent( wxEVT_COMMAND_BUTTON_CLICKED,
                                        BUTTON_PAUSE );
-  this->GetEventHandler()->AddPendingEvent( evt );
-   */
+  this->GetEventHandler()->ProcessEvent( evt );
+  /* NOTE: above, it seems that we should be using EvtHandler::AddPendingEvent
+   * rather than ProcessEvent, but the former was causing crash under Windows */
 }
 
 Frame::~Frame(){

@@ -109,6 +109,7 @@ void SonarThread::reset(){
 bool SonarThread::updateThreshold(){
   vector<float> activeReadings;
   cout << "updating threshold using active readings..." << endl;
+
   // set status text
   SonarEvent evt = SonarEvent( STATUS_MSG );
   evt.setMsg( "Calibrating...  Please move the mouse for a few seconds." );
@@ -200,23 +201,11 @@ void SonarThread::power_management(){
 
   // test to see whether we should die
   while( !this->TestDestroy() ){
+    /*
     cerr << ">> idle time " << true_idle_seconds() << '\t'
          << "lastTimeout="<<lastTimeout<<'\t'<<"lastSleep="<<lastSleep<< '\t'
          << "sleeping="<<sleeping<<'\t'<<"pingOn="<<pingOn<<endl;
-
-    // check scheduler to see if there are any periodic tasks to complete.
-    if( !this->scheduler( log_start_time ) ) break;
-
-    // check to see that threshold has been set.  If not, set it.
-    if( !(this->threshold > 0) && !sleeping ){
-      // start ping, if necessary
-      if( !pingOn ){
-        AudioDev::check_error( Pa_StartStream( strm ) ); // resume ping
-        pingOn = true;
-      }
-      if( !this->updateThreshold() ) break; // break if it was interrupted
-    }
-
+    */
     // Pause so that we don't poll idle_seconds() constantly
     SysInterface::sleep( SonarThread::SLEEP_LENGTH );
 
@@ -225,6 +214,19 @@ void SonarThread::power_management(){
     if( this->true_idle_seconds() < SonarThread::IDLE_TIME ){
       this->reset(); // throw out history
       sleeping=false; // OS will wake up monitor on user input
+
+      // check scheduler to see if there are any periodic tasks to complete.
+      if( !this->scheduler( log_start_time ) ) break;
+
+      // check to see that threshold has been set.  If not, set it.
+      if( !(this->threshold > 0) && !sleeping ){
+        // start ping, if necessary
+        if( !pingOn ){
+          AudioDev::check_error( Pa_StartStream( strm ) ); // resume ping
+          pingOn = true;
+        }
+        if( !this->updateThreshold() ) break; // break if it was interrupted
+      }
 
       // waking up too soon means that we just irritated the user
       long currentTime = SysInterface::current_time();
@@ -297,7 +299,6 @@ void SonarThread::recordAndProcessAndUpdateGUI(){
   // record and process
   AudioBuf rec = audio.blocking_record( SonarThread::WINDOW_LENGTH );
   Statistics s = measure_stats( rec, conf.ping_freq );
-  cout << s << endl;
   this->logger.log( s );
 
   // update sliding window and GUI
@@ -309,7 +310,7 @@ void SonarThread::recordAndProcessAndUpdateGUI(){
   for( i=0; i<n; i++ ) windowAvg += windowHistory[i];
   windowAvg /= n;
 
-  cerr << "window_avg (over "<<n<<"): " << windowAvg <<endl;
+  cout << s << '\t' <<"window_avg (over "<<n<<"): " << windowAvg <<endl;
 
   // if window is incomplete, do not draw avg.
   if ( n < SonarThread::SLIDING_WINDOW ){

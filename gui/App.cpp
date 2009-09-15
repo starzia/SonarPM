@@ -29,9 +29,12 @@ bool App::OnInit(){
 }
 
 int App::OnExit(){
+  cerr<<"OnExit"<<endl;
   // if sonar thread did not close properly, then ensure that log has quit msg
+/* TODO: this crashes in windows, fix it.
+  cerr << (void*)Logger::log_basic<<endl;
   Logger::log_basic( "end" );
-
+*/
   // close portaudio
   Pa_Terminate();
   return 0;

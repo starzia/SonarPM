@@ -155,11 +155,6 @@ long SysInterface::current_time(){
 
 string SysInterface::config_dir(){
 #if defined PLATFORM_WINDOWS
-  //char[80] cbuf;
-  //PHANDLE process_token;
-  //if( !OpenProcessToken( TOKEN_READ
-  //if( !GetUserProfileDirectory( ) )
-  //  cerr << "ERROR: couldn't obtain home directory name"<<endl;
   char buf[MAX_PATH];
   SHGetFolderPath( HWND_TOPMOST, CSIDL_APPDATA,
 		   NULL, SHGFP_TYPE_CURRENT, buf );
