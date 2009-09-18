@@ -1,41 +1,72 @@
 #export WX_CONFIG_W32=/usr/local/wx-2.8.10-mingw32/bin/wx-config
 CPP=cl /nologo
-CPPFLAGS=/O2 /EHsc /Iportaudio/include \
- /Ic:\wxWidgets-2.8.10\include  /Ic:\wxWidgets-2.8.10\lib\vc_lib\mswd
+LINK=link /NOLOGO #/verbose:lib
+#/MDd means use debug multithreaded DLLs for system libraries.
+CPPFLAGS=/O2 /EHsc /MDd /Iportaudio\include /Iportaudio\src\common \
+ /Ic:\wxWidgets-2.8.10\include  /Ic:\wxWidgets-2.8.10\lib\vc_lib\mswd 
   #/Wall
-WXLIBS=/Lc://wxWidgets-2.8.10/lib/vc_lib
+WXLIBS=/LIBPATH:c:\\wxWidgets-2.8.10\lib\vc_lib wxbase28d.lib wxmsw28d_core.lib wxmsw28d_adv.lib wxregexd.lib wxexpatd.lib wxtiffd.lib wxjpegd.lib wxpngd.lib wxzlibd.lib 
+
+#WINLIBS=kernel32.lib user32.lib gdi32.lib comdlg32.lib winspool.lib winmm.lib shell32.lib comctl32.lib ole32.lib oleaut32.lib uuid.lib rpcrt4.lib advapi32.lib wsock32.lib odbc32.lib wininet.lib
+WINLIBS=kernel32.lib user32.lib gdi32.lib comdlg32.lib winspool.lib winmm.lib shell32.lib comctl32.lib ole32.lib oleaut32.lib uuid.lib rpcrt4.lib advapi32.lib wsock32.lib odbc32.lib wininet.lib
 
 OBJS = audio.obj dsp.obj SysInterface.obj Config.obj Logger.obj
 GUI_OBJS = \
- gui/App.obj \
- gui/Frame.obj \
- gui/TaskBarIcon.obj \
- gui/PlotPane.obj \
- gui/SonarThread.obj \
- gui/SonarEvent.obj \
- gui/ConfigFrame.obj \
- gui/CloseConfirmFrame.obj
+ gui\App.obj \
+ gui\Frame.obj \
+ gui\TaskBarIcon.obj \
+ gui\PlotPane.obj \
+ gui\SonarThread.obj \
+ gui\SonarEvent.obj \
+ gui\ConfigFrame.obj \
+ gui\CloseConfirmFrame.obj
 
 BINS = sonar_tui.exe sonar_gui.exe
+
+############################## PORTAUDIO #################################
+
+PA_OBJS = \
+ portaudio\src\common\pa_allocation.obj \
+ portaudio\src\common\pa_converters.obj \
+ portaudio\src\common\pa_cpuload.obj \
+ portaudio\src\common\pa_dither.obj \
+ portaudio\src\common\pa_debugprint.obj \
+ portaudio\src\common\pa_front.obj \
+ portaudio\src\common\pa_process.obj \
+ portaudio\src\common\pa_skeleton.obj \
+ portaudio\src\common\pa_stream.obj \
+ portaudio\src\common\pa_trace.obj \
+ portaudio\src\hostapi\wmme\pa_win_wmme.obj \
+ portaudio\src\os\win\pa_win_hostapis.obj \
+ portaudio\src\os\win\pa_win_util.obj \
+ portaudio\src\os\win\pa_win_waveformat.obj \
+
+#portaudio.lib: $(PA_OBJS)
+#	$(LINK) -lib $@ $** 
+
+PA_FLAGS=/DPA_NO_DS /DPA_NO_ASIO /DPA_NO_WDMKS
 
 ############################# LINKING ####################################
 all: sonar_gui.exe
 
 sonar_tui.exe: $(OBJS) sonar_tui.obj
-	$(CPP) -o $@ $** -lm libportaudio.a -lwinmm -lwininet
+	$(LINK) /OUT:$@ /SUBSYSTEM:CONSOLE $** libportaudio.a m.lib wininet.lib
 
-sonar_gui.exe: $(OBJS) $(GUI_OBJS)
-	$(CPP) /Fe$@ $** libportaudio.a $(WX_LIBS)
+sonar_gui.exe: $(PA_OBJS) $(OBJS) $(GUI_OBJS)
+	$(LINK) /OUT:$@ /PDB:sonar_gui.pdb /SUBSYSTEM:WINDOWS \
+ $** $(WXLIBS) $(WINLIBS)
 
 ############################## COMPILING #################################
 
 .cpp.obj:
-	$(CPP) $(CPPFLAGS) /DPLATFORM_WINDOWS /c $<
+	$(CPP) $(CPPFLAGS) /DPLATFORM_WINDOWS /Fo$@ /c $<
+.c.obj:
+	$(CPP) $(CPPFLAGS) $(PA_FLAGS) /DPLATFORM_WINDOWS /Fo$@ /c $<
 
 ############################# MISC #######################################
 
 clean:
-	del $(BINS) $(OBJS) $(GUI_OBJS) *~ sonar.tar.gz
+	-del $(BINS) $(OBJS) $(GUI_OBJS) $(PA_OBJS)
 
 ############################ DEPENDENCIES #################################
 

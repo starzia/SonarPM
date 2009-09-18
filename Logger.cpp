@@ -7,9 +7,11 @@
 #include <limits> // for numeric_limit
 
 #if defined PLATFORM_WINDOWS
-#include <wininet.h> //  for ftp
+  #define NOMINMAX
+  #include <windows.h>
+  #include <wininet.h> //  for ftp
 #else
-#include <stdlib.h> //system, getenv, etc.
+  #include <stdlib.h> //system, getenv, etc.
 #endif
 
 using namespace std;
