@@ -3,7 +3,7 @@
 #include <string>
 #include <vector>
 
-#ifdef PLATFORM_WINDOWS
+#ifdef PLATFORM_WINDOWS_MINGW
 #include "/usr/include/portaudio.h"
 #else
 #include <portaudio.h>

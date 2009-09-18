@@ -2,6 +2,7 @@
 #include "../SysInterface.hpp"
 #include "../Config.hpp"
 #include "../Logger.hpp"
+#include <iostream>
 
 using namespace std;
 

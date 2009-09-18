@@ -1,5 +1,6 @@
 #include "dsp.hpp"
 #include <vector>
+#define _USE_MATH_DEFINES //for msvc++ to recognize M_PI
 #include <cmath>
 #include <iostream>
 #include <iomanip> // for tweaked printing
@@ -50,8 +51,9 @@ AudioBuf gaussian_white_noise( duration_t duration ){
 
 AudioBuf ultrasonic_noise( duration_t duration ){
   AudioBuf buf = tone( duration, 0 );   // create empty buffer;
-  unsigned int num_tones = (log(HIGHEST_FREQ)-log(LOWEST_FREQ)) 
-                            / log(SCALING_FACTOR);
+  // below, casts are needed to prevent ambiguity for msvc++
+  unsigned int num_tones = (log((float)HIGHEST_FREQ)-log((float)LOWEST_FREQ)) 
+                            / log((float)SCALING_FACTOR);
   frequency f;
   for( f = LOWEST_FREQ; f < HIGHEST_FREQ; f *= SCALING_FACTOR ){
     buf.mix( tone( duration, f ) * (1.0/num_tones) );
@@ -137,7 +139,7 @@ precision goertzel( const indexable & arr, unsigned int start_index,
   return s_prev2*s_prev2 + s_prev*s_prev - coeff*s_prev2*s_prev;
 }
 
-
+#ifdef GCC
 //16 byte vector of 4 floats
 typedef float v4sf __attribute__ ((vector_size(16)));
 //16 byte vector of 4 uints
@@ -187,7 +189,7 @@ f4v quad_goertzel( const indexable & arr, unsigned int start_index,
     - coeff.v * s_prev2.v * s_prev.v;
   return ret;
 }
-
+#endif
 
 /** Bartlett's method is the mean of several runs of Goertzel's algorithm in
     consecutive windows. */
@@ -200,13 +202,16 @@ precision bartlett( const indexable & arr, unsigned int start_index,
 
   // for each window
   for( i=0; i<num_windows; i++ ){
-    if( true || i > num_windows-4 ){ // TODO: decide which is more efficient
+    /*
+    if( i > num_windows-4 ){ // TODO: decide which is more efficient
+    */
       // if less than four windows left, do one at a time.
       // be careful not to go beyond end_index
       unsigned int j = (end_index<(i+1)*window_size)? 
 	end_index: start_index+(i+1)*window_size;
       energies.push_back( goertzel( arr, start_index + i*window_size, 
 				    j, norm_freq) );
+      /*
     }else{
       // otherwise do four at once.
       f4v res = quad_goertzel( arr, start_index + i*window_size,
@@ -217,6 +222,7 @@ precision bartlett( const indexable & arr, unsigned int start_index,
       energies.push_back( res.f[3] );
       i+=3; //skip ahead
     }  
+      */
   }
   return mean( energies );
 }

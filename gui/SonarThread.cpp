@@ -6,11 +6,24 @@
 
 #include <wx/event.h> // for wxxQueueEvent
 
+//=========== CONSTANTS ===========
+const duration_t SonarThread::WINDOW_LENGTH = (0.5);
+const unsigned int SonarThread::SLIDING_WINDOW = (10);
+const duration_t SonarThread::IDLE_TIME = (1);
+const duration_t SonarThread::SLEEP_LENGTH = (0.2);
+const duration_t SonarThread::FALSE_NEG = (5);
+const float SonarThread::DYN_THRESH_FACTOR = 0.8;
+const duration_t SonarThread::RECALIBRATION_INTERVAL = 3600;
+const duration_t SonarThread::DISPLAY_TIMEOUT = (600); // ten minutes
+const frequency SonarThread::DEFAULT_PING_FREQ = (22000);
+const duration_t SonarThread::DUMMY_INPUT_INTERVAL = (55);
+const float SonarThread::ACTIVE_GAIN = 2;
+
 using namespace std;
 
 SonarThread::SonarThread( Frame* mf, sonar_mode m ) :
      wxThread(wxTHREAD_DETACHED), mainFrame( mf ), mode(m),
-     threshold(0.0/0.0), windowAvg(0.0/0.0), lastCalibration(0) {
+     threshold(NAN), windowAvg(NAN), lastCalibration(0) {
   lastUserInputTime = lastDummyInputTime = SysInterface::current_time();
 }
 
@@ -127,7 +140,7 @@ bool SonarThread::updateThreshold(){
       activeReadings.push_back( FEATURE(s) );
     }
     // plot readings, but don't update status text
-    updateGUI( FEATURE(s), 0.0/0.0, 0.0/0.0, false );
+    updateGUI( FEATURE(s), NAN, NAN, false );
   }
   // set threshold to 1/ACTIVE_GAIN * average of active sonar readings
   float newThreshold = 0;
@@ -148,7 +161,7 @@ bool SonarThread::scheduler( long log_start_time ){
 
   // recalibrate, if enough time has passed
   if( currentTime - this->lastCalibration  > SonarThread::RECALIBRATION_INTERVAL ){
-    this->threshold = 0.0/0.0; // blank the threshold so it will be reset
+    this->threshold = NAN; // blank the threshold so it will be reset
     this->lastCalibration = currentTime;
   }
   // generate dummy keyboard input if enough idle time has passed
@@ -314,7 +327,7 @@ void SonarThread::recordAndProcessAndUpdateGUI(){
 
   // if window is incomplete, do not draw avg.
   if ( n < SonarThread::SLIDING_WINDOW ){
-    windowAvg = 0.0/0.0;
+    windowAvg = NAN;
   }else{
     windowHistory.pop_back();
   }

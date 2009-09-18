@@ -1,6 +1,8 @@
 #pragma once
 #include <wx/wx.h>
 #include <deque>
+#include <limits>
+#define NAN (std::numeric_limits<float>::quiet_NaN())
 
 class PlotPane : public wxPanel{
 public:

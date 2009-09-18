@@ -34,27 +34,27 @@ public:
 
   //====================== CONSTANTS =======================================
   // duration of each recording window
-  static const duration_t WINDOW_LENGTH = (0.5);
+  static const duration_t WINDOW_LENGTH;
   // number of windows to consider when calculating echo delta
-  static const unsigned int SLIDING_WINDOW = (10);
+  static const unsigned int SLIDING_WINDOW;
   // if there was input activity within IDLE_TIME, don't run sonar
-  static const duration_t IDLE_TIME = (1);
-  static const duration_t SLEEP_LENGTH = (0.2);
+  static const duration_t IDLE_TIME;
+  static const duration_t SLEEP_LENGTH;
   // if there is input activity within this window of a sleep, then call it a
   // false negative
-  static const duration_t FALSE_NEG = (5);
+  static const duration_t FALSE_NEG;
   // how rapidly does dynamic threshold move
-  static const float DYN_THRESH_FACTOR = 0.8;
+  static const float DYN_THRESH_FACTOR;
   // time after which threshold is reset
-  static const duration_t RECALIBRATION_INTERVAL = 3600;
+  static const duration_t RECALIBRATION_INTERVAL;
   // timeout for naive power managment policy
-  static const duration_t DISPLAY_TIMEOUT = (600); // ten minutes
-  static const frequency DEFAULT_PING_FREQ = (22000);
+  static const duration_t DISPLAY_TIMEOUT;
+  static const frequency DEFAULT_PING_FREQ;
   // just less than min Windows screensaver activation time of one minute
-  static const duration_t DUMMY_INPUT_INTERVAL = (55);
+  static const duration_t DUMMY_INPUT_INTERVAL;
   // this is how much higher we expect active state readings to be than absent
   // state.  This determines where the initial threshold is set.
-  static const float ACTIVE_GAIN = 2;
+  static const float ACTIVE_GAIN;
 
 private:
   void poll();

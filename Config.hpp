@@ -24,7 +24,7 @@ public:
 
   /* configuration data members */
   frequency ping_freq;
-  static const frequency DEFAULT_PING_FREQ = (22000);
+  static const frequency DEFAULT_PING_FREQ;
   static const char* CONFIG_FILENAME;
   bool allow_phone_home;
   int rec_dev;

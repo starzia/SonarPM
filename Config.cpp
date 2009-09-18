@@ -10,6 +10,7 @@
 using namespace std;
 
 const char* Config::CONFIG_FILENAME = "sonarPM.cfg";
+const frequency Config::DEFAULT_PING_FREQ = 22000;
 
 Config::Config(){
   // these default values will be overwritten if a config file is loaded

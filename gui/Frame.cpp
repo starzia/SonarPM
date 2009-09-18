@@ -231,7 +231,7 @@ void Frame::onSonarEvent(SonarEvent& event){
     s.Printf( wxT("Threshold updated to: %f"), event.a );
     this->SetStatusText(s);
   }else if( event.getType() == PLOT_EVENT_GAP ){
-    this->sonarHistory->addPoint( 0.0/0.0, 0.0/0.0, 0.0/0.0 ); //NaN
+    this->sonarHistory->addPoint( NAN, NAN, NAN ); //NaN
   }else if( event.getType() == SONAR_DONE ){
     // note that previously we were nullifying in the thread's OnExit.
     // However, this was causing locking problems in Windows.

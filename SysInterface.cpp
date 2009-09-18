@@ -1,4 +1,3 @@
-using namespace std;
 #include "SysInterface.hpp"
 
 // One of the following should be defined to activate platform-specific code.
@@ -19,15 +18,20 @@ using namespace std;
 #include <X11/Xos.h>
 #include <X11/extensions/scrnsaver.h>
 #elif defined PLATFORM_WINDOWS
-#include <ddk/ntddvdeo.h> // backlight control
 #define IOCTL_VIDEO_QUERY_SUPPORTED_BRIGHTNESS \
   CTL_CODE(FILE_DEVICE_VIDEO, 0x125, METHOD_BUFFERED, FILE_ANY_ACCESS)
 //#include <userenv.h> // home path query
 #include <shlobj.h> // for CSIDL, SHGetFolderPath
+
+#ifdef GCC
+// microsoft's headers define these, but not mingw's 
+#include <ddk/ntddvdeo.h> // backlight control
 typedef enum {
   SHGFP_TYPE_CURRENT = 0,
   SHGFP_TYPE_DEFAULT = 1,
 } SHGFP_TYPE; // this should be in <shlobj.h> anyway
+#endif
+
 #endif
 
 #ifndef PLATFORM_WINDOWS
@@ -35,6 +39,7 @@ typedef enum {
 #include <signal.h>
 #endif
 
+using namespace std;
 
 bool SysInterface::sleep_monitor(){
 #if defined PLATFORM_LINUX
