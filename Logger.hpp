@@ -26,7 +26,7 @@ public:
   // phone home constants
   static const int PHONEHOME_INTERVAL = 3600; // in seconds
   /** time to wait after a phonehome upload failure before attempting again */
-  static const int FAILURE_BACKOFF = 60;
+  static const int FAILURE_BACKOFF = 3600;
   static const char* FTP_SERVER;
   static const char* FTP_USER;
   static const char* FTP_PASSWD;

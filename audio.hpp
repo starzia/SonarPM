@@ -123,8 +123,8 @@ public:
   AudioBuf recordback( const AudioBuf & buf );
 
   PaStreamParameters out_params, in_params;
-  /** prints PortAudio error message, if any */
-  static void check_error( PaError err );
+  /** prints description of PortAudio error message, if any */
+  static PaError check_error( PaError err );
 
   /** must be called ONCE by the program to set up portaudio */
   static void init();

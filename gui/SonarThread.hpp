@@ -57,18 +57,7 @@ public:
   static const float ACTIVE_GAIN;
 
 private:
-  void poll();
-  void power_management();
-
-  // GUI helpers
-  void recordAndProcessAndUpdateGUI();
-  /** @param setStatus determines whether window's status text is updated with
-   *   this reading's values */
-  void updateGUI( float echo_delta, float window_avg, float thresh,
-                  bool setStatus );
-  void reset(); // create a gap in plot and clears sonar history window
-
-
+  //======= DATA MEMBERS =======
   Frame* mainFrame;
   sonar_mode mode; // power management, polling, etc.
   float threshold; // sonar threshold
@@ -81,6 +70,22 @@ private:
   long lastCalibration;
   long lastUserInputTime;
   long lastDummyInputTime;
+
+  /** the audio stream for playing the ping */
+  PaStream* pingStrm;
+
+  //======== FUNCTIONS ========
+  void poll();
+  void power_management();
+
+  // GUI helpers
+  void recordAndProcessAndUpdateGUI();
+  /** @param setStatus determines whether window's status text is updated with
+   *   this reading's values */
+  void updateGUI( float echo_delta, float window_avg, float thresh,
+                  bool setStatus );
+  void reset(); // create a gap in plot and clears sonar history window
+
 
   /** sets the screen blanking threshold.
    * @return true if successful false if interrupted by thread cancellation */
@@ -98,6 +103,11 @@ private:
   * @return false iff interrupted by thread cancellation event */
   bool waitUntilIdle();
   bool waitUntilActive();
+
+  /** starts the Ping, if it is not already playing */
+  bool resumePing();
+  /** stops the Ping, if it is playing */
+  bool pausePing();
 
   /** send a dummy input event to the OS to keep screensaver off */
   void sendDummyInput();

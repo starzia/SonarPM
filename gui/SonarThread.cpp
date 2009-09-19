@@ -172,10 +172,29 @@ bool SonarThread::scheduler( long log_start_time ){
   return true; // return true for uninterrupted completion
 }
 
+bool SonarThread::resumePing(){
+  PaError ret=0;
+  // start ping, if necessary
+  if( AudioDev::check_error( Pa_IsStreamStopped( this->pingStrm ) ) ){
+    ret = AudioDev::check_error( Pa_StartStream( this->pingStrm ) ); // resume ping
+    SysInterface::sleep(1); // wait for ping to get started
+    //TODO: figure out some better solution than this long delay.
+  }
+  return (ret == paNoError);
+}
+
+bool SonarThread::pausePing(){
+  PaError ret=0;
+  // stop ping, if necessary
+  if( AudioDev::check_error( Pa_IsStreamActive( this->pingStrm ) ) )
+    AudioDev::check_error( Pa_StopStream( this->pingStrm ) ); // stop ping
+  return (ret == paNoError);
+}
+
 void SonarThread::poll(){
   AudioBuf ping = tone( 0.01, conf.ping_freq, 0,0 ); // no fade since we loop it
   cout << "Begin pinging loop at frequency of " <<conf.ping_freq<<"Hz"<<endl;
-  PaStream* strm = audio.nonblocking_play_loop( ping );
+  this->pingStrm = audio.nonblocking_play_loop( ping );
 
   // test to see whether we should die
   while( !this->TestDestroy() ){
@@ -183,8 +202,8 @@ void SonarThread::poll(){
   }
 
   // clean up portaudio so that we can use it again later.
-  audio.check_error( Pa_StopStream( strm ) );
-  audio.check_error( Pa_CloseStream( strm ) );
+  audio.check_error( Pa_StopStream( this->pingStrm ) );
+  audio.check_error( Pa_CloseStream( this->pingStrm ) );
 }
 
 
@@ -199,7 +218,8 @@ void SonarThread::power_management(){
   cout << "Begin power management loop at frequency of " 
        <<conf.ping_freq<<"Hz"<<endl;
   // initialize and start ping
-  PaStream* strm = audio.nonblocking_play_loop( ping );
+  this->pingStrm = audio.nonblocking_play_loop( ping );
+  this->pausePing(); // pause to force resumePing() to be called before recording.
   this->logger.log( "begin" );
   long log_start_time = this->logger.get_log_start_time();
 
@@ -209,16 +229,9 @@ void SonarThread::power_management(){
   bool sleeping=false; // indicates whether the sonar system caused a sleep
                        // note that timeout-sleeps do not set this flag
                        // so sonar readings continue even after timeout-sleep
-  bool pingOn = true; // initially, ping is playing, but it will be turned off
-  // and on as the user is active and idle
 
   // test to see whether we should die
   while( !this->TestDestroy() ){
-    /*
-    cerr << ">> idle time " << true_idle_seconds() << '\t'
-         << "lastTimeout="<<lastTimeout<<'\t'<<"lastSleep="<<lastSleep<< '\t'
-         << "sleeping="<<sleeping<<'\t'<<"pingOn="<<pingOn<<endl;
-    */
     // Pause so that we don't poll idle_seconds() constantly
     SysInterface::sleep( SonarThread::SLEEP_LENGTH );
 
@@ -233,11 +246,7 @@ void SonarThread::power_management(){
 
       // check to see that threshold has been set.  If not, set it.
       if( !(this->threshold > 0) && !sleeping ){
-        // start ping, if necessary
-        if( !pingOn ){
-          AudioDev::check_error( Pa_StartStream( strm ) ); // resume ping
-          pingOn = true;
-        }
+        this->resumePing();
         if( !this->updateThreshold() ) break; // break if it was interrupted
       }
 
@@ -256,20 +265,12 @@ void SonarThread::power_management(){
         //-- THRESHOLD LOWERING
         this->setThreshold( this->threshold*SonarThread::DYN_THRESH_FACTOR );
       }
-      // stop ping, if necessary
-      if( pingOn ){
-        AudioDev::check_error( Pa_StopStream( strm ) ); // stop ping
-        pingOn = false;
-      }
+      this->pausePing();
 
     //==== INACTIVE ===========================================================
     }else if( !sleeping ){ // If inactive and sleeping, wait until awakened.
       // ---SONAR READING---
-      // start ping, if necessary
-      if( !pingOn ){
-        AudioDev::check_error( Pa_StartStream( strm ) ); // resume ping
-        pingOn = true;
-      }
+      this->resumePing();
       // run sonar, and store a new reading
       this->recordAndProcessAndUpdateGUI( );
 
@@ -293,10 +294,7 @@ void SonarThread::power_management(){
           SysInterface::sleep_monitor( ); // sleep monitor
           lastSleep = SysInterface::current_time( );
           sleeping = true;
-          if( pingOn ){
-            AudioDev::check_error( Pa_StopStream( strm ) ); // stop ping
-            pingOn = false;
-          }
+          this->pausePing();
           this->reset();
         }
       }
@@ -304,8 +302,8 @@ void SonarThread::power_management(){
   }
   this->logger.log( "end" );
   // clean up portaudio so that we can use it again later.
-  if( pingOn ) AudioDev::check_error( Pa_StopStream( strm ) ); // stop ping
-  AudioDev::check_error( Pa_CloseStream( strm ) );
+  this->pausePing();
+  AudioDev::check_error( Pa_CloseStream( this->pingStrm ) );
 }
 
 void SonarThread::recordAndProcessAndUpdateGUI(){
