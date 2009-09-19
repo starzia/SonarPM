@@ -1,6 +1,6 @@
 #export WX_CONFIG_W32=/usr/local/wx-2.8.10-mingw32/bin/wx-config
-CPP=cl /nologo
-LINK=link /NOLOGO #/verbose:lib
+CPP=cl /nologo /Zi # Zi for debugging
+LINK=link /NOLOGO /DEBUG #/verbose:lib
 #/MDd means use debug multithreaded DLLs for system libraries.
 CPPFLAGS=/O2 /EHsc /MDd /Iportaudio\include /Iportaudio\src\common \
  /Ic:\wxWidgets-2.8.10\include  /Ic:\wxWidgets-2.8.10\lib\vc_lib\mswd 

@@ -4,7 +4,8 @@
 #include <iostream>
 #include <sstream>
 #ifdef PLATFORM_WINDOWS
-#include <rpc.h> // for UUID
+// for UUID, use rpcrt4.lib
+#include "rpcdce.h"
 #endif
 
 using namespace std;
@@ -108,13 +109,22 @@ void Config::disable_phone_home(){
 void Config::generate_GUID(){
   ostringstream guid;
 #ifdef PLATFORM_WINDOWS
-  UUID* uuid = new UUID();
-  unsigned char** uuid_string;
-  UuidCreate( uuid );
-  UuidToString( uuid, uuid_string );
-  guid << &uuid_string;
-  RpcStringFree( uuid_string );
-  delete uuid;
+
+  unsigned char* sTemp;
+
+  UUID* pUUID = new UUID();
+  if( pUUID != NULL ){
+    HRESULT hr;
+    hr = UuidCreateSequential(pUUID);
+    if (hr == RPC_S_OK){
+      hr = UuidToString(pUUID, &sTemp);
+      if (hr == RPC_S_OK){
+	guid << sTemp;
+	RpcStringFree(&sTemp);
+      }
+    }
+    delete pUUID;
+  }
 #else
   // TODO: improve GUID generation in Linux
   guid << "linux" << SysInterface::current_time();
