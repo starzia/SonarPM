@@ -7,7 +7,8 @@
 #include <limits> // for numeric_limit
 
 #if defined PLATFORM_WINDOWS
-  #define NOMINMAX
+  #undef NOMINMAX
+  #define NOMINMAX true
   #include <windows.h>
   #include <wininet.h> //  for ftp
 #else

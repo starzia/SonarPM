@@ -5,7 +5,8 @@
 #include <sstream>
 #ifdef PLATFORM_WINDOWS
 // for UUID, use rpcrt4.lib
-#include "rpcdce.h"
+#include <windows.h>
+#include <rpcdce.h>
 #endif
 
 using namespace std;
@@ -109,13 +110,11 @@ void Config::disable_phone_home(){
 void Config::generate_GUID(){
   ostringstream guid;
 #ifdef PLATFORM_WINDOWS
-
   unsigned char* sTemp;
-
   UUID* pUUID = new UUID();
   if( pUUID != NULL ){
     HRESULT hr;
-    hr = UuidCreateSequential(pUUID);
+    hr = UuidCreate(pUUID);
     if (hr == RPC_S_OK){
       hr = UuidToString(pUUID, &sTemp);
       if (hr == RPC_S_OK){

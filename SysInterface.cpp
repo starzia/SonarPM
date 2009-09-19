@@ -23,7 +23,7 @@
 //#include <userenv.h> // home path query
 #include <shlobj.h> // for CSIDL, SHGetFolderPath
 
-#ifdef GCC
+#ifdef MINGW
 // microsoft's headers define these, but not mingw's 
 #include <ddk/ntddvdeo.h> // backlight control
 typedef enum {

@@ -19,7 +19,7 @@ gui.A: $(W32_OBJS)
 	$(shell $(WX_CONFIG_LINUX) --cxx --cppflags) $(FLAGS) -DPLATFORM_LINUX -c $< -o $@
 
 %.O : %.cpp %.hpp
-	$(shell $(WX_CONFIG_W32) --cxx --cppflags) $(FLAGS) -DPLATFORM_WINDOWS -c $< -o $@
+	$(shell $(WX_CONFIG_W32) --cxx --cppflags) $(FLAGS) -DMINGW -DPLATFORM_WINDOWS -c $< -o $@
 
 clean:
 	rm -f App gui.a gui.A $(OBJS) $(W32_OBJS) *~

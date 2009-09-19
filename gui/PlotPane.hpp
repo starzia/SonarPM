@@ -2,6 +2,7 @@
 #include <wx/wx.h>
 #include <deque>
 #include <limits>
+#undef NAN
 #define NAN (std::numeric_limits<float>::quiet_NaN())
 
 class PlotPane : public wxPanel{
