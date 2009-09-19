@@ -7,8 +7,7 @@ CPPFLAGS=/O2 /EHsc /MDd /Iportaudio\include /Iportaudio\src\common \
   #/Wall
 WXLIBS=/LIBPATH:c:\\wxWidgets-2.8.10\lib\vc_lib wxbase28d.lib wxmsw28d_core.lib wxmsw28d_adv.lib wxregexd.lib wxexpatd.lib wxtiffd.lib wxjpegd.lib wxpngd.lib wxzlibd.lib 
 
-#WINLIBS=kernel32.lib user32.lib gdi32.lib comdlg32.lib winspool.lib winmm.lib shell32.lib comctl32.lib ole32.lib oleaut32.lib uuid.lib rpcrt4.lib advapi32.lib wsock32.lib odbc32.lib wininet.lib
-WINLIBS=kernel32.lib user32.lib gdi32.lib comdlg32.lib winspool.lib winmm.lib shell32.lib comctl32.lib ole32.lib oleaut32.lib uuid.lib rpcrt4.lib advapi32.lib wsock32.lib odbc32.lib wininet.lib
+WINLIBS=kernel32.lib user32.lib gdi32.lib comdlg32.lib winspool.lib winmm.lib shell32.lib comctl32.lib ole32.lib oleaut32.lib uuid.lib rpcrt4.lib advapi32.lib wsock32.lib odbc32.lib wininet.lib PowrProf.lib
 
 OBJS = audio.obj dsp.obj SysInterface.obj Config.obj Logger.obj
 GUI_OBJS = \

@@ -5,6 +5,9 @@
 #include <sstream>
 
 #include <wx/event.h> // for wxxQueueEvent
+#ifdef PLATFORM_WINDOWS
+#include <PowrProf.h>
+#endif
 
 //=========== CONSTANTS ===========
 const duration_t SonarThread::WINDOW_LENGTH = (0.5);
@@ -98,6 +101,31 @@ void SonarThread::updateGUI( float echo_delta, float window_avg, float thresh,
     evt2.setMsg( ss.str() );
     this->mainFrame->GetEventHandler()->AddPendingEvent( evt2 );
   }
+}
+
+void SonarThread::setDisplayTimeout(){
+#ifdef PLATFORM_WINDOWS
+  // inhibit OS power managment, since we will be simulating it
+  // (actually, this inhibits only some policies; we still need
+  //  to periodically send keystrokes to keep screensaver off)
+  SetThreadExecutionState( ES_DISPLAY_REQUIRED | ES_CONTINUOUS );
+
+  GLOBAL_POWER_POLICY gpp;
+  POWER_POLICY pp;
+  if( GetCurrentPowerPolicies( &gpp, &pp ) ){
+    this->displayTimeout = pp.user.VideoTimeoutDc;
+  }else{
+    this->logger.log( "displayTimeoutFailed" );
+    this->displayTimeout = SonarThread::DISPLAY_TIMEOUT;
+  }
+#else
+  this->displayTimeout = SonarThread::DISPLAY_TIMEOUT;
+#endif
+  // log new setting
+  ostringstream log_msg;
+  log_msg << "displayTimeout " << this->displayTimeout;
+  this->logger.log( log_msg.str() );
+  cout << log_msg.str() << endl;
 }
 
 void SonarThread::reset(){
@@ -208,10 +236,6 @@ void SonarThread::poll(){
 
 
 void SonarThread::power_management(){
-  // inhibit OS power managment
-#ifdef PLATFORM_WINDOWS
-  SetThreadExecutionState( ES_DISPLAY_REQUIRED | ES_CONTINUOUS );
-#endif
   // buffer duration is 10ms, but actually it just needs to be a multiple
   // of the ping_period.
   AudioBuf ping = tone( 0.1, conf.ping_freq, 0,0 );
@@ -222,6 +246,7 @@ void SonarThread::power_management(){
   this->pausePing(); // pause to force resumePing() to be called before recording.
   this->logger.log( "begin" );
   long log_start_time = this->logger.get_log_start_time();
+  this->setDisplayTimeout();
 
   // keep track of certain program events
   long lastSleep=0; // sleep means sonar-caused display sleep
@@ -276,7 +301,7 @@ void SonarThread::power_management(){
 
       // ---TIMEOUT POLICY---
       // if user has been idle a very long time, then simulate default PM action
-      if( this->true_idle_seconds( ) > SonarThread::DISPLAY_TIMEOUT ){
+      if( this->true_idle_seconds( ) > this->displayTimeout ){
         // if we've been tring to detect use for too long, then this probably
         // means that the threshold is too low.
         cout << "Display timeout." << endl;

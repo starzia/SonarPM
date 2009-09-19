@@ -47,7 +47,7 @@ public:
   static const float DYN_THRESH_FACTOR;
   // time after which threshold is reset
   static const duration_t RECALIBRATION_INTERVAL;
-  // timeout for naive power managment policy
+  // default timeout for naive power managment policy, should never be used in practice
   static const duration_t DISPLAY_TIMEOUT;
   static const frequency DEFAULT_PING_FREQ;
   // just less than min Windows screensaver activation time of one minute
@@ -61,6 +61,8 @@ private:
   Frame* mainFrame;
   sonar_mode mode; // power management, polling, etc.
   float threshold; // sonar threshold
+  /** timeout for emulated timeout policy, to be set to OS's value */
+  duration_t displayTimeout;
 
   /** sliding window of sonar readings, index 0 is most recent */
   std::deque<float> windowHistory;
@@ -91,6 +93,9 @@ private:
    * @return true if successful false if interrupted by thread cancellation */
   bool updateThreshold();
   void setThreshold( float thresh );
+  /** query OS to get display timeout, so that OS policy can be emulated 
+    faithfully */
+  void setDisplayTimeout();
 
   /** runs any pending period tasks such as phone home or recalibration
    * @param log_start_time is when the app was first run (when logfile created).

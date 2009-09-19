@@ -370,7 +370,7 @@ AudioBuf AudioDev::recordback( const AudioBuf & buf ){
 }
 
 PaError AudioDev::check_error( PaError err ){
-  if( err != paNoError ){
+  if( err < 0 ){
     cerr << "PortAudio error: " << Pa_GetErrorText( err ) << endl;
   }
   return err;
