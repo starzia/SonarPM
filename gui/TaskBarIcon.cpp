@@ -1,7 +1,9 @@
 #include "TaskBarIcon.hpp"
 #include "Frame.hpp"
 
-//#include "bat_32.xpm" // the icon file
+#ifndef PLATFORM_WINDOWS
+  #include "bat_32.xpm" // the icon file
+#endif
 BEGIN_EVENT_TABLE(TaskBarIcon, wxTaskBarIcon)
 EVT_MENU(PU_RESTORE, TaskBarIcon::OnMenuRestore)
 EVT_MENU(PU_PAUSE,   TaskBarIcon::OnMenuPause)
@@ -10,8 +12,11 @@ EVT_TASKBAR_LEFT_DCLICK  (TaskBarIcon::OnLeftButtonDClick)
 END_EVENT_TABLE()
 
 TaskBarIcon::TaskBarIcon( wxFrame* f ) : theFrame(f){
-//  this->SetIcon( bat_32_xpm, _T("Sonar") );
+#ifdef PLATFORM_WINDOWS
   this->SetIcon( wxIcon( _T("bat_32.ico"), wxBITMAP_TYPE_ICO ) );
+#else
+  this->SetIcon( bat_32_xpm, _T("Sonar") );
+#endif
 }
 
 void TaskBarIcon::restore(){

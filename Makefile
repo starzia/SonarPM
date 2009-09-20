@@ -31,7 +31,8 @@ sonar_tui.exe: ${W32_OBJS} sonar_tui.O
 sonar_gui.exe: ${W32_OBJS} gui/gui.A
 	$(CXX) -o $@ ${W32_OBJS} \
           $(addprefix gui/, $(shell $(AR) -t gui/gui.A)) \
-          libportaudio.a -lm -lwinmm -lwininet $(shell $(WX_CONFIG_W32) --libs)
+          libportaudio.a -lm -lwinmm -lwininet -lpowrprof \
+          $(shell $(WX_CONFIG_W32) --libs)
 	$(STRIP) $@
 
 # the following target lets me see STDOUT and STDERR in windows

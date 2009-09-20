@@ -19,6 +19,7 @@ Config::Config(){
   this->ping_freq = this->DEFAULT_PING_FREQ;
   this->generate_GUID();
   this->log_id = 0;
+  this->start_time = SysInterface::current_time();
 }
 
 /** call calibration functions to create a new configuration */
@@ -53,6 +54,9 @@ bool Config::load( string filename ){
       ss.clear();
       ss.str( ini.GetValue("state","log_id" ) );
       ss >> this->log_id;
+      ss.clear();
+      ss.str( ini.GetValue("state","start_time" ) );
+      ss >> this->start_time;
       cerr<< "Loaded config file "<<filename<<endl;
     }catch( const exception& e ){
       cerr <<"Error loading data from Config file "<<filename<<endl
@@ -90,6 +94,9 @@ bool Config::write_config_file(){
   ss.str("");
   ss << this->log_id;
   ini.SetValue("state","log_id", ss.str().c_str());
+  ss.str("");
+  ss << this->start_time;
+  ini.SetValue("state","start_time", ss.str().c_str());
 
   // write to file
   SI_Error rc = ini.SaveFile( this->filename.c_str() );

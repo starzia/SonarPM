@@ -7,6 +7,9 @@
 #include "CloseConfirmFrame.hpp"
 #include <wx/textdlg.h>
 #include "../SysInterface.hpp"
+#ifndef PLATFORM_WINDOWS
+  #include "bat_32.xpm" // the icon file
+#endif
 using namespace std;
 
 
@@ -46,8 +49,11 @@ Frame::Frame( const wxString & title, int width, int height ) :
   // add taskbar icon
   this->tbIcon = new TaskBarIcon( this );
   // set window icon
-  ///this->SetIcon( bat_32_xpm );
+#ifdef PLATFORM_WINDOWS
   this->SetIcon( wxIcon( _T("bat_32.ico"), wxBITMAP_TYPE_ICO ) );
+#else
+  this->SetIcon( bat_32_xpm );
+#endif
 
   // add sonar Plot
   this->sonarHistory = new PlotPane( panel, wxDefaultPosition,

@@ -31,6 +31,7 @@ public:
   int play_dev;
   std::string GUID;
   unsigned int log_id; // this is the number of logs phoned home so far
+  long start_time; // time when sonar was first run
 
   /** Choose the delta threshold for presence detection by recording */
   void choose_ping_threshold( AudioDev & audio, frequency freq );

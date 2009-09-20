@@ -55,7 +55,8 @@ public:
   // this is how much higher we expect active state readings to be than absent
   // state.  This determines where the initial threshold is set.
   static const float ACTIVE_GAIN;
-
+  // stop logging after this length of time
+  static const duration_t STUDY_LENGTH;
 private:
   //======= DATA MEMBERS =======
   Frame* mainFrame;

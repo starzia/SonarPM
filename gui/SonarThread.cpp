@@ -6,7 +6,7 @@
 
 #include <wx/event.h> // for wxxQueueEvent
 #ifdef PLATFORM_WINDOWS
-#include <PowrProf.h>
+#include <powrprof.h>
 #endif
 
 //=========== CONSTANTS ===========
@@ -21,6 +21,7 @@ const duration_t SonarThread::DISPLAY_TIMEOUT = (600); // ten minutes
 const frequency SonarThread::DEFAULT_PING_FREQ = (22000);
 const duration_t SonarThread::DUMMY_INPUT_INTERVAL = (55);
 const float SonarThread::ACTIVE_GAIN = 2;
+const duration_t SonarThread::STUDY_LENGTH = 7*24*3600; // one week
 
 using namespace std;
 
@@ -187,8 +188,14 @@ bool SonarThread::updateThreshold(){
 bool SonarThread::scheduler( long log_start_time ){
   long currentTime = SysInterface::current_time();
 
+  // disable logging, if enough time has passed
+  if( this->conf.allow_phone_home 
+      && currentTime - this->conf.start_time > SonarThread::STUDY_LENGTH ){
+    this->conf.disable_phone_home();
+  }
   // recalibrate, if enough time has passed
-  if( currentTime - this->lastCalibration  > SonarThread::RECALIBRATION_INTERVAL ){
+  if( currentTime - this->lastCalibration  
+      > SonarThread::RECALIBRATION_INTERVAL ){
     this->threshold = NAN; // blank the threshold so it will be reset
     this->lastCalibration = currentTime;
   }
