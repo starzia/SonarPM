@@ -24,7 +24,7 @@ END_EVENT_TABLE()
 
 Frame::Frame( const wxString & title, int width, int height ) : 
   wxFrame( (wxFrame*)NULL,-1,title,wxDefaultPosition,wxSize(width,height),
-	   wxFRAME_NO_TASKBAR | wxSYSTEM_MENU | wxCAPTION 
+	   wxSYSTEM_MENU | wxCAPTION 
 	   | wxCLOSE_BOX | wxCLIP_CHILDREN | wxMINIMIZE_BOX //| wxRESIZE_BORDER
 	   | wxFULL_REPAINT_ON_RESIZE ), 
   sThread(NULL), threadLock(wxMUTEX_DEFAULT)
@@ -273,6 +273,10 @@ void Frame::onConfig(wxCommandEvent& event){
 void Frame::onModeSwitch( wxCommandEvent& event ){
   // if sonar is running, stop it so that new operating mode can be used.
   this->stopSonar();
+}
+
+bool Frame::isSonarRunning(){
+  return (this->sThread != NULL);
 }
 
 #ifdef PLATFORM_WINDOWS

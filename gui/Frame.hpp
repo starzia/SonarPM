@@ -29,6 +29,7 @@ public:
 
   void startSonar();
   void stopSonar();
+  bool isSonarRunning();
 
   /** routines to run if this is the first time the app is run */
   void firstTime();
