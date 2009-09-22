@@ -132,7 +132,7 @@ bool Logger::phone_home(){
                             INTERNET_DEFAULT_FTP_PORT, FTP_USER, FTP_PASSWD,
                             INTERNET_SERVICE_FTP, NULL, NULL );
     success = FtpPutFile( hnet, (this->filename + ".gz").c_str(),
-                          this->getFilenameNoPath().c_str(),
+                          (this->getFilenameNoPath() + ".gz").c_str(),
                           FTP_TRANSFER_TYPE_BINARY, NULL );
     if( !success ){
       // gunzip log so that we can continue logging to it

@@ -101,6 +101,7 @@ void Frame::startSonar( ){
   Config conf;
   bool firstTime = !conf.load();
   while( !conf.load() ){
+    this->restore(); // bring window to front
     ConfigFrame* conf = new ConfigFrame( this,_T("First-time configuration") );
     int choice;
     choice = conf->ShowModal();
@@ -219,7 +220,7 @@ void Frame::onClose( wxCloseEvent& event ){
 }
 
 void Frame::onIconize( wxIconizeEvent& event ){
-  // is this necessary?
+  // remove from taskbar when minimized
   this->Show(!event.Iconized());
 }
 
@@ -283,6 +284,13 @@ void Frame::onModeSwitch( wxCommandEvent& event ){
 
 bool Frame::isSonarRunning(){
   return (this->sThread != NULL);
+}
+
+void Frame::restore(){
+  this->Iconize(false);
+  this->Show(true);
+  this->Raise(); // make it the top-most window
+  this->SetFocus();
 }
 
 #ifdef PLATFORM_WINDOWS

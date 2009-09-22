@@ -21,7 +21,6 @@ public:
   DECLARE_EVENT_TABLE()
 
 private:
-  void restore();
   wxFrame* theFrame;
 };
 

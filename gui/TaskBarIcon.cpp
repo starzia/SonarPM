@@ -19,15 +19,9 @@ TaskBarIcon::TaskBarIcon( wxFrame* f ) : theFrame(f){
 #endif
 }
 
-void TaskBarIcon::restore(){
-  theFrame->Iconize(false);
-  theFrame->Show(true);
-  theFrame->Raise(); // make it the top-most window
-  theFrame->SetFocus();
-}
 
 void TaskBarIcon::OnMenuRestore(wxCommandEvent& ){
-  this->restore();
+  ((Frame*)theFrame)->restore();
 }
 
 void TaskBarIcon::OnMenuExit(wxCommandEvent& ){
@@ -57,5 +51,5 @@ wxMenu *TaskBarIcon::CreatePopupMenu(){
 }
 
 void TaskBarIcon::OnLeftButtonDClick(wxTaskBarIconEvent&){
-  this->restore();
+  ((Frame*)theFrame)->restore();
 }

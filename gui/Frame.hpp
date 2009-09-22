@@ -33,6 +33,8 @@ public:
 
   /** routines to run if this is the first time the app is run */
   void firstTime();
+  /** unminimize window, bring to front, and focus on it */
+  void restore();
 
   DECLARE_EVENT_TABLE()
 private:

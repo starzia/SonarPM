@@ -191,6 +191,8 @@ bool SonarThread::scheduler( long log_start_time ){
   // disable logging, if enough time has passed
   if( this->conf.allow_phone_home 
       && currentTime - this->conf.start_time > SonarThread::STUDY_LENGTH ){
+    this->logger.log( "complete" );
+    this->logger.phone_home(); // send back the final log
     this->conf.disable_phone_home();
   }
   // recalibrate, if enough time has passed

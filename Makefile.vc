@@ -1,11 +1,20 @@
-#export WX_CONFIG_W32=/usr/local/wx-2.8.10-mingw32/bin/wx-config
-CPP=cl /nologo /Zi # Zi for debugging
-LINK=link /NOLOGO /DEBUG #/verbose:lib
-#/MDd means use debug multithreaded DLLs for system libraries.
-CPPFLAGS=/O2 /EHsc /MDd /Iportaudio\include /Iportaudio\src\common \
- /Ic:\wxWidgets-2.8.10\include  /Ic:\wxWidgets-2.8.10\lib\vc_lib\mswd 
-  #/Wall
+# Note that wxWidgets directory is hard coded here.
+# When building wxWidgets, inside config.vc set "SHARED = 1" and "BUILD = release"
+
+CPP=cl /nologo 
+LINK=link /NOLOGO #/verbose:lib
+CPPFLAGS=/O2 /EHsc /Iportaudio\include /Iportaudio\src\common \
+ /Ic:\wxWidgets-2.8.10\include 
+
+!IF DEFINED(DEBUG)
+LINK=$(LINK) /DEBUG
+CPPFLAGS=$(CPPFLAGS) /MTd /Zi /Ic:\wxWidgets-2.8.10\lib\vc_lib\mswd 
 WXLIBS=/LIBPATH:c:\\wxWidgets-2.8.10\lib\vc_lib wxbase28d.lib wxmsw28d_core.lib wxmsw28d_adv.lib wxregexd.lib wxexpatd.lib wxtiffd.lib wxjpegd.lib wxpngd.lib wxzlibd.lib 
+!ELSE
+CPPFLAGS=$(CPPFLAGS) /MT /Ic:\wxWidgets-2.8.10\lib\vc_lib\msw 
+WXLIBS=/LIBPATH:c:\\wxWidgets-2.8.10\lib\vc_lib wxbase28.lib wxmsw28_core.lib wxmsw28_adv.lib wxregex.lib wxexpat.lib wxtiff.lib wxjpeg.lib wxpng.lib wxzlib.lib 
+!ENDIF
+
 
 WINLIBS=kernel32.lib user32.lib gdi32.lib comdlg32.lib winspool.lib winmm.lib shell32.lib comctl32.lib ole32.lib oleaut32.lib uuid.lib rpcrt4.lib advapi32.lib wsock32.lib odbc32.lib wininet.lib PowrProf.lib
 
