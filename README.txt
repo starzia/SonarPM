@@ -9,28 +9,24 @@ Under Linux, there are two main libraries required to build this code:
     and in Debian as package "libxss-dev"
 - curl is required for FTP uploading of the log file.
 
+
 COMPILATION
 -----------
-Just run 'make'.
+Run 'make'.
+
+You must also manually create the directory ~/sonarPM/ before the program
+can be run.
 
 
 USAGE
 -----
-To run the full-blown power managment algorithm run:
- ./sonar
+ ./sonar_gui
+
 
 ADVANCED USAGE
 --------------
-To just get the sonar readings run:
- ./sonar --poll [freq]
-where [freq] optionally sets the sonar ping frequency
+You can change the ping frequency by editing the config file: 
+~/sonarPM/sonarPM.cfg
 
-To run an echo test on your audio hardware run:
- ./sonar --echo
-
-To get the "frequency response" of your audio hardware run:
- ./sonar --response
-
-Configuration data is stored in ~/.sonarPM.cfg.  Erase this file to revert to
-the default settings (or edit the settings manually).
+Erase ~/sonarPM/* to eliminate the current configuration and start afresh.
 

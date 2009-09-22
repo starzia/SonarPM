@@ -12,7 +12,9 @@ W32_OBJS = audio.O dsp.O SysInterface.O Config.O Logger.O
 BINS = sonar_tui sonar_gui sonar_tui.exe sonar_gui.exe
 
 ############################# LINKING ####################################
+all: sonar_gui
 
+# sonar_tui targets do not currently work
 sonar_tui: ${OBJS} sonar_tui.o
 	$(CXX) -o $@ ${FLAGS} $^ -lXss -lportaudio -lm
 ## Mac version?
@@ -64,13 +66,13 @@ clean:
 	rm -f ${BINS} ${OBJS} ${W32_OBJS} *~ sonar.tar.gz
 	cd gui; $(MAKE) clean
 
-sonar.tar.gz:
+sonarPM.tar.gz:
 	rm -Rf sonar_dist
 	mkdir sonar_dist
-	cp $(shell svn list) sonar_dist/
+	cp $(shell svn list --depth files) sonar_dist/
 	mkdir sonar_dist/gui
-	cp $(shell svn list gui) sonar_dist/gui/
-	tar -czvf sonar.tar.gz sonar_dist
+	cd gui; cp $(shell svn list --depth files gui) ../sonar_dist/gui/
+	tar -czvf $@ sonar_dist
 	rm -Rf sonar_dist
 
 ############################ DEPENDENCIES #################################

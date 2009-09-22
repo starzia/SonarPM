@@ -1,3 +1,5 @@
+# This is the makefile for the MS Visual C++ toolchain
+
 # Note that wxWidgets directory is hard coded here.
 # When building wxWidgets, inside config.vc set "SHARED = 1" and "BUILD = release"
 
