@@ -45,14 +45,15 @@ void* SonarThread::Entry(){
   //===========================
 
   switch( this->mode ){
+    case MODE_FREQ_RESPONSE:
+      this->logger.log_freq_response( this->audio);
+      // afterwards, begin power management.
+      this->mode = MODE_POWER_MANAGEMENT;
     case MODE_POWER_MANAGEMENT:
       this->power_management();
       break;
     case MODE_POLLING:
       this->poll();
-      break;
-    case MODE_FREQ_RESPONSE:
-      this->logger.log_freq_response( this->audio);
       break;
     case MODE_ECHO_TEST:
     default:
@@ -97,8 +98,9 @@ void SonarThread::updateGUI( float echo_delta, float window_avg, float thresh,
     // set status text
     SonarEvent evt2 = SonarEvent( STATUS_MSG );
     ostringstream ss;
-    ss << "Last reading: " << echo_delta
-       << ",  ten-point average: " << window_avg;
+    ss << "Last reading: " << echo_delta;
+    if( window_avg > 0 )
+       ss << ",  ten-point average: " << window_avg;
     evt2.setMsg( ss.str() );
     this->mainFrame->GetEventHandler()->AddPendingEvent( evt2 );
   }
@@ -150,6 +152,7 @@ void SonarThread::reset(){
  */
 bool SonarThread::updateThreshold(){
   vector<float> activeReadings;
+  this->resumePing();
   cout << "updating threshold using active readings..." << endl;
 
   // set status text
@@ -177,6 +180,7 @@ bool SonarThread::updateThreshold(){
   for( i=0; i<activeReadings.size(); i++ ) newThreshold += activeReadings[i];
   newThreshold /= activeReadings.size() * SonarThread::ACTIVE_GAIN;
   this->setThreshold( newThreshold );
+  this->lastCalibration = SysInterface::current_time();
 
   // make a gap in the plot to separate training data
   SonarEvent evt2 = SonarEvent( PLOT_EVENT_GAP );
@@ -199,12 +203,10 @@ bool SonarThread::scheduler( long log_start_time ){
   if( currentTime - this->lastCalibration  
       > SonarThread::RECALIBRATION_INTERVAL ){
     this->threshold = NAN; // blank the threshold so it will be reset
-    this->lastCalibration = currentTime;
   }
   // generate dummy keyboard input if enough idle time has passed
   if( SysInterface::idle_seconds() > SonarThread::DUMMY_INPUT_INTERVAL ){
     this->sendDummyInput();
-    this->lastDummyInputTime = currentTime;
   }
   return true; // return true for uninterrupted completion
 }
@@ -263,6 +265,9 @@ void SonarThread::power_management(){
   bool sleeping=false; // indicates whether the sonar system caused a sleep
                        // note that timeout-sleeps do not set this flag
                        // so sonar readings continue even after timeout-sleep
+  
+  // always set threshold first
+  this->updateThreshold();
 
   // test to see whether we should die
   while( !this->TestDestroy() ){
@@ -280,7 +285,6 @@ void SonarThread::power_management(){
 
       // check to see that threshold has been set.  If not, set it.
       if( !(this->threshold > 0) && !sleeping ){
-        this->resumePing();
         if( !this->updateThreshold() ) break; // break if it was interrupted
       }
 
@@ -304,7 +308,6 @@ void SonarThread::power_management(){
     //==== INACTIVE ===========================================================
     }else if( !sleeping ){ // If inactive and sleeping, wait until awakened.
       // ---SONAR READING---
-      this->resumePing();
       // run sonar, and store a new reading
       this->recordAndProcessAndUpdateGUI( );
 
@@ -341,6 +344,8 @@ void SonarThread::power_management(){
 }
 
 void SonarThread::recordAndProcessAndUpdateGUI(){
+  this->resumePing();
+
   // record and process
   AudioBuf rec = audio.blocking_record( SonarThread::WINDOW_LENGTH );
   Statistics s = measure_stats( rec, conf.ping_freq );
@@ -387,6 +392,7 @@ void SonarThread::sendDummyInput(){
   SendInput( 2, input, sizeof(INPUT) );
 #endif
   // TODO: linux version (or some linux-specific screensaver deactivation)
+  this->lastDummyInputTime = SysInterface::current_time();
 }
 
 duration_t SonarThread::true_idle_seconds(){

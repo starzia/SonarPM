@@ -19,9 +19,11 @@ bool App::OnInit(){
   // initialize portaudio
   Pa_Initialize();
 
+  Config testConfigExists;
+  bool firstTime = !testConfigExists.load();
   this->frame = new Frame( _T("SonarPM version " VERSION),600,300);
-  this->frame->Show(false); // start minimized
   SetTopWindow( this->frame );
+  if( !firstTime ) this->frame->Show(false); // start minimized
 
   // TODO: note that term_handler will print a "quit" msg in the log even if 
   // sonar power management had not been started.

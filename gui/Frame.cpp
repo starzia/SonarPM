@@ -136,7 +136,7 @@ void Frame::startSonar( ){
 
 /** note that the gui's response to the thread stopping doesn't happen here but
  * after the thread sends back a SonarEvent(SONAR_DONE) event */
-void Frame::stopSonar(){   
+void Frame::stopSonar(){  
   // stop sonar processing thread
   LOCK( this->threadLock );
   if( this->sThread ){ // stop only if started
@@ -189,7 +189,7 @@ void Frame::firstTime(){
       if( this->sThread->Create() == wxTHREAD_NO_ERROR ){
         this->sThread->Run();
         this->SetStatusText(_T("Measuring frequency response... Please wait."));
-        this->Disable(); // gray out GUI controls while freq response is running
+        this->buttonPause->SetLabel( _T( "pause" ) );
       }
     }
   }
