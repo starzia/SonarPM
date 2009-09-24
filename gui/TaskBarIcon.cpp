@@ -13,7 +13,7 @@ END_EVENT_TABLE()
 
 TaskBarIcon::TaskBarIcon( wxFrame* f ) : theFrame(f){
 #ifdef PLATFORM_WINDOWS
-  this->SetIcon( wxIcon( _T("bat_32.ico"), wxBITMAP_TYPE_ICO ) );
+  this->SetIcon( wxIcon( _T("bat_32.ico"), wxBITMAP_TYPE_ICO ), _T("Sonar") );
 #else
   this->SetIcon( bat_32_xpm, _T("Sonar") );
 #endif

@@ -150,7 +150,7 @@ bool Logger::phone_home(){
   if( success ){
     // ftp upload
     string command = "curl -T " + this->filename + ".gz ftp://"+FTP_USER+
-            ':'+FTP_PASSWD+'@'+FTP_SERVER+'/'+this->getFilenameNoPath();
+            ':'+FTP_PASSWD+'@'+FTP_SERVER+'/'+this->getFilenameNoPath()+".gz";
     success = ( system( command.c_str() ) == EXIT_SUCCESS );
     if( !success ){
        // gunzip it to continue logging

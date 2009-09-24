@@ -47,7 +47,7 @@ bool SysInterface::sleep_monitor(){
   return true;
 #elif defined PLATFORM_WINDOWS
   // send monitor off message
-  PostMessage( HWND_TOPMOST, WM_SYSCOMMAND, SC_MONITORPOWER, 1 );
+  PostMessage( HWND_TOPMOST, WM_SYSCOMMAND, SC_MONITORPOWER, 2 );
   //                               -1 for "on", 1 for "low power", 2 for "off".
   //SendMessage( h, WM_SYSCOMMAND, SC_SCREENSAVE, NULL ); // activate scrnsaver
   SysInterface::sleep( 0.5 ); // give system time to process message
