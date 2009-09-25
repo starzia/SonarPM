@@ -7,6 +7,8 @@
 #include "CloseConfirmFrame.hpp"
 #include <wx/textdlg.h>
 #include "../SysInterface.hpp"
+#include "App.hpp" // for VERSION
+#include <sstream>
 #ifndef PLATFORM_WINDOWS
   #include "bat_32.xpm" // the icon file
 #endif
@@ -182,6 +184,15 @@ void Frame::firstTime(){
        "If this happens, simply wake up the display by moving the mouse.  "),
     _T("Calibration"), wxOK, this );
 
+  // log program version
+  ostringstream log_msg;
+  log_msg << "version " << VERSION;
+  this->logger.log( log_msg.str() );
+
+  // phone home now, so that Windows users are prompted to make a firewall
+  // exception (if we allow this to happen later when the app is minimized 
+  // then the user may be more confused).
+  this->logger.phone_home(); 
   {
     LOCK( this->threadLock );
     if( !this->sThread ){
