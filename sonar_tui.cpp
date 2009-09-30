@@ -1,18 +1,13 @@
-#include "sonar.hpp"
 #include "dsp.hpp"
+#include "Config.hpp"
+#include "SysInterface.hpp"
 #include <iostream>
 #include <sstream>
 
 //========================= IMPLEMENTATION CONSTANTS =========================
 #define RECORDING_PERIOD (2.0)
-//#define CONFIG_FILENAME ".sonarPM.cfg"
-//#define LOG_FILENAME ".sonarPM.log"
 #define SLEEP_TIME (0.2) // sleep time between idleness checks
-#define IDLE_THRESH (5) // don't activate sonar until idle for this long
-#define IDLE_SAFETYNET (300) // assume that if idle for this long, user is gone
 #define DEFAULT_PING_FREQ (22000)
-#define DYNAMIC_THRESH_FACTOR (1.3) // how rapidly does dynamic threshold move
-//#define PHONEHOME_TIME (604800) // number of seconds before phone home (1 week)
 
 
 //#define PROFILING // this enables audio HW profiling mode
@@ -22,11 +17,6 @@ using namespace std;
 void test_echo( AudioDev & audio );
 void poll( AudioDev & audio, Config & conf );
 
-/** This is the main program loop.  It checks for a user and powers down
-    the display if it's reasonably confident that no one is there */
-void power_management( AudioDev & audio, Config & conf );
-
-
 int main( int argc, char* argv[] ){
   // parse commandline arguments
   bool do_poll=false, echo=false, response=false;
@@ -34,18 +24,15 @@ int main( int argc, char* argv[] ){
   frequency poll_freq = 0;
   for( i=1; i<argc; i++ ){
     if( string(argv[i]) == string("--help") ){
-      cout<<"usage is "<<argv[0]<<" [ --help | --poll [freq] | --echo | --response | --phonehome ]"<<endl;
+      cout<<"usage is "<<argv[0]<<" [ --help | --poll [freq] | --echo | --response ]"<<endl;
       return -1;
     }else if( string(argv[i]) == string("--poll") ){
       do_poll=true;
     }else if( string(argv[i-1]) == string("--poll") && argv[i][0] != '-' ){
       istringstream ss( argv[i] );
       ss >> poll_freq;
-      //poll_freq = atof( argv[i] );
     }else if( string(argv[i]) == string("--echo") ){
       echo=true;
-    }else if( string(argv[i]) == string("--phonehome") ){
-      SysInterface::phone_home();
     }else if( string(argv[i]) == string("--response") ){
       response=true;
     }else{
@@ -79,11 +66,12 @@ int main( int argc, char* argv[] ){
 
     // write configuration to file
     return conf.write_config_file();
-
+/*
     log_freq_response( my_audio );
     log_model();
     // send initial configuration home
     if( conf.allow_phone_home ) SysInterface::phone_home();
+*/
   }else{
     my_audio.choose_device( conf.rec_dev, conf.play_dev );
   }
@@ -101,7 +89,9 @@ int main( int argc, char* argv[] ){
     if( poll_freq != 0 ) conf.ping_freq = poll_freq;
     poll( my_audio, conf );
   }else{
-    power_management( my_audio, conf );
+    cerr << "must choose an operating mode" << endl;
+    return -1;
+    // power_management( my_audio, conf );
   }
   return 0;
 }
@@ -115,67 +105,6 @@ void test_echo( AudioDev & audio ){
   audio.blocking_play( buf );
 }
 
-void power_management( AudioDev & audio, Config & conf ){
-  // buffer duration is one second, but actually it just needs to be a multiple
-  // of the ping_period.
-  SysInterface::register_term_handler();
-  float threshold = choose_ping_threshold( audio, conf.ping_freq );
-  AudioBuf ping = tone( 1, conf.ping_freq, 0,0 ); // no fade since we loop it
-  cout << "Begin power management loop at frequency of "
-       <<conf.ping_freq<<"Hz"<<endl;
-  PaStream* strm;
-  strm = audio.nonblocking_play_loop( ping ); // initialize and start ping
-  AudioDev::check_error( Pa_StopStream( strm ) ); // stop ping
-  SysInterface::log( "begin" );
-  long start_time = get_log_start_time();
-  while( 1 ){
-    SysInterface::wait_until_idle();
-    AudioDev::check_error( Pa_StartStream( strm ) ); // resume ping
-
-    //-- THRESHOLD RAISING
-    if( SysInterface::idle_seconds() > IDLE_SAFETYNET ){
-      // if we've been tring to detect use for too long, then this probably
-      // means that the threshold is too low.
-      cout << "False attention detected." <<endl;
-      SysInterface::log("false attention");
-      threshold *= DYNAMIC_THRESH_FACTOR;
-      conf.write_config_file(); // config save changes
-    }
-
-    // record and process
-    AudioBuf rec = audio.blocking_record( RECORDING_PERIOD );
-    AudioDev::check_error( Pa_StopStream( strm ) ); // stop ping
-    Statistics s = measure_stats( rec, conf.ping_freq );
-    cout << s << endl;
-    SysInterface::log( s );
-
-    // if sonar reading below thresh. and user is still idle ...
-    if( FEATURE(s) < threshold && SysInterface::idle_seconds() > IDLE_THRESH ){
-      // sleep monitor
-      SysInterface::sleep_monitor();
-      SysInterface::log( "sleep" );
-      long sleep_timestamp = SysInterface::current_time();
-      SysInterface::wait_until_active(); // OS will have turned on monitor
-
-      //-- THRESHOLD LOWERING
-      // waking up too soon means that we've just irritated the user
-      if( SysInterface::current_time( ) - sleep_timestamp < IDLE_THRESH ){
-        cout << "False sleep detected." << endl;
-        SysInterface::log( "false sleep" );
-        threshold /= DYNAMIC_THRESH_FACTOR;
-      }
-    }
-    //-- PHONE HOME, if enough time has passed
-    if( conf.allow_phone_home &&
-	(SysInterface::current_time()-start_time) > PHONEHOME_TIME ){
-      if( SysInterface::phone_home( ) ){
-        // if phone home was successful, then disable future phonehome attempts
-        conf.disable_phone_home( );
-      }
-    }
-
-  }
-}
 
 
 /** poll is a simplified version of the power management loop wherein we just
@@ -235,8 +164,8 @@ void Config::choose_ping_freq( AudioDev & audio ){
 
   if( best_gain < 10 ){
     cerr << "ERROR: Your mic and/or speakers are not sensitive enough to proceed!"<<endl;
-    SysInterface::log( "freq>=start_freq" );
-    SysInterface::phone_home();
+    //SysInterface::log( "freq>=start_freq" );
+    //SysInterface::phone_home();
     exit(-1);
   }
   this->ping_freq = best_freq;
@@ -293,21 +222,4 @@ void Config::warn_audio_level( AudioDev & audio ){
     cin >> input;
   }while( !( input == "yes" || input == "YES" || input == "Yes" ) );
   cout << endl;
-}
-
-void SysInterface::wait_until_active(){
-  duration_t prev_idle_time = SysInterface::idle_seconds();
-  duration_t current_idle_time = SysInterface::idle_seconds();
-  while( current_idle_time >= prev_idle_time ){
-    SysInterface::sleep( SLEEP_TIME );
-    prev_idle_time = current_idle_time;
-    current_idle_time = SysInterface::idle_seconds();
-  }
-  SysInterface::log( "active" );
-}
-void SysInterface::wait_until_idle(){
-  while( SysInterface::idle_seconds() < IDLE_THRESH ){
-    SysInterface::sleep( SLEEP_TIME ); //don't poll idle_seconds() constantly
-  }
-  SysInterface::log( "idle" );
 }
