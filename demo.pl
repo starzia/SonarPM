@@ -7,7 +7,7 @@ $WINDOW_SIZE=5;
 
 use FileHandle;
 
-open(S,"./sonar --poll |");
+open(S,"./sonar_tui --poll |");
 S->autoflush(1);
 open(F,">data.txt");
 F->autoflush(1);
@@ -52,7 +52,7 @@ while (<S>) {
 	$level = ( log($avg) - log($LOWEST) )/(log($HIGHEST)-log($LOWEST)); # \in [0,1)
 	if( $level < 0 ){ $level = 0; }
 	if( $level > 1 ){ $level = 1; }
-	backlight( $level );
+        backlight( $level );
 
         # (RE)PLOT
 	# set to fixed sliding x window
@@ -79,6 +79,7 @@ while (<S>) {
     }
 }
 
+$current_level = 0; # brightness level integer
 # parameter brightness should be in range [0,1]
 sub backlight{
     $level = $LCD_STEPS * $_[0];
@@ -88,6 +89,10 @@ sub backlight{
     if ( $level < 0 ){
 	$level = 0;
     }
-    system( sprintf( "dbus-send --system --print-reply --dest=org.freedesktop.Hal /org/freedesktop/Hal/devices/dell_lcd_panel org.freedesktop.Hal.Device.LaptopPanel.SetBrightness int32:%d\n",$level ) );
+    # don't bother setting level if its not changing
+    if( $current_level != $level ){
+        system( sprintf( "dbus-send --system --print-reply --dest=org.freedesktop.Hal /org/freedesktop/Hal/devices/dell_lcd_panel org.freedesktop.Hal.Device.LaptopPanel.SetBrightness int32:%d\n",$level ) );
+    }
+    $current_level = $level;
 }
 

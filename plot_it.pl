@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 use FileHandle;
 
-open(S,"./sonar --poll |");
+open(S,"./sonar_tui --poll |");
 S->autoflush(1);
 open(F,">data.txt");
 F->autoflush(1);

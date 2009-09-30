@@ -3,9 +3,10 @@
 #include "SysInterface.hpp"
 #include <iostream>
 #include <sstream>
+#include <stdlib.h>
 
 //========================= IMPLEMENTATION CONSTANTS =========================
-#define RECORDING_PERIOD (2.0)
+#define RECORDING_PERIOD (0.5)
 #define SLEEP_TIME (0.2) // sleep time between idleness checks
 #define DEFAULT_PING_FREQ (22000)
 
@@ -116,7 +117,7 @@ void poll( AudioDev & audio, Config & conf ){
   while( 1 ){
     AudioBuf rec = audio.blocking_record( RECORDING_PERIOD );
     Statistics s = measure_stats( rec, conf.ping_freq );
-    cout << s << endl;
+    cout << "{delta:" << s.delta <<"}"<< endl;
   }
   AudioDev::check_error( Pa_CloseStream( strm ) ); // close stream to free up dev
 }
