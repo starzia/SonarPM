@@ -59,8 +59,8 @@ PA_FLAGS=/DPA_NO_DS /DPA_NO_ASIO /DPA_NO_WDMKS
 ############################# LINKING ####################################
 all: sonar_gui.exe
 
-sonar_tui.exe: $(OBJS) sonar_tui.obj
-	$(LINK) /OUT:$@ /SUBSYSTEM:CONSOLE $** libportaudio.a m.lib wininet.lib
+sonar_tui.exe: $(PA_OBJS) $(OBJS) sonar_tui.obj
+	$(LINK) /OUT:$@ /SUBSYSTEM:CONSOLE $** $(WINLIBS)
 
 sonar_gui.exe: $(PA_OBJS) $(OBJS) $(GUI_OBJS)
 	$(LINK) /OUT:$@ /PDB:sonar_gui.pdb /SUBSYSTEM:WINDOWS \

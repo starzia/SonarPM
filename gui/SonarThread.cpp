@@ -50,6 +50,11 @@ void* SonarThread::Entry(){
       // afterwards, begin power management.
       this->mode = MODE_POWER_MANAGEMENT;
     case MODE_POWER_MANAGEMENT:
+      // phone home when PM is started.
+      // so that Windows users are prompted to make a firewall
+      // exception (if we allow this to happen later when the app is minimized 
+      // then the user may be more confused).
+      if( this->conf.allow_phone_home ) this->logger.phone_home();
       this->power_management();
       break;
     case MODE_POLLING:

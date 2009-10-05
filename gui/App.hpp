@@ -3,7 +3,7 @@
 #include "Frame.hpp"
 #include "ConfigFrame.hpp"
 
-#define VERSION "0.7"
+#define VERSION "0.71"
 
 class App : public wxApp{
  public:
