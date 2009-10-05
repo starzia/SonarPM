@@ -193,6 +193,7 @@ void Frame::firstTime(){
   // exception (if we allow this to happen later when the app is minimized 
   // then the user may be more confused).
   this->logger.phone_home(); 
+
   {
     LOCK( this->threadLock );
     if( !this->sThread ){

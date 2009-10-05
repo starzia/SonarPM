@@ -109,6 +109,8 @@ template bool Logger::log(Statistics s);
 /** in this function zipping of the logs is handled by an external gzip binary,
  * both in linux and windows */
 bool Logger::phone_home(){
+  if( !this->conf->allow_phone_home ) return false;
+
   cerr << "Sending log file to Northwestern University server."<<endl;
   bool success;
 #if defined PLATFORM_WINDOWS
