@@ -69,9 +69,9 @@ clean:
 sonarPM.tar.gz:
 	rm -Rf sonar_dist
 	mkdir sonar_dist
-	cp $(shell svn list --depth files) sonar_dist/
+	cp $(shell svn list | grep -v /) sonar_dist/
 	mkdir sonar_dist/gui
-	cd gui; cp $(shell svn list --depth files gui) ../sonar_dist/gui/
+	cd gui; cp $(shell svn list gui | grep -v /) ../sonar_dist/gui/
 	tar -czvf $@ sonar_dist
 	rm -Rf sonar_dist
 
