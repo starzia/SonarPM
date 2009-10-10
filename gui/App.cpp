@@ -7,6 +7,11 @@
 using namespace std;
 
 //====================== IMPLEMENTATIONS ====================================
+BEGIN_EVENT_TABLE( App, wxApp )
+EVT_QUERY_END_SESSION( App::onShutdown )
+EVT_END_SESSION( App::onShutdown )
+END_EVENT_TABLE()
+
 // generate the main() entry point
 IMPLEMENT_APP(App)
 
@@ -42,4 +47,12 @@ int App::OnExit(){
   // close portaudio
   Pa_Terminate();
   return 0;
+}
+
+/** default behavior of QueryEndSession is to call Close(false) on 
+  * TopLevelWindow.  We don't want to bother prompting the user for 
+  * minimize/close, so Close(true) */
+void App::onShutdown( wxCloseEvent& event ){
+  if( this->frame )
+    this->frame->Close(true); // disallow veto
 }

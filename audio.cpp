@@ -5,7 +5,7 @@
 /* NOTE: I raised to a huge value (32768) to reduce clicking in output,
  * but this  caused CPU utilization to soar, so I reduced size again.
  **/
-#define FRAMES_PER_BUFFER (1<<16) // PortAudio buf size.  The examples use 256.
+#define FRAMES_PER_BUFFER paFramesPerBufferUnspecified //(1<<16) // PortAudio buf size.  The examples use 256.
 int SAMPLE_RATE;
 
 using namespace std;
