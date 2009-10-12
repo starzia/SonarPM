@@ -178,7 +178,11 @@ bool Logger::phone_home(){
 
 
 bool Logger::log_freq_response( AudioDev & audio ){
-  freq_response f = test_freq_response( audio );
+  pair<freq_response,freq_response> response_pair =
+    test_ultrasonic_response( audio );
+  freq_response noise = response_pair.first;
+  freq_response silence = response_pair.second;
+
   ostringstream log_msg;
   log_msg << "sample_rate " << SAMPLE_RATE;
   this->log( log_msg.str() );
@@ -186,8 +190,9 @@ bool Logger::log_freq_response( AudioDev & audio ){
   log_msg.str("");  //reset stringstream
   log_msg << "response ";
   unsigned int i;
-  for( i=0; i<f.size(); i++ ){
-    log_msg << f[i].first << ':' << f[i].second << ' ';
+  for( i=0; i<noise.size(); i++ ){
+    log_msg << noise[i].first << ':' << noise[i].second 
+            << ',' << silence[i].second << ' ';
   }
   return this->log( log_msg.str() );
 }

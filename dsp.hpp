@@ -53,9 +53,14 @@ typedef std::vector< std::pair<frequency,float> > freq_response;
 std::ostream& operator<<(std::ostream& os, const freq_response& f);
 freq_response operator/(freq_response& a, freq_response& b);
 
-/** tests the frequency response of the audio hardware and returns the most 
-    reponsive ultrasonic frequency */
-freq_response test_freq_response( AudioDev & audio );
+/** tests the frequency response of the audio hardware while playing the 
+    provided stimulus audio */
+freq_response test_freq_response( AudioDev & audio, AudioBuf & stimulus );
+
+/** tests the frequency response of the audio hardware to both ultrasonic noise and
+    the background levels (silence). 
+    @return pair<noise response, silence response> */
+std::pair<freq_response,freq_response> test_ultrasonic_response( AudioDev & audio );
 
 /** @return the spectrum of the passed buffer */
 freq_response spectrum( AudioBuf & buf );

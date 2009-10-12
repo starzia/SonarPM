@@ -271,25 +271,30 @@ freq_response operator/(freq_response& a, freq_response& b){
   return ret;
 }
 
-freq_response test_freq_response( AudioDev & audio ){
-  const duration_t test_period = 10;
+const duration_t TEST_DURATION = 10; // foar freq_response
+
+freq_response test_freq_response( AudioDev & audio, AudioBuf & stimulus ){
+  AudioBuf rec = audio.recordback( stimulus );
+  return spectrum( rec );
+}
+
+pair<freq_response,freq_response> test_ultrasonic_response( AudioDev & audio ){
   cout << "Please wait while the system is calibrated."<<endl
-       << "This will take approximately "<<test_period*2<<" seconds."<<endl
+       << "This will take approximately "<<TEST_DURATION*2<<" seconds."<<endl
        << "During this time you may hear some noise."<<endl;
   
   // record silence (as a reference point)
-  AudioBuf silence = tone( test_period, 0 );
-  AudioBuf silence_rec = audio.recordback( silence );
+  AudioBuf silence = tone( TEST_DURATION, 0 );
+  freq_response silence_response = test_freq_response( audio, silence );
   // record white noise
-  AudioBuf noise = ultrasonic_noise(test_period);
-  AudioBuf noise_rec = audio.recordback( noise );
+  AudioBuf noise = ultrasonic_noise(TEST_DURATION);
+  freq_response noise_response = test_freq_response( audio, noise );
   
-  // now record ratio of stimulated to silent energy for a range of frequencies
-  freq_response noise_response = spectrum( noise_rec );
-  freq_response silence_response = spectrum( silence_rec );
+  // now print ratio of stimulated to silent energy for this range of frequencies
   freq_response gain = noise_response / silence_response;
   cout << gain <<endl;
-  return gain;
+  
+  return make_pair( noise_response, silence_response );
 }
 
 freq_response spectrum( AudioBuf & buf ){
