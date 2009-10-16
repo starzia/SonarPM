@@ -83,7 +83,7 @@ int main( int argc, char* argv[] ){
     return 0;
   }
   if( response ){
-    test_freq_response( my_audio );
+    test_ultrasonic_response( my_audio );
     return 0;
   }
   if( do_poll ){
@@ -158,7 +158,10 @@ void Config::choose_ping_freq( AudioDev & audio ){
   cin.ignore();
   cin.get();
 
-  freq_response f = test_freq_response( audio );
+  pair<freq_response,freq_response> response_pair =
+    test_ultrasonic_response( audio );
+  freq_response f = response_pair.first / response_pair.second;
+
   // TODO: search for maximum gain here
   float best_freq = f[0].first;
   float best_gain = f[0].second;

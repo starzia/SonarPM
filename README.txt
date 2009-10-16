@@ -31,7 +31,7 @@ LINUX COMPILATION
 -----------------
 Run 'make sonar_gui' or 'make sonar_tui'.
 
-You must also manually create the directory ~/sonarPM/ before the program
+You must also manually create the directory ~/.sonarPM/ before the program
 can be run.
 
 
@@ -43,9 +43,9 @@ LINUX USAGE
 ADVANCED USAGE
 --------------
 You can change the ping frequency by editing the config file: 
-~/sonarPM/sonarPM.cfg
+~/.sonarPM/sonarPM.cfg
 
-Erase ~/sonarPM/* to eliminate the current configuration and start afresh.
+Erase ~/.sonarPM/* to eliminate the current configuration and start afresh.
 
 './sonar_tui --poll' is useful for piping the output into a script or for
 storing a simple log of sonar readings.
@@ -53,9 +53,9 @@ storing a simple log of sonar readings.
 
 WINDOWS PREREQUISITES
 ---------------------
-Compiling for Windows is a bit trickier.  Portaudio is included in the 
-source tarball, but wxWidgets library must be installed (and the Makefile 
-edited to reflect its installation directory).
+Compiling for Windows is a bit trickier.  Portaudio must be downloaded and 
+moved into a 'portaudio' directory and wxWidgets library must be installed
+(and Makefile.vc edited to reflect its installation directory).
 
 
 WINDOWS COMPILATION
