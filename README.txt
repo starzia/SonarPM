@@ -7,16 +7,24 @@ Robert Dick (U. Michigan), Peter Dinda (Northwestern), and Gokhan Memik
 (Northwestern).
 ========================================================================
 
+LICENSE
+-------
+You may use this source code without any restriction.  However, we would
+appreciate it if you would notify us of projects insipired by our project 
+so that we can link you.
+
+
 LINUX PREREQUISITES
 -------------------
 Under Linux, there are two main libraries required to build this code:
-- Portaudio cross platform audio library
+- Portaudio cross platform audio library V19 (V18 won't work)
     This is available in Fedora as package "portaudio-devel"
     and in Debian as package "libportaudio-dev"
 - X Screen Saver extension library
     This is available in Fedora as package "libScrnSaver-devel"
     and in Debian as package "libxss-dev"
 - curl is required for FTP uploading of the log file.
+- wxWidgets 2.8
 
 
 LINUX COMPILATION

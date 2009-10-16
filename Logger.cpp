@@ -105,6 +105,7 @@ long Logger::get_log_start_time( ){
 
 // explicitly instantiate log function for type Statistics (not sure why needed)
 template bool Logger::log(Statistics s);
+template bool Logger::log(char const* s);
 
 /** in this function zipping of the logs is handled by an external gzip binary,
  * both in linux and windows */
