@@ -16,8 +16,8 @@ For technical details see this publication:
 LICENSE
 -------
 This source code is released under the "MIT license".  Please see LICENSE.txt
-for details.  Additionally, please note that we would appreciate it if you 
-would notify us of projects insipired by our project so that we can link you.
+for details.  Optionally, please notify us of projects insipired by this 
+project so that we can link you.
 
 
 LINUX PREREQUISITES
@@ -25,7 +25,7 @@ LINUX PREREQUISITES
 Under Linux, there are two main libraries required to build this code:
 - Portaudio cross platform audio library V19 (V18 won't work)
     This is available in Fedora as package "portaudio-devel"
-    and in Debian as package "libportaudio-dev"
+    and in Debian as package "portaudio19-dev" (or "libportaudio-dev"?)
 - X Screen Saver extension library
     This is available in Fedora as package "libScrnSaver-devel"
     and in Debian as package "libxss-dev"

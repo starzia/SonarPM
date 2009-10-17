@@ -1,3 +1,21 @@
+This software includes code from several sources, covered by different
+permissive licenses.  Please see the following documents for details:
+  gzip_LICENSE_GPLv2.txt
+  portaudio_LICENSE.txt
+  SimpleIni.h
+  ConvertUTF.h
+
+The above codes bear the following copyrights:
+  Copyright (C) 2007 Free Software Foundation, Inc.
+  Copyright (C) 1993 Jean-loup Gailly.
+  Copyright (c) 1999-2006 Ross Bencina and Phil Burk
+  Copyright (c) 2006-2008, Brodie Thiesfield
+  Copyright 2001-2004 Unicode, Inc.
+
+All other code was written by Stephen P. Tarzia and is subject to the 
+following license:
+==============================================================================
+
 The MIT License
 
 Copyright (c) 2009 Stephen P. Tarzia
