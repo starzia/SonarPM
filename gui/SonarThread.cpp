@@ -223,8 +223,9 @@ bool SonarThread::resumePing(){
   if( AudioDev::check_error( Pa_IsStreamStopped( this->pingStrm ) ) ){
     ret = AudioDev::check_error( Pa_StartStream( this->pingStrm ) ); // resume ping
     // fade to full volume, taking one second, to reduce onset "click"  
-    // This also gives ping a chance to get started before we record.
-    this->audio->fade( 1, 1 );
+    this->audio.fade( 1 );
+    // Also give ping a chance to get started before we record.
+    SysInterface::sleep( 1 ); // pad to one second delay
     // TODO: figure a way to shorten delay without even recording too early
   }
   return (ret == paNoError);
@@ -235,8 +236,10 @@ bool SonarThread::pausePing(){
   // stop ping, if necessary
   if( AudioDev::check_error( Pa_IsStreamActive( this->pingStrm ) ) )
     // fade to zero volume, to reduce stop "click"
-    this->audio->fade( 0, 0.1 );
-    AudioDev::check_error( Pa_StopStream( this->pingStrm ) ); // stop ping
+    this->audio.fade( 0 );
+    // must check again that stream hasn't died since fading started.
+    if( Pa_IsStreamActive( this->pingStrm ) )
+      AudioDev::check_error( Pa_AbortStream( this->pingStrm ) ); // stop ping
   return (ret == paNoError);
 }
 
@@ -299,7 +302,7 @@ void SonarThread::power_management(){
       if( !this->scheduler( log_start_time ) ) break;
 
       // check to see that threshold has been set.  If not, set it.
-      if( !(this->threshold > 0) && !sleeping ){
+      if( !(this->threshold > 0) && !(sonar_sleeping || timeout_sleeping) ){
         if( !this->updateThreshold() ) break; // break if it was interrupted
       }
 
@@ -321,7 +324,8 @@ void SonarThread::power_management(){
       this->pausePing();
 
     //==== INACTIVE ===========================================================
-    }else if( !sleeping ){ // If inactive and sleeping, wait until awakened.
+    }else if( !sonar_sleeping ){ // If inactive and sleeping due to sonar,
+                                 // wait until awakened.
       // ---SONAR READING---
       // run sonar, and store a new reading
       this->recordAndProcessAndUpdateGUI( );

@@ -16,7 +16,7 @@
 #define SCALING_FACTOR (1.02) // freq bin scaling factor for freq response
 #define LOWEST_FREQ (15000) // lowest freq for spectral analysis
 #define HIGHEST_FREQ (30000) // highest freq for spectral analysis
-#define TEST_DURATION = (10); // for freq_response
+#define TEST_DURATION (10) // for freq_response
 
 using namespace std;
 

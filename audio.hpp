@@ -121,11 +121,10 @@ public:
   AudioBuf blocking_record( duration_t duration );
   /** Record the echo of buf */
   AudioBuf recordback( const AudioBuf & buf );
-  /** fade volume to a given level. */
-  void fade( float final_level, duration_t fade_time ){
 
-  PaStreamParameters out_params, in_params;
-  float volume_level; /** in [0,1] scales down playback audio buffers */
+  /** fade volume to a given level over a short time period. */
+  static void fade( float final_level );
+
   /** prints description of PortAudio error message, if any */
   static PaError check_error( PaError err );
 
@@ -133,6 +132,12 @@ public:
   static void init();
   /** must be called after ALL portaudio usage is complete */
   static void terminate();
+
+private:
+  PaStreamParameters out_params, in_params;
+  /** in [0,1] scales down playback audio buffers */
+  static float currentVolumeLevel, targetVolumeLevel, volumeStepFactor;
+  // TODO: above, volume level should be per-stream or per-device not global
 };
 
 #endif //ndef AUDIO_H

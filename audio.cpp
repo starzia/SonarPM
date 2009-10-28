@@ -116,10 +116,9 @@ void AudioDev::terminate(){
   check_error( Pa_Terminate() ); // Close PortAudio, this is important!
 }
 
-AudioDev::AudioDev() : volume_level(1.0) {}
+AudioDev::AudioDev(){}
 
-AudioDev::AudioDev( unsigned int in_dev_num, unsigned int out_dev_num )
-    : volume_level(1.0) {
+AudioDev::AudioDev( unsigned int in_dev_num, unsigned int out_dev_num ){
   this->choose_device( in_dev_num, out_dev_num );
 }
 
@@ -225,18 +224,17 @@ int AudioDev::player_callback( const void *inputBuffer, void *outputBuffer,
   return req->done();
 }
 
-void AudioDev::fade( float final_level, duration_t fade_time ){
-  int STEPS = 10;
-  float old_level = this->volume_level;
-  if( old_level == final_level ) return;
+#define HIGH_VOLUME_LEVEL (1.0)
+#define LOW_VOLUME_LEVEL (0.00001) // zero value would break code below
+float AudioDev::currentVolumeLevel = 1.0; // set by oscillator_callback
+float AudioDev::targetVolumeLevel = 1.0; // this will be overriden by app
+#define FADE_TIME (0.1) // time in seconds taken to fade ping in/out @44.1kHz
+float AudioDev::volumeStepFactor = pow( HIGH_VOLUME_LEVEL/LOW_VOLUME_LEVEL,
+                                        1.0/(FADE_TIME*44100) );
 
-  float step_exp = pow( final_level/old_level, 1.0/STEPS );
-  int i;
-  for( i=0; i<STEPS; i++ ){
-    this->volume_level *= step_exp;
-    // delay
-    Pa_sleep( 1000 * fade_time / STEPS ); // note, we convert from s -> ms
-  }
+void AudioDev::fade( float final_level ){
+  AudioDev::targetVolumeLevel = final_level;
+  Pa_Sleep( 1000 * FADE_TIME * 44100/SAMPLE_RATE ); //wait for fade to finish
 }
 
 /** Similiar to player_callback, but "wrap around" buffer indices */
@@ -252,7 +250,20 @@ int AudioDev::oscillator_callback( const void *inputBuffer, void *outputBuffer,
 
   unsigned int i, total_samples = req->audio.get_num_samples();
   for( i=0; i<framesPerBuffer; i++ ){
-    *out++ = this->volume_level * 
+    if( currentVolumeLevel != targetVolumeLevel ){
+      if( currentVolumeLevel > targetVolumeLevel ){
+        currentVolumeLevel /= volumeStepFactor;
+        // verify that we didn't go too far
+        if( currentVolumeLevel < targetVolumeLevel )
+          currentVolumeLevel = targetVolumeLevel;
+      }else{
+        currentVolumeLevel *= volumeStepFactor;
+        // verify that we didn't go too far
+        if( currentVolumeLevel > targetVolumeLevel )
+          currentVolumeLevel = targetVolumeLevel;
+      }
+    }
+    *out++ = AudioDev::currentVolumeLevel *
              req->audio[ ( req->progress_index + i ) % total_samples ]; // left
     *out++ = 0; // right
   }

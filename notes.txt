@@ -12,9 +12,8 @@ Platform specific portions:
 Other TODO items:
 - use strings instead of indices to identify audio devices to allow for device
    removal or addition.  Also, hide OSS devices because their names change.
-- fix memory leaks
+- fix memory leaks, if any
 - Only works with Portaudio 1.9, which is only in the bleeding edge distros
-- create ~/.sonarPM directory to store all associated files
 
 mingw32 notes:
 - must compile portaudio.a first:

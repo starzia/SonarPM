@@ -1,6 +1,7 @@
 Sonar Power Manager
-Author: Stephen Tarzia
-        steve@stevetarzia.com
+========================================================================
+Main author: Stephen Tarzia (steve@stevetarzia.com)
+Patch contributors: Jon Klepek
 
 This code was written at Northwestern university in collaboration with:
  Robert Dick (U. Michigan)
@@ -29,16 +30,14 @@ Under Linux, there are two main libraries required to build this code:
 - X Screen Saver extension library
     This is available in Fedora as package "libScrnSaver-devel"
     and in Debian as package "libxss-dev"
-- curl is required for FTP uploading of the log file.
+- "curl" is required for FTP uploading of the log file.
 - wxWidgets 2.8
+    on Debian this is "libwxgtk2.8-dev"
 
 
 LINUX COMPILATION
 -----------------
 Run 'make sonar_gui' or 'make sonar_tui'.
-
-You must also manually create the directory ~/.sonarPM/ before the program
-can be run.
 
 
 LINUX USAGE
@@ -72,28 +71,24 @@ You can compile either with mingw using the standard Makefile:
 or with the MS Visual Studio commandline (this method preferred):
 'nmake -f Makefile.vc'
 
-In either case, you must manually create the folder:
-'[Application Data]/sonarPM'
-Normally the installer would do this, but the installer is not presently
-included in the source tarball.  Also, be sure that gzip.exe is located in the
-same folder as sonar_gui.exe.
+Be sure that gzip.exe is located in the same folder as sonar_gui.exe.
 
 
 CHANGELOG
 ---------
 Version 0.8
-- added "about" window
 - fixed sonar clicking
+- automatically create config directory.
 - fixed logging
   - log power status on thread start
   - log application version
   - removed duplicate "sleep timeout" messages
   - log un-sleep (re-active)
-0 added Macintosh compilation instructions
+- added "about" window
 
 
-WISH LIST
----------
+WISH LIST - developers, please feel free to submit patches
+----------------------------------------------------------
 These are items that should be added to future releases
 - Mac OS support
 - User control of:
@@ -102,3 +97,14 @@ These are items that should be added to future releases
   - sonar ping frequency
 - expanded frequency response measurement
 - Adaptive sonar readings (take fewer readings when user is unlikely to change presence status, ie after a long stream of "present" readings).
+
+
+KNOWN ISSUES
+------------
+- Removable audio devices, such as USB or Bluetooth, can cause problems.  
+The config file stores your preferred audio device as an integer index into
+the list of audio devices.  If this list changes due to addition or deletion
+of a device, then the stored audio device numbers will be invalid.  In this
+case you must reconfigure or delete the config file.
+- On Fedora 11, one user reported missing controls in the Config window.
+

@@ -17,11 +17,14 @@
 #include <X11/Xutil.h>
 #include <X11/Xos.h>
 #include <X11/extensions/scrnsaver.h>
+#include <sys/stat.h> // for creating directories
+#include <sys/types.h>
 #elif defined PLATFORM_WINDOWS
 #define IOCTL_VIDEO_QUERY_SUPPORTED_BRIGHTNESS \
   CTL_CODE(FILE_DEVICE_VIDEO, 0x125, METHOD_BUFFERED, FILE_ANY_ACCESS)
 //#include <userenv.h> // home path query
 #include <shlobj.h> // for CSIDL, SHGetFolderPath
+#include <direct.h> // for creating directories
 
 #ifdef MINGW
 // microsoft's headers define these, but not mingw's 
@@ -51,53 +54,6 @@ bool SysInterface::sleep_monitor(){
   //                               -1 for "on", 1 for "low power", 2 for "off".
   //SendMessage( h, WM_SYSCOMMAND, SC_SCREENSAVE, NULL ); // activate scrnsaver
   SysInterface::sleep( 0.5 ); // give system time to process message
-  return true;
-#elif 0 // the following is Windows LCD brightness control code
-  //open LCD device handle
-  HANDLE lcd_handle = CreateFile(
-	"\\\\.\\LCD",  /*__in      LPCTSTR lpFileName=@"\\.\LCD"*/
-	GENERIC_READ | GENERIC_WRITE,/*__in      DWORD dwDesiredAccess*/
-	0,             /*__in      DWORD dwShareMode*/
-	NULL,          /*__in_opt  LPSECURITY_ATTRIBUTES lpSecurityAttributes*/
-	OPEN_EXISTING, /*__in      DWORD dwCreationDisposition*/
-	FILE_ATTRIBUTE_NORMAL, /*__in      DWORD dwFlagsAndAttributes*/
-	NULL ); /*__in_opt  HANDLE hTemplateFile*/
-  if( lcd_handle == INVALID_HANDLE_VALUE ){
-    cerr << "ERROR: could not open LCD handle"<<endl;
-    return false;
-  }
-  // read LCD's brightness range
-  char buf[256];
-  DWORD num_levels=0;
-  if( DeviceIoControl( lcd_handle,                // handle to device
-		       IOCTL_VIDEO_QUERY_SUPPORTED_BRIGHTNESS,//dwIoControlCode
-		       NULL,                      // lpInBuffer
-		       0,                         // nInBufferSize
-		       buf,                       // output buffer
-		       256,                       // size of output buffer
-		       &num_levels,               // number of bytes returned
-		       NULL )                     // OVERLAPPED structure
-      == FALSE ){
-    return false;
-  }
-  if( num_levels==0 ){
-    cerr<<"ERROR: hardware does not support LCD brightness control!"<<endl;
-  }
-  unsigned int i;
-  for( i=0; i<num_levels; i++ ){
-    cout << "level["<<i<<"]="<<buf[i]<<endl;
-  }
-  /*
-  DeviceIoControl( lcd_handle,                 // handle to device
-		  IOCTL_VIDEO_SET_DISPLAY_BRIGHTNESS, // dwIoControlCode
-		  (LPVOID) lpInBuffer,         // input buffer
-		  (DWORD) nInBufferSize,       // size of the input buffer
-		  NULL,                        // lpOutBuffer
-		  0,                           // nOutBufferSize
-		  (LPDWORD) lpBytesReturned,   // number of bytes returned
-		  (LPOVERLAPPED) lpOverlapped  // OVERLAPPED structure
-		  );
-  */
   return true;
 #else
   cout << "Monitor sleep unimplemented for this platform."<<endl;
@@ -163,11 +119,31 @@ string SysInterface::config_dir(){
   char buf[MAX_PATH];
   SHGetFolderPath( HWND_TOPMOST, CSIDL_APPDATA,
 		   NULL, SHGFP_TYPE_CURRENT, buf );
-  return string( buf ) + '\\' + "sonarPM" +'\\';
-  //return "C:\\";
+
+  string dirname = string( buf ) + '\\' + "sonarPM" +'\\';
 #else
-  return string( getenv("HOME") ) + "/.sonarPM/";
+  string dirname = string( getenv( "HOME" ) ) + "/.sonarPM/";
 #endif
+  const char *p = dirname.c_str( ); // get const char * representation
+  // test that directory exists
+  if( access( p, 0 ) == 0 ){
+    struct stat status;
+    stat( p, &status );
+
+    if( status.st_mode & S_IFDIR ){ // directory exists
+      return dirname;
+    }
+  }else{
+    // create directory
+#if defined PLATFORM_WINDOWS
+    if( mkdir( p ) == -1 ){
+#else
+    if( mkdir( p, 0755 ) == -1 ){
+#endif
+      cerr << "Error: could not create directory";
+    }
+  }
+  return dirname;
 }
 
 
