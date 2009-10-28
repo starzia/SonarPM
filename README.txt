@@ -77,3 +77,28 @@ In either case, you must manually create the folder:
 Normally the installer would do this, but the installer is not presently
 included in the source tarball.  Also, be sure that gzip.exe is located in the
 same folder as sonar_gui.exe.
+
+
+CHANGELOG
+---------
+Version 0.8
+- added "about" window
+- fixed sonar clicking
+- fixed logging
+  - log power status on thread start
+  - log application version
+  - removed duplicate "sleep timeout" messages
+  - log un-sleep (re-active)
+0 added Macintosh compilation instructions
+
+
+WISH LIST
+---------
+These are items that should be added to future releases
+- Mac OS support
+- User control of:
+  - the sleep threshold
+  - the delay before sonar readings begin
+  - sonar ping frequency
+- expanded frequency response measurement
+- Adaptive sonar readings (take fewer readings when user is unlikely to change presence status, ie after a long stream of "present" readings).

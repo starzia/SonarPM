@@ -221,3 +221,18 @@ bool Logger::log_basic( string msg ){
     return false;
   }
 }
+
+bool Logger::logPowerStatus(){
+#if defined PLATFORM_WINDOWS
+  SYSTEM_POWER_STATUS status;
+  GetSystemPowerStatus( &status );
+  if( status.ACLineStatus == 0 ){
+    Logger::log_basic( "battery" );
+  }else if( status.ACLineStatus == 1 ){
+    Logger::log_basic( "AC" );
+  }
+#else
+  Logger::log_basic( "AC" );
+#endif
+  return true;
+}

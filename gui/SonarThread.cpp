@@ -10,6 +10,7 @@
 #endif
 
 //=========== CONSTANTS ===========
+// see comment descriptions in the header file.
 const duration_t SonarThread::WINDOW_LENGTH = (0.5);
 const unsigned int SonarThread::SLIDING_WINDOW = (10);
 const duration_t SonarThread::IDLE_TIME = (1);
@@ -221,8 +222,10 @@ bool SonarThread::resumePing(){
   // start ping, if necessary
   if( AudioDev::check_error( Pa_IsStreamStopped( this->pingStrm ) ) ){
     ret = AudioDev::check_error( Pa_StartStream( this->pingStrm ) ); // resume ping
-    SysInterface::sleep(1); // wait for ping to get started
-    //TODO: figure out some better solution than this long delay.
+    // fade to full volume, taking one second, to reduce onset "click"  
+    // This also gives ping a chance to get started before we record.
+    this->audio->fade( 1, 1 );
+    // TODO: figure a way to shorten delay without even recording too early
   }
   return (ret == paNoError);
 }
@@ -231,6 +234,8 @@ bool SonarThread::pausePing(){
   PaError ret=0;
   // stop ping, if necessary
   if( AudioDev::check_error( Pa_IsStreamActive( this->pingStrm ) ) )
+    // fade to zero volume, to reduce stop "click"
+    this->audio->fade( 0, 0.1 );
     AudioDev::check_error( Pa_StopStream( this->pingStrm ) ); // stop ping
   return (ret == paNoError);
 }
@@ -260,6 +265,7 @@ void SonarThread::power_management(){
   // initialize and start ping
   this->pingStrm = audio.nonblocking_play_loop( ping );
   this->pausePing(); // pause to force resumePing() to be called before recording.
+  this->logger.logPowerStatus();
   this->logger.log( "begin" );
   long log_start_time = this->logger.get_log_start_time();
   this->setDisplayTimeout();
@@ -267,9 +273,8 @@ void SonarThread::power_management(){
   // keep track of certain program events
   long lastSleep=0; // sleep means sonar-caused display sleep
   long lastTimeout=0; // timeout means timeout-caused display sleep
-  bool sleeping=false; // indicates whether the sonar system caused a sleep
-                       // note that timeout-sleeps do not set this flag
-                       // so sonar readings continue even after timeout-sleep
+  bool sonar_sleeping=false; // indicates whether sonar system caused a sleep
+  bool timeout_sleeping=false; // indicates whether timeout system caused sleep
   
   // always set threshold first
   this->updateThreshold();
@@ -283,7 +288,12 @@ void SonarThread::power_management(){
     // If user is active, reset window and test for false negatives.
     if( this->true_idle_seconds() < SonarThread::IDLE_TIME ){
       this->reset(); // throw out history
-      sleeping=false; // OS will wake up monitor on user input
+      // OS will wake up monitor on user input, all we have to do is log:
+      if( sonar_sleeping || timeout_sleeping ){
+        this->logger.log("wakeup");
+      }
+      sonar_sleeping=false;
+      timeout_sleeping=false;
 
       // check scheduler to see if there are any periodic tasks to complete.
       if( !this->scheduler( log_start_time ) ) break;
@@ -318,12 +328,14 @@ void SonarThread::power_management(){
 
       // ---TIMEOUT POLICY---
       // if user has been idle a very long time, then simulate default PM action
-      if( this->true_idle_seconds( ) > this->displayTimeout ){
+      if( this->true_idle_seconds( ) > this->displayTimeout 
+          && !timeout_sleeping ){
         // if we've been tring to detect use for too long, then this probably
         // means that the threshold is too low.
         cout << "Display timeout." << endl;
         this->logger.log( "sleep timeout" );
         SysInterface::sleep_monitor( ); // sleep monitor
+        timeout_sleeping = true;
         lastTimeout = SysInterface::current_time( );
       }
       // ---SONAR POLICY---
@@ -335,7 +347,7 @@ void SonarThread::power_management(){
           this->logger.log( "sleep sonar" );
           SysInterface::sleep_monitor( ); // sleep monitor
           lastSleep = SysInterface::current_time( );
-          sleeping = true;
+          sonar_sleeping = true;
           this->pausePing();
           this->reset();
         }
@@ -416,29 +428,6 @@ duration_t SonarThread::true_idle_seconds(){
   }
 }
 
-/* these functions are not currently needed
-bool SonarThread::waitUntilIdle(){
-  while( SysInterface::idle_seconds() < SonarThread::IDLE_TIME ){
-    SysInterface::sleep( SonarThread::SLEEP_LENGTH ); //don't poll idle_seconds() constantly
-    if( this->TestDestroy() ) return false; //test to see if thread was destroyed
-  }
-  this->logger.log( "idle" );
-  return true;
-}
-
-bool SonarThread::waitUntilActive(){
-  duration_t prev_idle_time = SysInterface::idle_seconds();
-  duration_t current_idle_time = SysInterface::idle_seconds();
-  while( current_idle_time >= prev_idle_time ){
-    SysInterface::sleep( SonarThread::SLEEP_LENGTH );
-    prev_idle_time = current_idle_time;
-    current_idle_time = SysInterface::idle_seconds();
-    if( this->TestDestroy() ) return false; //test to see if thread was destroyed
-  }
-  this->logger.log( "active" );
-  return true;
-}
-*/
 
 //=========================================================================
 EchoThread::EchoThread( wxDialog* diag,

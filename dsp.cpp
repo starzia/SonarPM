@@ -16,6 +16,7 @@
 #define SCALING_FACTOR (1.02) // freq bin scaling factor for freq response
 #define LOWEST_FREQ (15000) // lowest freq for spectral analysis
 #define HIGHEST_FREQ (30000) // highest freq for spectral analysis
+#define TEST_DURATION = (10); // for freq_response
 
 using namespace std;
 
@@ -270,8 +271,6 @@ freq_response operator/(freq_response& a, freq_response& b){
   }
   return ret;
 }
-
-const duration_t TEST_DURATION = 10; // foar freq_response
 
 freq_response test_freq_response( AudioDev & audio, AudioBuf & stimulus ){
   AudioBuf rec = audio.recordback( stimulus );

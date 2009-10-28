@@ -121,8 +121,11 @@ public:
   AudioBuf blocking_record( duration_t duration );
   /** Record the echo of buf */
   AudioBuf recordback( const AudioBuf & buf );
+  /** fade volume to a given level. */
+  void fade( float final_level, duration_t fade_time ){
 
   PaStreamParameters out_params, in_params;
+  float volume_level; /** in [0,1] scales down playback audio buffers */
   /** prints description of PortAudio error message, if any */
   static PaError check_error( PaError err );
 

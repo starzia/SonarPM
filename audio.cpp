@@ -116,9 +116,10 @@ void AudioDev::terminate(){
   check_error( Pa_Terminate() ); // Close PortAudio, this is important!
 }
 
-AudioDev::AudioDev(){}
+AudioDev::AudioDev() : volume_level(1.0) {}
 
-AudioDev::AudioDev( unsigned int in_dev_num, unsigned int out_dev_num ){
+AudioDev::AudioDev( unsigned int in_dev_num, unsigned int out_dev_num )
+    : volume_level(1.0) {
   this->choose_device( in_dev_num, out_dev_num );
 }
 
@@ -224,6 +225,20 @@ int AudioDev::player_callback( const void *inputBuffer, void *outputBuffer,
   return req->done();
 }
 
+void AudioDev::fade( float final_level, duration_t fade_time ){
+  int STEPS = 10;
+  float old_level = this->volume_level;
+  if( old_level == final_level ) return;
+
+  float step_exp = pow( final_level/old_level, 1.0/STEPS );
+  int i;
+  for( i=0; i<STEPS; i++ ){
+    this->volume_level *= step_exp;
+    // delay
+    Pa_sleep( 1000 * fade_time / STEPS ); // note, we convert from s -> ms
+  }
+}
+
 /** Similiar to player_callback, but "wrap around" buffer indices */
 int AudioDev::oscillator_callback( const void *inputBuffer, void *outputBuffer,
 				   unsigned long framesPerBuffer,
@@ -237,7 +252,8 @@ int AudioDev::oscillator_callback( const void *inputBuffer, void *outputBuffer,
 
   unsigned int i, total_samples = req->audio.get_num_samples();
   for( i=0; i<framesPerBuffer; i++ ){
-    *out++ = req->audio[ ( req->progress_index + i ) % total_samples ]; // left
+    *out++ = this->volume_level * 
+             req->audio[ ( req->progress_index + i ) % total_samples ]; // left
     *out++ = 0; // right
   }
   // update progress index
@@ -357,7 +373,7 @@ AudioBuf AudioDev::blocking_record( duration_t duration ){
   return rec_request->audio;
 }
 
-/** This function could probably be more accurately (re synchronization)
+/** This function could probably be more accurately (re: synchronization)
     implemented by creating a new duplex stream.  For sonar purposes,
     it shouldn't be necessary*/
 AudioBuf AudioDev::recordback( const AudioBuf & buf ){

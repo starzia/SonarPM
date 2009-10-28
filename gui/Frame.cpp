@@ -16,13 +16,12 @@ using namespace std;
 
 
 BEGIN_EVENT_TABLE( Frame, wxFrame )
-///EVT_MENU    (wxID_EXIT, Frame::OnExit)
-///EVT_MENU    (DO_TEST,   Frame::DoTest)
 EVT_SIZE( Frame::onSize )
 EVT_ICONIZE( Frame::onIconize )
 EVT_SONAR( wxID_ANY, Frame::onSonarEvent )
 EVT_BUTTON( BUTTON_PAUSE, Frame::onPause )
 EVT_BUTTON( BUTTON_CONFIG, Frame::onConfig )
+EVT_BUTTON( BUTTON_ABOUT, Frame::onAbout )
 EVT_CHOICE( CHOICE_MODE, Frame::onModeSwitch )
 EVT_CLOSE( Frame::onClose )
 END_EVENT_TABLE()
@@ -47,6 +46,8 @@ Frame::Frame( const wxString & title, int width, int height ) :
   this->choiceMode->SetSelection( 0 ); // power management by default
   this->buttonConfig = new wxButton( panel, BUTTON_CONFIG, _T("configure"),
 				     wxDefaultPosition, wxDefaultSize );
+  this->buttonAbout = new wxButton( panel, BUTTON_ABOUT, _T("about"),
+				     wxDefaultPosition, wxDefaultSize );
 
   // add taskbar icon
   this->tbIcon = new TaskBarIcon( this );
@@ -68,7 +69,7 @@ Frame::Frame( const wxString & title, int width, int height ) :
   sizer3->Add( this->choiceMode, 1, wxALL | wxEXPAND, 5 );
   sizer3->Add( this->buttonPause, 1, wxALL | wxEXPAND, 5 );
   sizer3->Add( this->buttonConfig, 1, wxALL | wxEXPAND, 5 );
-
+  sizer3->Add( this->buttonAbout, 1, wxALL | wxEXPAND, 5 );
 
   wxBoxSizer* sizer2 = new wxBoxSizer( wxHORIZONTAL );
   sizer2->Add( this->sonarHistory,
@@ -173,6 +174,9 @@ void Frame::firstTime(){
         _T("Please enter the manufacturer and model name of your computer."),
         _T("Computer description"), _T("Generic"), this );
   Logger::log_basic( "model " + string(modelName.mb_str()) );
+
+  // log program version 
+  Logger::log_basic( "version " + string( VERSION );
 
   // log frequency response
   ret = wxMessageBox(
@@ -284,6 +288,13 @@ void Frame::onConfig(wxCommandEvent& event){
   }
 }
 
+void Frame::onAbout(wxCommandEvent& event){
+  // pop up about window
+  int ret = wxMessageBox(
+    _T("This software was written by Stephen Tarzia in 2009.  Design guidance came from Peter Dinda, Robert Dick and Gokhan Memik.\n\nFor details, including a technical discussion, see:\nhttp://stevetarzia.com/sonar"),
+    _T("About"), wxOK, this );
+}
+
 void Frame::onModeSwitch( wxCommandEvent& event ){
   // if sonar is running, stop it so that new operating mode can be used.
   this->stopSonar();
@@ -310,13 +321,7 @@ WXLRESULT Frame::MSWWindowProc( WXUINT message,
     }else if( wParam == PBT_APMSUSPEND ){
       Logger::log_basic( "suspend" );
     }else if( wParam == PBT_APMPOWERSTATUSCHANGE ){
-      SYSTEM_POWER_STATUS status;
-      GetSystemPowerStatus( &status );
-      if( status.ACLineStatus == 0 ){
-        Logger::log_basic( "battery" );
-      }else if( status.ACLineStatus == 1 ){
-        Logger::log_basic( "AC" );
-      }
+      Logger::logPowerStatus();
     }
   }
   // pass message on to base class version for standard processing.

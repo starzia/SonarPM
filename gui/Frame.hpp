@@ -23,6 +23,7 @@ public:
   void onClose( wxCloseEvent& event );
   void onModeSwitch( wxCommandEvent& event );
   void onConfig( wxCommandEvent& event );
+  void onAbout( wxCommandEvent& event );
 
   void onSonarEvent(SonarEvent& event);
   void onPause( wxCommandEvent& event );
@@ -49,6 +50,7 @@ private:
   wxButton* buttonPause;
   wxChoice* choiceMode;
   wxButton* buttonConfig;
+  wxButton* buttonAbout;
 
   TaskBarIcon* tbIcon;
   PlotPane* sonarHistory;
@@ -62,4 +64,5 @@ private:
 const int  BUTTON_PAUSE = wxID_HIGHEST + 1;
 const int  CHOICE_MODE = wxID_HIGHEST + 2;
 const int  BUTTON_CONFIG = wxID_HIGHEST + 3;
+const int  BUTTON_ABOUT = wxID_HIGHEST + 4;
 

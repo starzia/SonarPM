@@ -22,6 +22,9 @@ public:
    * configuration file each time, however it is useful for callback functions
    * which have no reference to the active logger object */
   static bool log_basic( std::string message );
+  /** log whether computer is running on AC or battery power.
+   * note this is static because it may be called before logger is initalized */
+  static bool logPowerStatus();
 
   // phone home constants
   static const int PHONEHOME_INTERVAL = 3600; // in seconds
