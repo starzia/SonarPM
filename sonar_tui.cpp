@@ -113,13 +113,14 @@ void test_echo( AudioDev & audio ){
 void poll( AudioDev & audio, Config & conf ){
   AudioBuf ping = tone( 1, conf.ping_freq, 0,0 ); // no fade since we loop it
   cout << "Begin pinging loop at frequency of " <<conf.ping_freq<<"Hz"<<endl;
-  PaStream* strm = audio.nonblocking_play_loop( ping );
+  AudioRequest* strm = audio.nonblocking_play_loop( ping );
+  SysInterface::sleep(1); // give oscillator time to start before recording.
   while( 1 ){
     AudioBuf rec = audio.blocking_record( RECORDING_PERIOD );
     Statistics s = measure_stats( rec, conf.ping_freq );
     cout << "{delta:" << s.delta <<"}"<< endl;
   }
-  AudioDev::check_error( Pa_CloseStream( strm ) ); // close stream to free up dev
+  AudioDev::check_error( Pa_CloseStream( strm->stream ) ); // close stream to free up dev
 }
 
 

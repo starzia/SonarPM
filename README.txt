@@ -12,6 +12,9 @@ For technical details see this publication:
  S. P. Tarzia, R. P. Dick, P. A. Dinda, G. Memik. Sonar-based Measurement of 
  User Presence and Attention. In Proc. 11th Intl. Conf. on Ubiquitous 
  Computing (UbiComp'09). September-October 2009. pages 89-92.
+
+project website is http://stevetarzia.com/sonar
+This text refers to the source code tarball available at the website.
 ========================================================================
 
 LICENSE
@@ -96,7 +99,8 @@ These are items that should be added to future releases
   - the delay before sonar readings begin
   - sonar ping frequency
 - expanded frequency response measurement
-- Adaptive sonar readings (take fewer readings when user is unlikely to change presence status, ie after a long stream of "present" readings).
+- Adaptive sonar readings (take fewer readings when user is unlikely to 
+change presence status, ie after a long stream of "present" readings).
 
 
 KNOWN ISSUES

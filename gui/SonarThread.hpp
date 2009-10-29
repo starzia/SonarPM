@@ -75,7 +75,7 @@ private:
   long lastDummyInputTime;
 
   /** the audio stream for playing the ping */
-  PaStream* pingStrm;
+  AudioRequest* pingStrm;
 
   //======== FUNCTIONS ========
   void poll();
@@ -88,7 +88,7 @@ private:
   void updateGUI( float echo_delta, float window_avg, float thresh,
                   bool setStatus );
   void reset(); // create a gap in plot and clears sonar history window
-
+  void plotGap(); // helper function for above
 
   /** sets the screen blanking threshold.
    * @return true if successful false if interrupted by thread cancellation */

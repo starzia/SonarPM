@@ -293,7 +293,7 @@ void Frame::onAbout(wxCommandEvent& event){
   wxMessageBox(
     _T("This software was written by Stephen Tarzia in 2009.  "
        "Design guidance came from Peter Dinda, Robert Dick and Gokhan Memik.\n\n"
-       "To download the latest version or source code, submit bug reports, or to read technical details see:\n"
+       "To download the latest version or source code, submit bug reports, or to read instructions and technical details see:\n"
        "http://stevetarzia.com/sonar"),
     _T("About"), wxOK, this );
 }

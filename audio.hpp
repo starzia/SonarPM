@@ -65,9 +65,16 @@ public:
   AudioRequest( duration_t len );
   /** has this request been fully serviced? */
   bool done();
+  /** fade volume to a given level over a short time period. */
+  void fade( float final_level );
 
   AudioBuf audio;
   unsigned int progress_index;
+  /** in [0,1] scales down playback audio buffers */
+  float currentVolumeLevel, targetVolumeLevel;
+  float volumeStepFactor;
+  /** pointer to the stream playing this request, if any */
+  PaStream* stream;
 };
 
 class AudioDev{
@@ -114,16 +121,13 @@ public:
 				PaStreamCallbackFlags statusFlags,
 				void *userData );
 
-  PaStream* nonblocking_play( const AudioBuf & buf );
+  AudioRequest* nonblocking_play( const AudioBuf & buf );
   /** the looping version of play repeats the audio buffer indefinitely */
-  PaStream* nonblocking_play_loop( const AudioBuf & buf );
+  AudioRequest* nonblocking_play_loop( const AudioBuf & buf );
   void blocking_play( const AudioBuf & buf );
   AudioBuf blocking_record( duration_t duration );
   /** Record the echo of buf */
   AudioBuf recordback( const AudioBuf & buf );
-
-  /** fade volume to a given level over a short time period. */
-  static void fade( float final_level );
 
   /** prints description of PortAudio error message, if any */
   static PaError check_error( PaError err );
@@ -135,9 +139,6 @@ public:
 
 private:
   PaStreamParameters out_params, in_params;
-  /** in [0,1] scales down playback audio buffers */
-  static float currentVolumeLevel, targetVolumeLevel, volumeStepFactor;
-  // TODO: above, volume level should be per-stream or per-device not global
 };
 
 #endif //ndef AUDIO_H

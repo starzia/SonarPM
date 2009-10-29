@@ -121,9 +121,10 @@ string SysInterface::config_dir(){
 		   NULL, SHGFP_TYPE_CURRENT, buf );
 
   string dirname = string( buf ) + '\\' + "sonarPM" +'\\';
+  const char *p = dirname.c_str( ); // get const char * representation
+  CreateDirectory( p, NULL ); // this will return an error code if exists.
 #else
   string dirname = string( getenv( "HOME" ) ) + "/.sonarPM/";
-#endif
   const char *p = dirname.c_str( ); // get const char * representation
   // test that directory exists
   if( access( p, 0 ) == 0 ){
@@ -135,14 +136,11 @@ string SysInterface::config_dir(){
     }
   }else{
     // create directory
-#if defined PLATFORM_WINDOWS
-    if( mkdir( p ) == -1 ){
-#else
     if( mkdir( p, 0755 ) == -1 ){
-#endif
       cerr << "Error: could not create directory";
     }
   }
+#endif
   return dirname;
 }
 

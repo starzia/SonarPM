@@ -90,9 +90,18 @@ bool AudioBuf::write_to_file( string filename ) const{
   return true;
 }
 
+#define HIGH_VOLUME_LEVEL (1.0)
+#define LOW_VOLUME_LEVEL (0.00001) // zero value would break code below
+#define FADE_TIME (0.1) // time in seconds taken to fade ping in/out @44.1kHz
+
 AudioRequest::AudioRequest( const AudioBuf & buf ){
   this->progress_index = 0; // set to zero so playback starts at beginning
   this->audio = buf;
+  // store pointers to volume variables in the device structure.
+  this->targetVolumeLevel = 1.0;
+  this->currentVolumeLevel = 1.0;
+  this->volumeStepFactor = pow( HIGH_VOLUME_LEVEL/LOW_VOLUME_LEVEL,
+                                1.0/(FADE_TIME*44100) );
 }
 
 /** this constructor is used for recording, so we have to allocate an new 
@@ -106,6 +115,11 @@ bool AudioRequest::done(){
   return this->progress_index > this->audio.get_num_samples();
 }
 
+void AudioRequest::fade( float final_level ){
+  this->targetVolumeLevel = final_level;
+  //wait for fade to finish, note that we give it an extra 500ms
+  Pa_Sleep( 1000 * FADE_TIME * 44100/SAMPLE_RATE ); 
+}
 
 
 void AudioDev::init(){
@@ -116,6 +130,7 @@ void AudioDev::terminate(){
   check_error( Pa_Terminate() ); // Close PortAudio, this is important!
 }
 
+// reset volume levels
 AudioDev::AudioDev(){}
 
 AudioDev::AudioDev( unsigned int in_dev_num, unsigned int out_dev_num ){
@@ -224,19 +239,6 @@ int AudioDev::player_callback( const void *inputBuffer, void *outputBuffer,
   return req->done();
 }
 
-#define HIGH_VOLUME_LEVEL (1.0)
-#define LOW_VOLUME_LEVEL (0.00001) // zero value would break code below
-float AudioDev::currentVolumeLevel = 1.0; // set by oscillator_callback
-float AudioDev::targetVolumeLevel = 1.0; // this will be overriden by app
-#define FADE_TIME (0.1) // time in seconds taken to fade ping in/out @44.1kHz
-float AudioDev::volumeStepFactor = pow( HIGH_VOLUME_LEVEL/LOW_VOLUME_LEVEL,
-                                        1.0/(FADE_TIME*44100) );
-
-void AudioDev::fade( float final_level ){
-  AudioDev::targetVolumeLevel = final_level;
-  Pa_Sleep( 1000 * FADE_TIME * 44100/SAMPLE_RATE ); //wait for fade to finish
-}
-
 /** Similiar to player_callback, but "wrap around" buffer indices */
 int AudioDev::oscillator_callback( const void *inputBuffer, void *outputBuffer,
 				   unsigned long framesPerBuffer,
@@ -247,23 +249,26 @@ int AudioDev::oscillator_callback( const void *inputBuffer, void *outputBuffer,
   AudioRequest *req = (AudioRequest*)userData; 
   sample_t *out = (sample_t*)outputBuffer;
   (void) inputBuffer; /* Prevent unused variable warning. */
+  float target = req->targetVolumeLevel;
 
+  // TODO: this code is not exactly thread-safe, but consequences are
+  // probably not serious
   unsigned int i, total_samples = req->audio.get_num_samples();
   for( i=0; i<framesPerBuffer; i++ ){
-    if( currentVolumeLevel != targetVolumeLevel ){
-      if( currentVolumeLevel > targetVolumeLevel ){
-        currentVolumeLevel /= volumeStepFactor;
+    if( req->currentVolumeLevel != target ){
+      if( req->currentVolumeLevel > target ){
+        req->currentVolumeLevel /= req->volumeStepFactor;
         // verify that we didn't go too far
-        if( currentVolumeLevel < targetVolumeLevel )
-          currentVolumeLevel = targetVolumeLevel;
+        if( req->currentVolumeLevel < target )
+          req->currentVolumeLevel = target;
       }else{
-        currentVolumeLevel *= volumeStepFactor;
+        req->currentVolumeLevel *= req->volumeStepFactor;
         // verify that we didn't go too far
-        if( currentVolumeLevel > targetVolumeLevel )
-          currentVolumeLevel = targetVolumeLevel;
+        if( req->currentVolumeLevel > target )
+          req->currentVolumeLevel = target;
       }
     }
-    *out++ = AudioDev::currentVolumeLevel *
+    *out++ = req->currentVolumeLevel *
              req->audio[ ( req->progress_index + i ) % total_samples ]; // left
     *out++ = 0; // right
   }
@@ -297,7 +302,7 @@ int AudioDev::recorder_callback( const void *inputBuffer, void *outputBuffer,
   return req->done();
 }
 
-PaStream* AudioDev::nonblocking_play( const AudioBuf & buf ){
+AudioRequest* AudioDev::nonblocking_play( const AudioBuf & buf ){
   PaStream *stream;
   AudioRequest *play_request = new AudioRequest( buf );
   /* Open an audio I/O stream. */
@@ -311,14 +316,15 @@ PaStream* AudioDev::nonblocking_play( const AudioBuf & buf ){
                          // otherwise set to paNoFlag,
 	 AudioDev::player_callback, /* this is your callback function */
 	 play_request ) ); /*This is a pointer that will be passed to
-			     your callback*/
+			                 your callback*/
+  play_request->stream = stream;
   // start playback
   check_error( Pa_StartStream( stream ) );
   // caller is responsible for freeing stream
-  return stream;
+  return play_request;
 }
 
-PaStream* AudioDev::nonblocking_play_loop( const AudioBuf & buf ){
+AudioRequest* AudioDev::nonblocking_play_loop( const AudioBuf & buf ){
   PaStream *stream;
   AudioRequest *play_request = new AudioRequest( buf );
   /* Open an audio I/O stream. */
@@ -333,10 +339,11 @@ PaStream* AudioDev::nonblocking_play_loop( const AudioBuf & buf ){
 	 AudioDev::oscillator_callback, /* this is your callback function */
 	 play_request ) ); /*This is a pointer that will be passed to
 			     your callback*/
+  play_request->stream = stream;
   // start playback
   check_error( Pa_StartStream( stream ) );
   // caller is responsible for freeing stream
-  return stream;
+  return play_request;
 }
 
 void AudioDev::blocking_play( const AudioBuf & buf ){

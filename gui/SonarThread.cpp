@@ -137,13 +137,16 @@ void SonarThread::setDisplayTimeout(){
   cout << log_msg.str() << endl;
 }
 
+void SonarThread::plotGap(){
+  // create gap in plot
+  SonarEvent evt = SonarEvent( PLOT_EVENT_GAP );
+  this->mainFrame->GetEventHandler()->AddPendingEvent( evt );
+}
+
 void SonarThread::reset(){
   // check that we are not already in gap
   if( this->windowHistory.size() > 0 ){
-    // create gap in plot
-    SonarEvent evt = SonarEvent( PLOT_EVENT_GAP );
-    this->mainFrame->GetEventHandler()->AddPendingEvent( evt );
-
+    this->plotGap();
     // clear sonar window
     this->windowHistory.resize( 0,0 );
   }
@@ -167,8 +170,10 @@ bool SonarThread::updateThreshold(){
   this->mainFrame->GetEventHandler()->AddPendingEvent( evt );
 
   while( activeReadings.size() < SonarThread::SLIDING_WINDOW ){
-    if( this->TestDestroy() ) return false; // test to see whether we should die
-      
+    if( this->TestDestroy() ){ // test to see whether we should die
+      this->plotGap();
+      return false; 
+    }
     // take sonar reading
     AudioBuf rec = audio.blocking_record( SonarThread::WINDOW_LENGTH );
     Statistics s = measure_stats( rec, conf.ping_freq );
@@ -189,8 +194,7 @@ bool SonarThread::updateThreshold(){
   this->lastCalibration = SysInterface::current_time();
 
   // make a gap in the plot to separate training data
-  SonarEvent evt2 = SonarEvent( PLOT_EVENT_GAP );
-  this->mainFrame->GetEventHandler()->AddPendingEvent( evt2 );
+  this->plotGap();
   return true;
 }
 
@@ -220,12 +224,12 @@ bool SonarThread::scheduler( long log_start_time ){
 bool SonarThread::resumePing(){
   PaError ret=0;
   // start ping, if necessary
-  if( AudioDev::check_error( Pa_IsStreamStopped( this->pingStrm ) ) ){
-    ret = AudioDev::check_error( Pa_StartStream( this->pingStrm ) ); // resume ping
-    // fade to full volume, taking one second, to reduce onset "click"  
-    this->audio.fade( 1 );
+  if( AudioDev::check_error( Pa_IsStreamStopped( this->pingStrm->stream ) ) ){
+    ret = AudioDev::check_error( Pa_StartStream( this->pingStrm->stream ) ); // resume ping
+    // fade to full volume, to reduce onset "click"  
+    this->pingStrm->fade( 1 );
     // Also give ping a chance to get started before we record.
-    SysInterface::sleep( 1 ); // pad to one second delay
+    SysInterface::sleep( 1 );
     // TODO: figure a way to shorten delay without even recording too early
   }
   return (ret == paNoError);
@@ -234,12 +238,14 @@ bool SonarThread::resumePing(){
 bool SonarThread::pausePing(){
   PaError ret=0;
   // stop ping, if necessary
-  if( AudioDev::check_error( Pa_IsStreamActive( this->pingStrm ) ) )
+  if( AudioDev::check_error( Pa_IsStreamActive( this->pingStrm->stream ) ) )
     // fade to zero volume, to reduce stop "click"
-    this->audio.fade( 0 );
+    this->pingStrm->fade( 0 );
+    // also give the ping extra time to die down before we cut it off
+    SysInterface::sleep( 0.3 ); 
     // must check again that stream hasn't died since fading started.
-    if( Pa_IsStreamActive( this->pingStrm ) )
-      AudioDev::check_error( Pa_AbortStream( this->pingStrm ) ); // stop ping
+    if( Pa_IsStreamActive( this->pingStrm->stream ) )
+      AudioDev::check_error( Pa_StopStream( this->pingStrm->stream ) ); // stop ping
   return (ret == paNoError);
 }
 
@@ -247,6 +253,7 @@ void SonarThread::poll(){
   AudioBuf ping = tone( 0.01, conf.ping_freq, 0,0 ); // no fade since we loop it
   cout << "Begin pinging loop at frequency of " <<conf.ping_freq<<"Hz"<<endl;
   this->pingStrm = audio.nonblocking_play_loop( ping );
+  SysInterface::sleep(1); // give oscillator time to get started
 
   // test to see whether we should die
   while( !this->TestDestroy() ){
@@ -254,8 +261,8 @@ void SonarThread::poll(){
   }
 
   // clean up portaudio so that we can use it again later.
-  audio.check_error( Pa_StopStream( this->pingStrm ) );
-  audio.check_error( Pa_CloseStream( this->pingStrm ) );
+  audio.check_error( Pa_StopStream( this->pingStrm->stream ) );
+  audio.check_error( Pa_CloseStream( this->pingStrm->stream ) );
 }
 
 
@@ -361,7 +368,7 @@ void SonarThread::power_management(){
   this->logger.log( "end" );
   // clean up portaudio so that we can use it again later.
   this->pausePing();
-  AudioDev::check_error( Pa_CloseStream( this->pingStrm ) );
+  AudioDev::check_error( Pa_CloseStream( this->pingStrm->stream ) );
 }
 
 void SonarThread::recordAndProcessAndUpdateGUI(){
