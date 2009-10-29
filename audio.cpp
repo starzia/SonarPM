@@ -91,7 +91,7 @@ bool AudioBuf::write_to_file( string filename ) const{
 }
 
 #define HIGH_VOLUME_LEVEL (1.0)
-#define LOW_VOLUME_LEVEL (0.00001) // zero value would break code below
+#define LOW_VOLUME_LEVEL (0.000001) // zero value would break code below
 #define FADE_TIME (0.1) // time in seconds taken to fade ping in/out @44.1kHz
 
 AudioRequest::AudioRequest( const AudioBuf & buf ){
@@ -100,6 +100,9 @@ AudioRequest::AudioRequest( const AudioBuf & buf ){
   // store pointers to volume variables in the device structure.
   this->targetVolumeLevel = 1.0;
   this->currentVolumeLevel = 1.0;
+  // set volumeStepFactor such that multiplying (or dividing) by it before each
+  // audio sample will get from high to low (or low to high) volume levels
+  // after FADE_TIME
   this->volumeStepFactor = pow( HIGH_VOLUME_LEVEL/LOW_VOLUME_LEVEL,
                                 1.0/(FADE_TIME*44100) );
 }
@@ -250,6 +253,9 @@ int AudioDev::oscillator_callback( const void *inputBuffer, void *outputBuffer,
   sample_t *out = (sample_t*)outputBuffer;
   (void) inputBuffer; /* Prevent unused variable warning. */
   float target = req->targetVolumeLevel;
+  if( target < LOW_VOLUME_LEVEL ){  // we can't ever reach zero
+    target = LOW_VOLUME_LEVEL;
+  }
 
   // TODO: this code is not exactly thread-safe, but consequences are
   // probably not serious
