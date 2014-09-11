@@ -11,18 +11,19 @@ W32_OBJS = audio.O dsp.O SysInterface.O Config.O Logger.O
 # also two versions of each binary: suffix '.exe' for windows
 BINS = sonar_tui sonar_gui sonar_tui.exe sonar_gui.exe
 
+LINUX_LIBS=-lXss -lportaudio -lm -lX11
 ############################# LINKING ####################################
 all: sonar_gui
 
 # sonar_tui targets do not currently work
 sonar_tui: ${OBJS} sonar_tui.o
-	$(CXX) -o $@ ${FLAGS} $^ -lXss -lportaudio -lm
+	$(CXX) -o $@ ${FLAGS} $^ $(LINUX_LIBS)
 ## Mac version?
 #${CXX} $(FLAGS) -DPLATFORM_MAC -lportaudio -lm sonar.cpp -o sonar
 
 sonar_gui: ${OBJS} gui/gui.a
 	$(CXX) -o $@ $^ \
-          $(shell $(WX_CONFIG_LINUX) --libs) -lXss -lportaudio -lm
+          $(shell $(WX_CONFIG_LINUX) --libs) $(LINUX_LIBS)
 
 sonar_tui.exe: ${W32_OBJS} sonar_tui.O
 	$(CXX) -o $@ $^ -lm libportaudio.a -lwinmm -lwininet -lpowrprof -lrpcrt4
