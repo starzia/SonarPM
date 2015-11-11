@@ -22,7 +22,7 @@ sonar_tui: ${OBJS} sonar_tui.o
 
 sonar_gui: ${OBJS} gui/gui.a
 	$(CXX) -o $@ $^ \
-          $(shell $(WX_CONFIG_LINUX) --libs) -lXss -lportaudio -lm
+          $(shell $(WX_CONFIG_LINUX) --libs) -lXss -lX11 -lportaudio -lm
 
 sonar_tui.exe: ${W32_OBJS} sonar_tui.O
 	$(CXX) -o $@ $^ -lm libportaudio.a -lwinmm -lwininet -lpowrprof -lrpcrt4
